@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chaos-workshop.local/schemas/challenge-definition.schema.json",
+  "title": "Chaos Engineering Workshop Challenge",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "difficulty",
+    "scenario",
+    "learningObjectives",
+    "guidanceLevel",
+    "traffic",
+    "workflow",
+    "failureControls",
+    "resilienceOptions",
+    "evaluation"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^challenge-[1-9][0-9]*$" },
+    "title": { "type": "string", "minLength": 1 },
+    "difficulty": { "enum": ["BEGINNER", "INTERMEDIATE", "ADVANCED"] },
+    "estimatedMinutes": { "type": "integer", "minimum": 1 },
+    "scenario": { "type": "string", "minLength": 1 },
+    "learningObjectives": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "guidanceLevel": { "enum": ["FULL", "PARTIAL", "MINIMAL"] },
+    "instructions": { "type": "array", "items": { "$ref": "#/$defs/instruction" } },
+    "hints": { "type": "array", "items": { "type": "string" } },
+    "traffic": { "$ref": "#/$defs/traffic" },
+    "workflow": { "$ref": "#/$defs/workflow" },
+    "failureControls": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/failureControl" } },
+    "resilienceOptions": { "type": "array", "items": { "$ref": "#/$defs/resilienceOption" } },
+    "defaultResilience": { "type": "object" },
+    "evaluation": { "$ref": "#/$defs/evaluation" }
+  },
+  "$defs": {
+    "instruction": {
+      "type": "object",
+      "required": ["step", "title", "body"],
+      "properties": {
+        "step": { "enum": ["MEASURE", "HYPOTHESIZE", "EXPERIMENT", "OBSERVE", "IMPROVE"] },
+        "title": { "type": "string" },
+        "body": { "type": "string" }
+      }
+    },
+    "traffic": {
+      "type": "object",
+      "required": ["endpoint", "ratePerSecond"],
+      "properties": {
+        "endpoint": { "type": "string", "pattern": "^/api/" },
+        "ratePerSecond": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "required": ["requiredEvidence"],
+      "properties": {
+        "requiredEvidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": ["BASELINE", "HYPOTHESIS", "FAILURE", "EXPERIMENT", "OBSERVATION", "MITIGATION", "VALIDATION", "CONCLUSION"]
+          }
+        }
+      }
+    },
+    "failureControl": {
+      "type": "object",
+      "required": ["id", "type", "target"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "enum": ["LATENCY", "UNAVAILABLE", "TIMEOUT"] },
+        "target": { "enum": ["inventory", "shipping"] },
+        "parameters": { "type": "object" }
+      }
+    },
+    "resilienceOption": {
+      "type": "object",
+      "required": ["id", "label", "settings"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "settings": { "type": "object" }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "required": ["technical", "conceptual"],
+      "properties": {
+        "technical": { "type": "object" },
+        "conceptual": { "type": "object" }
+      }
+    }
+  }
+}

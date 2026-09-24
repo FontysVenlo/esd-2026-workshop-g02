@@ -1,0 +1,83 @@
+services:
+  chaos-workshop-ui:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      workshop-controller:
+        condition: service_started
+    ports:
+      - "8080:80"
+    networks:
+      - workshop-net
+
+  workshop-controller:
+    build:
+      context: .
+      dockerfile: workshop-controller/Dockerfile
+    environment:
+      CHALLENGE_DIRECTORY: /app/challenges
+      STOREFRONT_BASE_URL: http://storefront-service:8080
+      TOXIPROXY_API_URL: http://toxiproxy:8474
+    depends_on:
+      storefront-service:
+        condition: service_started
+      toxiproxy:
+        condition: service_started
+    restart: on-failure
+    expose:
+      - "8080"
+    networks:
+      - workshop-net
+
+  storefront-service:
+    build:
+      context: .
+      dockerfile: services/storefront-service/Dockerfile
+    environment:
+      INVENTORY_BASE_URL: http://toxiproxy:8666
+      SHIPPING_BASE_URL: http://toxiproxy:8667
+      EXPERIMENT_INVENTORY_BASE_URL: http://toxiproxy:8668
+    depends_on:
+      inventory-service:
+        condition: service_started
+      shipping-service:
+        condition: service_started
+      toxiproxy:
+        condition: service_started
+    expose:
+      - "8080"
+    networks:
+      - workshop-net
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: services/inventory-service/Dockerfile
+    expose:
+      - "8080"
+    networks:
+      - workshop-net
+
+  shipping-service:
+    build:
+      context: .
+      dockerfile: services/shipping-service/Dockerfile
+    expose:
+      - "8080"
+    networks:
+      - workshop-net
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.12.0
+    expose:
+      - "8474"
+      - "8666"
+      - "8667"
+      - "8668"
+    networks:
+      - workshop-net
+
+networks:
+  workshop-net:
+    driver: bridge

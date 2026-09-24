@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: workshop-controller
+
+workshop:
+  challenge-directory: ${CHALLENGE_DIRECTORY:/app/challenges}
+  storefront-base-url: ${STOREFRONT_BASE_URL:http://localhost:8081}
+  toxiproxy-api-url: ${TOXIPROXY_API_URL:http://localhost:8474}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+

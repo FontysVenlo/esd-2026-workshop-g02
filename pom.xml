@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.0</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>de.workshop.chaos</groupId>
+    <artifactId>chaos-engineering-workshop</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>Chaos Engineering Workshop</name>
+    <description>Local interactive workshop for learning Chaos Engineering fundamentals.</description>
+
+    <modules>
+        <module>workshop-controller</module>
+        <module>services/storefront-service</module>
+        <module>services/inventory-service</module>
+        <module>services/shipping-service</module>
+    </modules>
+
+    <properties>
+        <java.version>21</java.version>
+    </properties>
+</project>
+
