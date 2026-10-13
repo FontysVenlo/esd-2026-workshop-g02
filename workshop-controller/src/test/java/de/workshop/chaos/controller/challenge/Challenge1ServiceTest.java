@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -53,6 +54,22 @@ class Challenge1ServiceTest {
         doAnswer(ignored -> { faultActive.set(false); return null; })
                 .when(toxiproxy).removeLatency();
         doAnswer(ignored -> { metrics.reset(); return null; }).when(traffic).resetMetrics();
+    }
+
+    @Test
+    void baselineRequiresChosenLatencyMetricAndStockDependency() {
+        challenge.startTraffic();
+        recordRequests(1, 15, 8, false);
+        assertThatThrownBy(() -> challenge.captureBaseline(List.of("successRate"), "inventory"))
+                .isInstanceOf(ChallengeStateException.class);
+        assertThatThrownBy(() -> challenge.captureBaseline(List.of("responseLatency"), "shipping"))
+                .isInstanceOf(ChallengeStateException.class);
+        challenge.captureBaseline(List.of("responseLatency", "successRate"), "inventory");
+        assertThat(challenge.view().steadyStateMetrics()).containsExactly("responseLatency", "successRate");
+        assertThat(challenge.view().testedDependency()).isEqualTo("inventory");
+        challenge.reset();
+        assertThat(challenge.view().steadyStateMetrics()).isEmpty();
+        assertThat(challenge.view().testedDependency()).isNull();
     }
 
     @Test
@@ -100,7 +117,11 @@ class Challenge1ServiceTest {
         recordRequests(3, 15, 420, true);
         challenge.captureValidation();
 
-        assertThat(challenge.view().step()).isEqualTo(Challenge1Service.Step.COMPLETED);
+        assertThat(challenge.view().step()).isEqualTo(Challenge1Service.Step.CONCLUDE);
+        assertThatThrownBy(() -> challenge.saveConclusion("short"))
+                .isInstanceOf(ChallengeStateException.class);
+        challenge.saveConclusion("P95 improved with successful fallback responses.");
+        assertThat(challenge.view().completed()).isTrue();
         assertThat(challenge.view().validation().fallbackCount()).isEqualTo(15);
         assertThat(challenge.view().validation().p95LatencyMs()).isEqualTo(420);
         assertThat(challenge.view().validationFeedback()).isEmpty();
@@ -149,6 +170,7 @@ class Challenge1ServiceTest {
         challenge.startValidation();
         recordRequests(4, 15, 420, true);
         challenge.captureValidation();
+        challenge.saveConclusion("P95 improved with successful fallback responses.");
         assertThat(challenge.view().completed()).isTrue();
     }
 

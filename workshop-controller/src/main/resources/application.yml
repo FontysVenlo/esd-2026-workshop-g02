@@ -6,10 +6,10 @@ workshop:
   challenge-directory: ${CHALLENGE_DIRECTORY:/app/challenges}
   storefront-base-url: ${STOREFRONT_BASE_URL:http://localhost:8081}
   toxiproxy-api-url: ${TOXIPROXY_API_URL:http://localhost:8474}
+  gameday-scenario: ${GAMEDAY_SCENARIO:inventory-latency}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
-
+        include: health,info,prometheus

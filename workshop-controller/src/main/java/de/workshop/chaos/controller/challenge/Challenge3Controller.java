@@ -42,7 +42,8 @@ public class Challenge3Controller {
     }
     @PostMapping("/hypothesis")
     public ExperimentSliceService.Snapshot hypothesis(@RequestBody HypothesisInput input) {
-        challenge.saveHypothesis(input.text(), input.faultId()); return slice.snapshot();
+        challenge.saveExperimentPlan(input.text(), input.faultId(),
+                input.blastRadius(), input.abortCondition()); return slice.snapshot();
     }
     @PostMapping("/experiment/start")
     public ExperimentSliceService.Snapshot startExperiment() {
@@ -59,7 +60,7 @@ public class Challenge3Controller {
     }
     @PostMapping("/mitigation/apply")
     public ExperimentSliceService.Snapshot mitigation(@RequestBody MitigationInput input) {
-        challenge.applySettings(input.settings(), input.reason()); return slice.snapshot();
+        challenge.applySettings(input.settings(), input.reason(), input.expectedEvidence()); return slice.snapshot();
     }
     @PostMapping("/validation/start")
     public ExperimentSliceService.Snapshot startValidation() {
@@ -89,7 +90,9 @@ public class Challenge3Controller {
                 .body(new ErrorResponse(exception.getMessage()));
     }
     public record BaselineInput(List<String> indicators) {}
-    public record HypothesisInput(String text, String faultId) {}
-    public record MitigationInput(Challenge3Service.Settings settings, String reason) {}
+    public record HypothesisInput(String text, String faultId, String blastRadius,
+            String abortCondition) {}
+    public record MitigationInput(Challenge3Service.Settings settings, String reason,
+            String expectedEvidence) {}
     public record ErrorResponse(String message) {}
 }

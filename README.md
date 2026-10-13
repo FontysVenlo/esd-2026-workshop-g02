@@ -1,41 +1,44 @@
 # Chaos Engineering Workshop
 
-A local, single-participant workshop for practicing controlled failure experiments. Phase 5 adds Challenge 3, an independent experiment, alongside the accepted Challenges 1 and 2.
+A completely local, single-participant workshop with four engineering assignments. The practical exercises are designed for roughly **45–55 minutes** in total; no timers are imposed. Participants define steady state, form hypotheses, inject controlled faults, interpret real measurements, and validate resilience changes.
 
-## Start
+## Start on Windows
 
-Install Docker with Compose, then from this repository run:
+Install and start Docker Desktop. Double-click `scripts/start-workshop.bat` from this repository, or run `docker compose up -d --build --wait` here. The first run needs Internet access to download base images and dependencies. Wait for the script to report that the workshop is ready.
 
-```sh
-docker compose up --build
-```
+Open:
 
-Wait for the services to start, then open **http://localhost:8080**. Choose a challenge from the overview. Direct links are `http://localhost:8080/#challenge-1`, `http://localhost:8080/#challenge-2`, and `http://localhost:8080/#challenge-3`. Only the workshop UI is published to the host. Once the images are available locally, the workshop runs without an Internet connection. Stop the stack with `docker compose down`.
+- Workshop: **http://localhost:8080**
+- Grafana dashboard: **http://localhost:3000/d/workshop-observability/workshop-observability**
+- Prometheus: **http://localhost:9090**
 
-## Challenge 1 in brief
+The Grafana data source and dashboard are provisioned automatically. No account, cloud service, or manual proxy configuration is needed. Stop with `scripts/stop-workshop.bat` or `docker compose down`. Workshop challenge progress is in controller memory and disappears on controller restart.
 
-The five steps are **Measure → Hypothesis → Experiment → Observe → Improve**. Start Traffic and capture at least 15 normal requests as your baseline. Write a prediction, inject the 1500 ms Inventory delay, and capture the failure results. Compare those saved results with the baseline and record your observation. Choose a mitigation, rerun the same delay, and compare all three saved result sets. A short timeout with a graceful stock-information fallback should keep product responses useful and responsive.
+The three published ports bind to `127.0.0.1` only; business services and Toxiproxy are not exposed on the host.
 
-The live chart and rolling average are for monitoring; the saved baseline, failure, and post-mitigation windows are the evidence used for comparison. **Reset Challenge** stops traffic, removes the fault, restores default Storefront behavior, clears all measurements and answers, and returns to Step 1.
+For an offline workshop, **build and pull all images while online first**. After preparation, `docker compose up -d --no-build --pull never --wait` starts using local images. No CDN or external authentication is used at runtime. Rebuilding offline additionally requires Maven/npm dependencies cached by Docker; ordinary workshop use does not rebuild.
 
-## Challenge 2 in brief
+## Practical assignments
 
-Challenge 2 asks whether an order summary should fail when Shipping cannot provide an estimate. Capture a normal baseline, predict the effect of losing Shipping, disconnect it, capture the failure, record what changed, then choose an approach and rerun the *same* outage. The Shipping Service stays unavailable during validation; a useful mitigation keeps the order summary working and honestly marks the estimate as unavailable. The interface gives fewer step-by-step instructions than Challenge 1. Each challenge has separate live and captured measurements.
+1. **Network Latency · guided · 8–10 minutes.** Establish normal product-page behavior, test +1500 ms Stock latency, justify a mitigation, and repeat the same fault. The workshop dashboard introduces the process.
+2. **Service Unavailable · intermediate · 10–12 minutes.** Investigate a Shipping outage, its blast radius, and whether the order summary can remain usable.
+3. **Independent Experiment · advanced · 12–15 minutes.** Select steady-state metrics, fault magnitude, blast radius, and an abort condition. Design and interpret your own Stock experiment.
+4. **Mini GameDay · capstone · 15–18 minutes.** Use Grafana to investigate a hidden, reproducible incident; record a diagnosis and plan; reproduce a safe predefined fault; apply a resilience change; and compare the same fault before/after mitigation.
 
-The controller sets up the network fault automatically. Participants do not need to configure infrastructure or use the API. See the [participant guide](docs/participant-guide.md) for the exercise and the [facilitator guide](docs/facilitator-guide.md) for expected results and troubleshooting.
+Each assignment begins with scenario, success criteria, tools, and deliverable. The optional **Chaos Engineering Toolbox** and **Architecture** pages explain the real components. The overview's **Reset Entire Workshop** stops traffic, removes faults, restores default settings, and clears challenge records. Individual challenges have their own reset buttons.
 
-## Challenge 3 in brief
+The four direct links are `http://localhost:8080/#challenge-1` through `#challenge-4`.
 
-Choose steady-state indicators and save a normal product-page baseline. Write a testable hypothesis and choose a stock-service fault: 500, 1000, or 1500 ms added latency, or an unavailable service. Capture the failure, interpret the saved results, then combine timeout, fallback, retry, and circuit-breaker controls as you see fit. Validation always reruns the *same* selected fault. Completion requires a measurable improvement and a short reflection; the controls are not scored as a preselected answer. Reset restores Challenge 3's separate connection and settings without clearing Challenges 1 or 2.
+See the [participant guide](docs/participant-guide.md), [facilitator guide](docs/facilitator-guide.md), [Phase 6 facilitator notes](docs/phase-6-facilitator.md), and [architecture notes](docs/architecture.md).
 
-## Repository map
+## Repository map and checks
 
-- `frontend/` — React workshop UI.
-- `workshop-controller/` — challenge workflows, traffic, measurements, and fault control.
-- `services/` — Storefront, Inventory, and Shipping services.
-- `challenges/` — challenge content and technical thresholds.
-- `docs/` — participant and facilitator guides, architecture, and API contracts.
+- `frontend/` — React assignment UI and simplified live metrics.
+- `workshop-controller/` — workflow state, real request generation, measurement, and fault control.
+- `services/` — Storefront, Inventory, and Shipping.
+- `challenges/` — local challenge definitions and outcome thresholds.
+- `observability/` — Prometheus scrape and Grafana provisioning/dashboard.
+- `scripts/` — Windows one-click start and stop.
+- `docs/` — participant, facilitator, architecture, and API guides.
 
-## Development checks
-
-Run `npm ci` and `npm run build` in `frontend/` for the UI, or build everything with `docker compose build`. Run Java tests from the repository root with `mvn test` (Java 21 and Maven required). The Docker build does not replace a local test run.
+With Java 21/Maven, run `mvn test` at the root. With Node, run `npm ci`, `npm test`, and `npm run build` in `frontend/`. Docker alternatives are `docker compose build` and the local Maven/Node images. `docker compose ps` shows container health; `docker compose logs workshop-controller storefront-service prometheus grafana` helps diagnose startup or monitoring issues.

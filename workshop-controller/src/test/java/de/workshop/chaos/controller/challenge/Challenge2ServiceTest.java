@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -56,6 +57,34 @@ class Challenge2ServiceTest {
     }
 
     @Test
+    void capturesChosenHealthMetricAndBlastRadiusConclusion() {
+        challenge.startTraffic();
+        record(1, 15, 8, true, false);
+        assertThatThrownBy(() -> challenge.captureBaseline(List.of()))
+                .isInstanceOf(ChallengeStateException.class);
+        challenge.captureBaseline(List.of("success", "errors"));
+        assertThat(challenge.view().steadyStateMetrics()).containsExactly("success", "errors");
+        challenge.saveHypothesis("The order summary will fail without Shipping.");
+        challenge.startExperiment();
+        record(2, 15, 6, false, false);
+        challenge.captureExperiment();
+        challenge.saveObservation(new Challenge2Service.Observation(
+                "The whole order summary failed during the outage.",
+                "Success rate dropped to zero.", true, "YES",
+                "Shipping was unreachable and blocked the request.",
+                "Entire order summary"));
+        challenge.applyMitigation("fallback", "A fallback keeps the summary usable.");
+        challenge.startValidation();
+        record(3, 15, 5, true, true);
+        challenge.captureValidation();
+        challenge.saveBlastRadiusConclusion("Yes");
+        assertThat(challenge.view().blastRadiusReduced()).isEqualTo("Yes");
+        challenge.reset();
+        assertThat(challenge.view().steadyStateMetrics()).isEmpty();
+        assertThat(challenge.view().blastRadiusReduced()).isNull();
+    }
+
+    @Test
     void requiresNormalBaselineAndMeaningfulHypothesisBeforeDisconnect() {
         assertThatThrownBy(challenge::captureBaseline).isInstanceOf(ChallengeStateException.class);
         assertThatThrownBy(challenge::startExperiment).isInstanceOf(ChallengeStateException.class);
@@ -90,7 +119,9 @@ class Challenge2ServiceTest {
         assertThat(shippingAvailable.get()).isFalse();
         record(3, 15, 12, true, true);
         challenge.captureValidation();
-        assertThat(challenge.view().step()).isEqualTo(Challenge2Service.Step.COMPLETED);
+        assertThat(challenge.view().step()).isEqualTo(Challenge2Service.Step.CONCLUDE);
+        challenge.saveBlastRadiusConclusion("Yes");
+        assertThat(challenge.view().completed()).isTrue();
         assertThat(challenge.view().validation().fallbackCount()).isEqualTo(15);
         assertThat(challenge.view().validation().shippingAvailable()).isFalse();
         assertThat(challenge.view().validationFeedback()).isEmpty();
@@ -137,6 +168,7 @@ class Challenge2ServiceTest {
         challenge.startValidation();
         record(4, 15, 12, true, true);
         challenge.captureValidation();
+        challenge.saveBlastRadiusConclusion("Yes");
         assertThat(challenge.view().completed()).isTrue();
     }
 

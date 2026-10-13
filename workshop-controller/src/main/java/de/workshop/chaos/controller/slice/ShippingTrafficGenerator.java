@@ -24,6 +24,7 @@ public class ShippingTrafficGenerator {
             .connectTimeout(Duration.ofSeconds(2)).build();
     private final URI orderUri;
     private final ShippingMetricsStore metrics;
+    private final WorkshopMetricsRecorder observability;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicInteger inFlight = new AtomicInteger();
     private final AtomicLong windowId = new AtomicLong();
@@ -31,9 +32,11 @@ public class ShippingTrafficGenerator {
 
     public ShippingTrafficGenerator(
             @Value("${workshop.storefront-base-url}") String storefrontBaseUrl,
-            ShippingMetricsStore metrics, Challenge2Definition definition) {
+            ShippingMetricsStore metrics, Challenge2Definition definition,
+            WorkshopMetricsRecorder observability) {
         this.orderUri = URI.create(storefrontBaseUrl + definition.traffic().endpoint());
         this.metrics = metrics;
+        this.observability = observability;
     }
 
     public void start() {
@@ -82,6 +85,7 @@ public class ShippingTrafficGenerator {
                         if (generation == resetGeneration.get()) {
                             metrics.record(elapsedMs, success, fallback, requestWindow);
                         }
+                        observability.record("challenge-2", elapsedMs, success, fallback);
                         inFlight.decrementAndGet();
                     });
         } catch (RuntimeException exception) {
@@ -89,6 +93,8 @@ public class ShippingTrafficGenerator {
                 metrics.record(Math.round((System.nanoTime() - started) / 1_000_000.0),
                         false, false, requestWindow);
             }
+            observability.record("challenge-2",
+                    Math.round((System.nanoTime() - started) / 1_000_000.0), false, false);
             inFlight.decrementAndGet();
         }
     }

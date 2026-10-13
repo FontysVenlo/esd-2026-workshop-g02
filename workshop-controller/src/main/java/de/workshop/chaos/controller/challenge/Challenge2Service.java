@@ -12,6 +12,8 @@ import de.workshop.chaos.controller.slice.ShippingMetricsStore;
 import de.workshop.chaos.controller.slice.ShippingTrafficGenerator;
 import de.workshop.chaos.controller.slice.ToxiproxyClient;
 import de.workshop.chaos.controller.slice.TrafficGenerator;
+import de.workshop.chaos.controller.slice.GameDayTrafficGenerator;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /** A separate, partially guided run for an unavailable Shipping dependency. */
@@ -19,13 +21,14 @@ import org.springframework.stereotype.Service;
 public class Challenge2Service {
 
     public enum Step {
-        MEASURE, HYPOTHESIS, EXPERIMENT, OBSERVE, IMPROVE, COMPLETED
+        MEASURE, HYPOTHESIS, EXPERIMENT, OBSERVE, IMPROVE, CONCLUDE, COMPLETED
     }
 
     private final Challenge2Definition definition;
     private final ToxiproxyClient toxiproxy;
     private final ShippingTrafficGenerator traffic;
     private final TrafficGenerator inventoryTraffic;
+    private GameDayTrafficGenerator gameDayTraffic;
     private final ShippingMetricsStore metrics;
     private final ShippingSettingsClient storefront;
 
@@ -44,6 +47,8 @@ public class Challenge2Service {
     private String mitigationReason;
     private List<String> validationFeedback = List.of();
     private List<String> conceptFeedback = List.of();
+    private List<String> steadyStateMetrics = List.of();
+    private String blastRadiusReduced;
 
     public Challenge2Service(Challenge2Definition definition, ToxiproxyClient toxiproxy,
             ShippingTrafficGenerator traffic, TrafficGenerator inventoryTraffic,
@@ -73,12 +78,14 @@ public class Challenge2Service {
                 currentWindowSamples, step, experimentActive, validationActive,
                 baseline, hypothesis, experiment, observation,
                 mitigation == null ? null : mitigation.id(), mitigationReason,
-                validation, validationFeedback, conceptFeedback, step == Step.COMPLETED);
+                validation, validationFeedback, conceptFeedback, step == Step.COMPLETED,
+                steadyStateMetrics, blastRadiusReduced);
     }
 
     public synchronized void startTraffic() {
         require(step != Step.COMPLETED, "Reset Challenge 2 before starting new traffic.");
         inventoryTraffic.stop();
+        if (gameDayTraffic != null) gameDayTraffic.stop();
         if (step == Step.MEASURE && baselineWindowId == 0) {
             baselineWindowId = traffic.beginWindow();
             metrics.addEvent("TRAFFIC_STARTED", "Normal order traffic started");
@@ -102,6 +109,19 @@ public class Challenge2Service {
         baseline = captured;
         step = Step.HYPOTHESIS;
         metrics.addEvent("BASELINE_CAPTURED", "Baseline captured");
+    }
+
+    @Autowired
+    void gameDayTraffic(GameDayTrafficGenerator generator) {
+        this.gameDayTraffic = generator;
+    }
+
+    public synchronized void captureBaseline(List<String> indicators) {
+        require(indicators != null && !indicators.isEmpty()
+                && indicators.stream().allMatch(Set.of("latency", "success", "errors")::contains),
+                "Choose at least one health metric before measuring normal behavior.");
+        captureBaseline();
+        steadyStateMetrics = List.copyOf(indicators);
     }
 
     public synchronized void saveHypothesis(String input) {
@@ -147,9 +167,13 @@ public class Challenge2Service {
                         && Set.of("YES", "PARTIALLY", "NO")
                                 .contains(input.hypothesisConfirmed()),
                 "Choose whether your hypothesis was confirmed.");
+        require(input.blastRadius() != null && Set.of("Only Shipping functionality",
+                "Entire order summary", "Entire Storefront",
+                "Unclear from current evidence").contains(input.blastRadius()),
+                "Use your evidence to choose the observed blast radius.");
         observation = new Observation(input.whatChanged().trim(),
                 input.metricsAffected().trim(), input.completeRequestFailed(),
-                input.hypothesisConfirmed(), input.why().trim());
+                input.hypothesisConfirmed(), input.why().trim(), input.blastRadius());
         step = Step.IMPROVE;
     }
 
@@ -193,10 +217,19 @@ public class Challenge2Service {
         conceptFeedback = evaluateConcepts();
         metrics.addEvent("VALIDATION_CAPTURED", "Post-mitigation result captured");
         if (validationFeedback.isEmpty()) {
-            step = Step.COMPLETED;
+            step = Step.CONCLUDE;
             traffic.stop();
-            metrics.addEvent("CHALLENGE_COMPLETED", "Challenge 2 completed");
+            metrics.addEvent("VALIDATION_PASSED", "Challenge 2 validation passed");
         }
+    }
+
+    public synchronized void saveBlastRadiusConclusion(String answer) {
+        require(step == Step.CONCLUDE, "Capture a successful validation first.");
+        require(answer != null && Set.of("Yes", "Partly", "No").contains(answer),
+                "Choose whether the mitigation reduced the blast radius.");
+        blastRadiusReduced = answer;
+        step = Step.COMPLETED;
+        metrics.addEvent("CHALLENGE_COMPLETED", "Challenge 2 completed");
     }
 
     public synchronized void reset() {
@@ -219,6 +252,8 @@ public class Challenge2Service {
         validation = null;
         validationFeedback = List.of();
         conceptFeedback = List.of();
+        steadyStateMetrics = List.of();
+        blastRadiusReduced = null;
     }
 
     private ShippingMeasurement measure(long windowId, boolean shippingAvailable) {
@@ -296,7 +331,13 @@ public class Challenge2Service {
     }
 
     public record Observation(String whatChanged, String metricsAffected,
-            Boolean completeRequestFailed, String hypothesisConfirmed, String why) {
+            Boolean completeRequestFailed, String hypothesisConfirmed, String why,
+            String blastRadius) {
+        public Observation(String whatChanged, String metricsAffected,
+                Boolean completeRequestFailed, String hypothesisConfirmed, String why) {
+            this(whatChanged, metricsAffected, completeRequestFailed,
+                    hypothesisConfirmed, why, "Entire order summary");
+        }
     }
 
     public record ShippingMeasurement(long averageLatencyMs, long p95LatencyMs,
@@ -313,6 +354,7 @@ public class Challenge2Service {
             ShippingMeasurement experiment, Observation observation,
             String mitigationId, String mitigationReason, ShippingMeasurement validation,
             List<String> validationFeedback, List<String> conceptFeedback,
-            boolean completed) {
+            boolean completed, List<String> steadyStateMetrics,
+            String blastRadiusReduced) {
     }
 }

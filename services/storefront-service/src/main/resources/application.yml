@@ -6,9 +6,11 @@ storefront:
   inventory-base-url: ${INVENTORY_BASE_URL:http://localhost:8666}
   shipping-base-url: ${SHIPPING_BASE_URL:http://localhost:8667}
   experiment-inventory-base-url: ${EXPERIMENT_INVENTORY_BASE_URL:http://localhost:8668}
+  gameday-inventory-base-url: ${GAMEDAY_INVENTORY_BASE_URL:http://localhost:8669}
+  gameday-shipping-base-url: ${GAMEDAY_SHIPPING_BASE_URL:http://localhost:8670}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus

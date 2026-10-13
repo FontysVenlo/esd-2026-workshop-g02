@@ -9,6 +9,8 @@ import de.workshop.chaos.controller.slice.MetricsStore.MeasurementSummary;
 import de.workshop.chaos.controller.slice.ShippingTrafficGenerator;
 import de.workshop.chaos.controller.slice.ToxiproxyClient;
 import de.workshop.chaos.controller.slice.TrafficGenerator;
+import de.workshop.chaos.controller.slice.GameDayTrafficGenerator;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -33,12 +35,14 @@ public class Challenge3Service {
             Observation observation, Settings settings, String mitigationReason,
             Measurement validation, List<String> validationFeedback,
             Reflection reflection, boolean experimentActive, boolean validationActive,
-            boolean completed) {}
+            boolean completed, String blastRadius, String abortCondition,
+            String expectedEvidence) {}
 
     private final Challenge3Definition definition;
     private final ToxiproxyClient toxiproxy;
     private final ExperimentTrafficGenerator traffic;
     private final TrafficGenerator challenge1Traffic;
+    private GameDayTrafficGenerator gameDayTraffic;
     private final ShippingTrafficGenerator challenge2Traffic;
     private final ExperimentMetricsStore metrics;
     private final ExperimentSettingsClient storefront;
@@ -57,6 +61,9 @@ public class Challenge3Service {
     private Observation observation;
     private Settings settings = Settings.defaults();
     private String mitigationReason;
+    private String blastRadius;
+    private String abortCondition;
+    private String expectedEvidence;
     private Measurement validation;
     private List<String> validationFeedback = List.of();
     private Reflection reflection;
@@ -88,18 +95,25 @@ public class Challenge3Service {
                 steadyStateIndicators, baseline, hypothesis,
                 selectedFault == null ? null : selectedFault.id(), failure, observation,
                 settings, mitigationReason, validation, validationFeedback, reflection,
-                experimentActive, validationActive, step == Step.COMPLETED);
+                experimentActive, validationActive, step == Step.COMPLETED,
+                blastRadius, abortCondition, expectedEvidence);
     }
 
     public synchronized void startTraffic() {
         require(step != Step.COMPLETED, "Reset this challenge before starting a new run.");
         challenge1Traffic.stop();
         challenge2Traffic.stop();
+        if (gameDayTraffic != null) gameDayTraffic.stop();
         if (step == Step.MEASURE && baselineWindow == 0) {
             baselineWindow = traffic.beginWindow();
         }
         traffic.start();
         metrics.addEvent("TRAFFIC_STARTED", "Product requests started");
+    }
+
+    @Autowired
+    void gameDayTraffic(GameDayTrafficGenerator generator) {
+        this.gameDayTraffic = generator;
     }
 
     public synchronized void stopTraffic() { traffic.stop(); }
@@ -128,6 +142,19 @@ public class Challenge3Service {
                 .findFirst().orElseThrow(() -> new ChallengeStateException("Choose a fault."));
         hypothesis = text.trim();
         step = Step.EXPERIMENT;
+    }
+
+    public synchronized void saveExperimentPlan(String text, String faultId,
+            String radius, String abort) {
+        require(radius != null && Set.of("Stock information only", "Entire product page",
+                "Entire Storefront", "Unclear from current evidence").contains(radius),
+                "Choose the expected blast radius before the experiment.");
+        require(abort != null && Set.of("Error rate above 50%", "Success rate below 50%",
+                "Latency above 3000 ms", "Service completely unusable").contains(abort),
+                "Choose an abort condition before the experiment.");
+        saveHypothesis(text, faultId);
+        blastRadius = radius;
+        abortCondition = abort;
     }
 
     public synchronized void startExperiment() {
@@ -188,6 +215,12 @@ public class Challenge3Service {
         metrics.addEvent("MITIGATION_APPLIED", "Resilience settings changed");
     }
 
+    public synchronized void applySettings(Settings chosen, String reason, String evidence) {
+        require(meaningful(evidence), "State what evidence would show improvement.");
+        applySettings(chosen, reason);
+        expectedEvidence = evidence.trim();
+    }
+
     public synchronized void startValidation() {
         require(step == Step.IMPROVE && mitigationReason != null && !validationActive,
                 "Apply your resilience settings first.");
@@ -241,6 +274,7 @@ public class Challenge3Service {
         settings = Settings.defaults();
         validationFeedback = List.of();
         reflection = null;
+        blastRadius = abortCondition = expectedEvidence = null;
     }
 
     private List<String> evaluate(Measurement result) {

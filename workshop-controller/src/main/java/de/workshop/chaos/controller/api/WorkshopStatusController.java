@@ -16,8 +16,8 @@ public class WorkshopStatusController {
     @GetMapping("/status")
     public Map<String, Object> status() {
         return Map.of(
-                "phase", "phase-5",
-                "message", "Challenges 1, 2, and 3 are available.",
+                "phase", "phase-6",
+                "message", "Four local workshop challenges are available.",
                 "trafficImplemented", true
         );
     }

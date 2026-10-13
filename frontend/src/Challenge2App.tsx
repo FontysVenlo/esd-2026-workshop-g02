@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import LiveMetrics from "./LiveMetrics";
 import ShippingSummaryTable from "./ShippingSummaryTable";
+import AssignmentCard from "./AssignmentCard";
 import type { ChallengeStep, ShippingSnapshot } from "./types";
 
 const steps: { id: ChallengeStep; label: string }[] = [
@@ -15,7 +16,7 @@ type ActionPath =
   | "/traffic/start" | "/traffic/stop" | "/baseline/capture"
   | "/hypothesis" | "/experiment/start" | "/experiment/capture"
   | "/observation" | "/mitigation/apply" | "/validation/start"
-  | "/validation/capture" | "/reset";
+  | "/validation/capture" | "/reset" | "/reflection";
 
 async function readSnapshot(response: Response): Promise<ShippingSnapshot> {
   if (!response.ok) {
@@ -38,6 +39,9 @@ export default function Challenge2App({ onBack }: { onBack: () => void }) {
   const [why, setWhy] = useState("");
   const [selectedMitigation, setSelectedMitigation] = useState("");
   const [mitigationReason, setMitigationReason] = useState("");
+  const [baselineSignals, setBaselineSignals] = useState<string[]>([]);
+  const [blastRadius, setBlastRadius] = useState("");
+  const [blastRadiusReduced, setBlastRadiusReduced] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -59,6 +63,11 @@ export default function Challenge2App({ onBack }: { onBack: () => void }) {
   }, []);
 
   const saved = snapshot?.challenge;
+  useEffect(() => {
+    if (saved?.steadyStateMetrics?.length) setBaselineSignals(saved.steadyStateMetrics);
+    if (saved?.observation?.blastRadius) setBlastRadius(saved.observation.blastRadius);
+    if (saved?.blastRadiusReduced) setBlastRadiusReduced(saved.blastRadiusReduced);
+  }, [saved?.steadyStateMetrics, saved?.observation?.blastRadius, saved?.blastRadiusReduced]);
   useEffect(() => { if (saved?.hypothesis) setHypothesis(saved.hypothesis); }, [saved?.hypothesis]);
   useEffect(() => {
     if (saved?.observation) {
@@ -100,7 +109,7 @@ export default function Challenge2App({ onBack }: { onBack: () => void }) {
   }
 
   const step = saved?.step ?? "MEASURE";
-  const currentIndex = step === "COMPLETED" ? steps.length
+  const currentIndex = step === "COMPLETED" || step === "CONCLUDE" ? steps.length
     : steps.findIndex((item) => item.id === step);
   const enough = !!saved && saved.currentWindowSamples >= saved.minimumSamples;
   const selectedLabel = saved?.mitigationOptions.find(
@@ -131,6 +140,8 @@ export default function Challenge2App({ onBack }: { onBack: () => void }) {
         </div>
       </header>
 
+      <AssignmentCard challenge="Challenge 2" scenario="The delivery-estimate service may be unavailable while customers request an order summary." assignment="Determine whether the order summary can remain usable during a Shipping outage" criteria="Choose health metrics, predict and measure the outage impact, identify its blast radius, justify a mitigation, and repeat the outage to measure whether the blast radius shrank." tools="Workshop dashboard, saved result windows, controlled Shipping outage; optional toolbox and architecture pages." deliverable="An experiment record with baseline, hypothesis, outage evidence, blast-radius assessment, mitigation rationale, validation, and conclusion." />
+
       <ol className="progress" aria-label="Challenge progress">
         {steps.map((item, index) => <li key={item.id}
           className={index < currentIndex ? "done" : index === currentIndex ? "active" : "locked"}
@@ -147,15 +158,16 @@ export default function Challenge2App({ onBack }: { onBack: () => void }) {
       </div>
       {error && <p className="error" role="alert">{error}</p>}
 
-      {saved && !saved.completed && <section className="work-card" aria-labelledby="challenge-2-step">
+      {saved && !saved.completed && step !== "CONCLUDE" && <section className="work-card" aria-labelledby="challenge-2-step">
         <p className="eyebrow">STEP {currentIndex + 1} OF 5 · CURRENT STEP</p>
         <h2 id="challenge-2-step">{steps[currentIndex]?.label}</h2>
         <details className="hints"><summary>Need a hint?</summary><ul>{saved.hints.map((hint) => <li key={hint}>{hint}</li>)}</ul></details>
 
         {step === "MEASURE" && <div className="step-content">
           <p>Measure the normal order summary before changing the system.</p>
+          <fieldset className="indicator-options"><legend>Which metrics indicate a healthy order summary?</legend>{[["latency", "Response latency"], ["success", "Success rate"], ["errors", "Error rate"]].map(([id, label]) => <label key={id}><input type="checkbox" checked={baselineSignals.includes(id)} onChange={event => setBaselineSignals(event.target.checked ? [...baselineSignals, id] : baselineSignals.filter(value => value !== id))} /> {label}</label>)}</fieldset>
           <SampleProgress count={saved.currentWindowSamples} minimum={saved.minimumSamples} />
-          <button disabled={busy || !snapshot?.trafficRunning || !snapshot.shippingAvailable || !enough} onClick={() => void act("/baseline/capture")}>Capture Baseline</button>
+          <button disabled={busy || !snapshot?.trafficRunning || !snapshot.shippingAvailable || !enough || !baselineSignals.length} onClick={() => void act("/baseline/capture", { indicators: baselineSignals })}>Capture Baseline</button>
         </div>}
 
         {step === "HYPOTHESIS" && <form className="step-content" onSubmit={(event) => {
@@ -172,16 +184,17 @@ export default function Challenge2App({ onBack }: { onBack: () => void }) {
 
         {step === "OBSERVE" && <form className="step-content" onSubmit={(event) => {
           event.preventDefault(); void act("/observation", { whatChanged, metricsAffected,
-            completeRequestFailed: completeRequestFailed === "YES", hypothesisConfirmed, why });
+            completeRequestFailed: completeRequestFailed === "YES", hypothesisConfirmed, why, blastRadius });
         }}>
           <p>Compare the two saved result sets. Shipping remains disconnected.</p>
           <ShippingSummaryTable baseline={saved.baseline} experiment={saved.experiment} validation={null} />
           <label>What changed?<textarea value={whatChanged} onChange={(event) => setWhatChanged(event.target.value)} minLength={10} required /></label>
           <label>Which metrics were affected?<textarea value={metricsAffected} onChange={(event) => setMetricsAffected(event.target.value)} minLength={10} required /></label>
           <label>Did the complete order-summary request fail?<select value={completeRequestFailed} onChange={(event) => setCompleteRequestFailed(event.target.value)} required><option value="">Choose an answer</option><option value="YES">Yes</option><option value="NO">No</option></select></label>
+          <p>Blast radius means how much of the system or how many users are affected. What scope did this outage reach?</p><label>Observed blast radius<select value={blastRadius} onChange={event => setBlastRadius(event.target.value)} required><option value="">Choose from your evidence</option><option>Only Shipping functionality</option><option>Entire order summary</option><option>Entire Storefront</option><option>Unclear from current evidence</option></select></label>
           <label>Was your hypothesis confirmed?<select value={hypothesisConfirmed} onChange={(event) => setHypothesisConfirmed(event.target.value)} required><option value="">Choose an answer</option><option value="YES">Yes</option><option value="PARTIALLY">Partially</option><option value="NO">No</option></select></label>
           <label>Why?<textarea value={why} onChange={(event) => setWhy(event.target.value)} minLength={10} required /></label>
-          <button disabled={busy || whatChanged.trim().length < 10 || metricsAffected.trim().length < 10 || !completeRequestFailed || !hypothesisConfirmed || why.trim().length < 10}>Save Observation</button>
+          <button disabled={busy || whatChanged.trim().length < 10 || metricsAffected.trim().length < 10 || !completeRequestFailed || !blastRadius || !hypothesisConfirmed || why.trim().length < 10}>Save Observation</button>
         </form>}
 
         {step === "IMPROVE" && <div className="step-content">
@@ -204,12 +217,16 @@ export default function Challenge2App({ onBack }: { onBack: () => void }) {
         </div>}
       </section>}
 
+      {saved?.step === "CONCLUDE" && <section className="work-card step-content"><p className="eyebrow">VALIDATION PASSED · CONCLUSION</p><h2>Did the blast radius shrink?</h2><ShippingSummaryTable baseline={saved.baseline} experiment={saved.experiment} validation={saved.validation} /><label>Did the mitigation reduce the blast radius?<select value={blastRadiusReduced} onChange={event => setBlastRadiusReduced(event.target.value)}><option value="">Interpret the evidence</option><option>Yes</option><option>Partly</option><option>No</option></select></label><button disabled={busy || !blastRadiusReduced} onClick={() => void act("/reflection", { answer: blastRadiusReduced })}>Complete Experiment Record</button></section>}
+
       {saved?.completed && <section className="work-card completion" aria-labelledby="challenge-2-completion">
         <p className="eyebrow">CHALLENGE COMPLETED</p>
         <h2 id="challenge-2-completion">The order summary stayed usable during the Shipping outage.</h2>
         <p>Shipping remained unavailable during both failure runs. Compare the saved results and note where the user-facing response continued without an estimate.</p>
         <ShippingSummaryTable baseline={saved.baseline} experiment={saved.experiment} validation={saved.validation} />
         <p><strong>Approach applied:</strong> {selectedLabel ?? "—"}</p>
+        <p><strong>Experiment record:</strong> Health signals: {saved.steadyStateMetrics.join(", ")}. Hypothesis: {saved.hypothesis}. Observed blast radius: {saved.observation?.blastRadius}. Mitigation reason: {saved.mitigationReason}. Did it reduce the blast radius? {saved.blastRadiusReduced || "Record your conclusion below"}.</p>
+        <p><strong>In the real world:</strong> Dependency outages test graceful degradation, timeouts, circuit breakers, and fallback behavior. A team would record which user journeys remain usable.</p>
         {saved.conceptFeedback.length > 0 && <div className="concept-feedback"><strong>Reflection prompts</strong><ul>{saved.conceptFeedback.map((item) => <li key={item}>{item}</li>)}</ul></div>}
       </section>}
 

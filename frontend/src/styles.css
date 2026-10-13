@@ -47,7 +47,23 @@ button.fault-button { border-color: #f4ae7a; background: #f2b886; color: #352213
 .topline { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .header-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
 .text-button { padding: .45rem .65rem; border-color: #547084; background: transparent; color: #bfd2dd; }
-.overview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 2rem; }
+.overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 2rem; }
+.assignment-card { margin: 1.3rem 0 2rem; padding: 1.6rem; border: 2px solid #78d9c1; border-radius: 1rem; background: #183039; }
+.assignment-card h2 { margin: .3rem 0 1rem; font-size: clamp(1.4rem, 3vw, 2rem); }
+.assignment-card p { max-width: 85ch; line-height: 1.55; }
+.assignment-card strong { color: #abefd9; }
+.button-link { display: inline-flex; align-items: center; padding: .68rem .95rem; border: 1px solid #76dcc1; border-radius: .55rem; background: #7ce6c9; color: #0b2426; font-size: .88rem; font-weight: 700; text-decoration: none; }
+.button-link:focus-visible, .task-board button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.task-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .6rem; margin: 1.5rem 0; }
+.task-board button { padding: .75rem; border: 1px solid #496274; border-radius: .6rem; color: #e9f0f5; background: #172430; text-align: left; font-weight: 700; }
+.task-board button.active { border: 2px solid #78d9c1; background: #1b373a; }
+.task-board button.done { border-color: #4d9b84; }
+.task-board button.locked { color: #aabdc9; }
+.task-board small { display: block; margin-top: .2rem; font-weight: 400; }
+.task-panel { scroll-margin-top: 1rem; }
+.task-panel > p { max-width: 80ch; line-height: 1.55; }
+.architecture-flow { width: fit-content; margin: 1rem auto; padding: 1.5rem; border: 1px solid #496274; border-radius: .8rem; text-align: center; line-height: 1.8; font-size: 1.15rem; font-weight: 700; }
+.architecture-branches { display: flex; gap: 4rem; margin-top: .4rem; }
 .challenge-card { display: flex; flex-direction: column; align-items: flex-start; gap: .8rem; min-height: 250px; padding: 1.5rem; border: 1px solid #35566a; border-radius: 1rem; background: #172430; }
 .challenge-card h2, .challenge-card p { margin: 0; }
 .challenge-card h2 { font-size: 1.5rem; }
@@ -132,6 +148,7 @@ button.fault-button { border-color: #f4ae7a; background: #f2b886; color: #352213
   .chart-frame, .empty-chart { height: 280px; min-height: 280px; }
   .progress { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .overview-grid { grid-template-columns: 1fr; }
+  .task-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .topline { align-items: flex-start; }
   .section-heading { align-items: flex-start; flex-direction: column; }
   .toolbar span { flex-basis: 100%; }

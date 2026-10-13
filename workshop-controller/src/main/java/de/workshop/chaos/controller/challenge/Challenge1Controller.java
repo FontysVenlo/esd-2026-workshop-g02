@@ -40,8 +40,8 @@ public class Challenge1Controller {
     }
 
     @PostMapping("/baseline/capture")
-    public SliceService.SliceSnapshot captureBaseline() {
-        challenge.captureBaseline();
+    public SliceService.SliceSnapshot captureBaseline(@RequestBody BaselineSelection input) {
+        challenge.captureBaseline(input.metrics(), input.dependency());
         return slice.snapshot();
     }
 
@@ -71,7 +71,7 @@ public class Challenge1Controller {
 
     @PostMapping("/mitigation/apply")
     public SliceService.SliceSnapshot mitigation(@RequestBody MitigationSelection input) {
-        challenge.applyMitigation(input.optionId());
+        challenge.applyMitigation(input.optionId(), input.reason(), input.expectedEvidence());
         return slice.snapshot();
     }
 
@@ -84,6 +84,12 @@ public class Challenge1Controller {
     @PostMapping("/validation/capture")
     public SliceService.SliceSnapshot captureValidation() {
         challenge.captureValidation();
+        return slice.snapshot();
+    }
+
+    @PostMapping("/conclusion")
+    public SliceService.SliceSnapshot conclusion(@RequestBody ConclusionInput input) {
+        challenge.saveConclusion(input.text());
         return slice.snapshot();
     }
 
@@ -105,7 +111,13 @@ public class Challenge1Controller {
                 .body(new ErrorResponse(exception.getMessage()));
     }
 
-    public record MitigationSelection(String optionId) {
+    public record BaselineSelection(java.util.List<String> metrics, String dependency) {
+    }
+
+    public record MitigationSelection(String optionId, String reason, String expectedEvidence) {
+    }
+
+    public record ConclusionInput(String text) {
     }
 
     public record ErrorResponse(String message) {

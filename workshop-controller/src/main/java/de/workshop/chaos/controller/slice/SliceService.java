@@ -8,6 +8,8 @@ import de.workshop.chaos.controller.challenge.Challenge1Service;
 import de.workshop.chaos.controller.challenge.Challenge2Definition;
 import de.workshop.chaos.controller.challenge.Challenge3Service;
 import de.workshop.chaos.controller.challenge.ExperimentSettingsClient;
+import de.workshop.chaos.controller.challenge.Challenge4Service;
+import de.workshop.chaos.controller.challenge.GameDaySettingsClient;
 import de.workshop.chaos.controller.challenge.ShippingSettingsClient;
 import de.workshop.chaos.controller.challenge.StorefrontSettingsClient;
 import org.slf4j.Logger;
@@ -32,12 +34,14 @@ public class SliceService {
     private final Challenge2Definition shippingDefinition;
     private final ShippingSettingsClient shippingSettings;
     private final ExperimentSettingsClient experimentSettings;
+    private final GameDaySettingsClient gameDaySettings;
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
     public SliceService(ToxiproxyClient toxiproxy, TrafficGenerator traffic, MetricsStore metrics,
             Challenge1Service challenge, StorefrontSettingsClient storefront,
             Challenge1Definition definition, Challenge2Definition shippingDefinition,
-            ShippingSettingsClient shippingSettings, ExperimentSettingsClient experimentSettings) {
+            ShippingSettingsClient shippingSettings, ExperimentSettingsClient experimentSettings,
+            GameDaySettingsClient gameDaySettings) {
         this.toxiproxy = toxiproxy;
         this.traffic = traffic;
         this.metrics = metrics;
@@ -47,6 +51,7 @@ public class SliceService {
         this.shippingDefinition = shippingDefinition;
         this.shippingSettings = shippingSettings;
         this.experimentSettings = experimentSettings;
+        this.gameDaySettings = gameDaySettings;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -57,6 +62,7 @@ public class SliceService {
                 storefront.apply(definition.defaultResilience());
                 shippingSettings.apply(shippingDefinition.defaultResilience());
                 experimentSettings.apply(Challenge3Service.Settings.defaults());
+                gameDaySettings.apply(Challenge4Service.Settings.defaults());
                 log.info("Inventory and Shipping proxies are ready");
                 return;
             } catch (IllegalStateException exception) {

@@ -1,4 +1,4 @@
-# Architecture (Phase 5)
+# Architecture (Phase 6)
 
 This is a local, single-participant system. The React UI is served at `http://localhost:8080` and forwards `/api/*` to the Workshop Controller. No business-service or Toxiproxy port is published to the host.
 
@@ -22,3 +22,21 @@ Challenge 2 has its own state machine with the same five conceptual steps but le
 Challenge 3 captures baseline, fault, and validation windows using the participant's selected indicators and fault. It stores the original fault choice and verifies the real proxy state at the beginning and end of each run. Failure capture restores the connection; validation reapplies the exact same fault. Participants may combine bounded timeout, one retry, fallback, and a simple circuit breaker (opens for five seconds after three failures). Outcome thresholds come from `challenges/challenge-3.json`. Reset restores only Challenge 3's dedicated proxy and settings so it does not disrupt another challenge.
 
 Restarting the controller loses in-memory progress. The UI is a local single-participant exercise, not a multi-user or persistent platform.
+
+## GameDay and observability
+
+Challenge 4 uses a separate Storefront summary path calling **both** Inventory and Shipping through dedicated Toxiproxy connections on internal ports 8669 and 8670. Neither connection is bypassed. The controller creates both connections automatically on startup. The hidden incident scenario is selected deterministically by `GAMEDAY_SCENARIO` and remains stable until configuration changes. Only the controller knows the initial fault; participants use dependency-level monitoring to diagnose it. A predefined selected fault is saved in the experiment plan and verified against actual proxy state before capture and again for validation. Reset restores both GameDay connections and settings, then clears the in-memory record.
+
+```text
+Browser → Workshop UI → Workshop Controller → Storefront
+                                            ↙            ↘
+                                Toxiproxy 8669        Toxiproxy 8670
+                                      ↓                      ↓
+                                  Inventory               Shipping
+
+Controller and Storefront metrics → Prometheus → Grafana
+```
+
+Micrometer records completed user-facing request count, duration histogram, outcome, and fallback count for each challenge in the controller. Storefront records GameDay dependency call count, duration histogram, and outcome by dependency. Both expose `/actuator/prometheus` only inside the Compose network. Prometheus scrapes them every five seconds. Grafana is provisioned from repository files with a local Prometheus data source and a seven-panel dashboard. The workshop's own saved windows are separate from the 90-second live chart and from Prometheus's time-series views. Prometheus and Grafana are published to the host on ports 9090 and 3000, respectively; no cloud endpoint is configured.
+
+All four challenge workflows and answers remain in controller memory. Micrometer/Prometheus counters accumulate for the lifetime of their containers even when challenge measurement windows are reset; reset clears workshop evidence but does not erase historical monitoring time series. This is expected and should be explained when reusing a laptop.

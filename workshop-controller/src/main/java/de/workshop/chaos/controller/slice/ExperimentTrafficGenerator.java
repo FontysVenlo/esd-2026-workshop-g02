@@ -19,15 +19,18 @@ public class ExperimentTrafficGenerator {
             .connectTimeout(Duration.ofSeconds(2)).build();
     private final URI uri;
     private final ExperimentMetricsStore metrics;
+    private final WorkshopMetricsRecorder observability;
     private final AtomicBoolean running = new AtomicBoolean();
     private final AtomicInteger inFlight = new AtomicInteger();
     private final AtomicLong window = new AtomicLong();
     private final AtomicLong generation = new AtomicLong();
 
     public ExperimentTrafficGenerator(@Value("${workshop.storefront-base-url}") String base,
-            ExperimentMetricsStore metrics, Challenge3Definition definition) {
+            ExperimentMetricsStore metrics, Challenge3Definition definition,
+            WorkshopMetricsRecorder observability) {
         uri = URI.create(base + definition.traffic().endpoint());
         this.metrics = metrics;
+        this.observability = observability;
     }
 
     public void start() { running.set(true); }
@@ -62,6 +65,7 @@ public class ExperimentTrafficGenerator {
                         if (requestGeneration == generation.get()) {
                             metrics.record(elapsed, success, fallback, requestWindow);
                         }
+                        observability.record("challenge-3", elapsed, success, fallback);
                         inFlight.decrementAndGet();
                     });
         } catch (RuntimeException exception) {
@@ -69,6 +73,8 @@ public class ExperimentTrafficGenerator {
                 metrics.record(Math.round((System.nanoTime() - started) / 1_000_000.0),
                         false, false, requestWindow);
             }
+            observability.record("challenge-3",
+                    Math.round((System.nanoTime() - started) / 1_000_000.0), false, false);
             inFlight.decrementAndGet();
         }
     }

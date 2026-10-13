@@ -2,15 +2,21 @@ import { useEffect, useState } from "react";
 import LiveMetrics from "./LiveMetrics";
 import Challenge2App from "./Challenge2App";
 import Challenge3App from "./Challenge3App";
+import Challenge4App from "./Challenge4App";
+import { Architecture, Toolbox } from "./WorkshopGuide";
+import AssignmentCard from "./AssignmentCard";
 import SummaryTable from "./SummaryTable";
-import type { ChallengeStep, ExperimentSnapshot, ShippingSnapshot, SliceSnapshot } from "./types";
+import type { ChallengeStep, ExperimentSnapshot, GameDaySnapshot, ShippingSnapshot, SliceSnapshot } from "./types";
 
-type WorkshopView = "overview" | "challenge-1" | "challenge-2" | "challenge-3";
+type WorkshopView = "overview" | "challenge-1" | "challenge-2" | "challenge-3" | "challenge-4" | "toolbox" | "architecture";
 
 function viewFromHash(): WorkshopView {
   if (window.location.hash === "#challenge-1") return "challenge-1";
   if (window.location.hash === "#challenge-2") return "challenge-2";
   if (window.location.hash === "#challenge-3") return "challenge-3";
+  if (window.location.hash === "#challenge-4") return "challenge-4";
+  if (window.location.hash === "#toolbox") return "toolbox";
+  if (window.location.hash === "#architecture") return "architecture";
   return "overview";
 }
 
@@ -26,7 +32,7 @@ type ActionPath =
   | "/traffic/start" | "/traffic/stop" | "/baseline/capture"
   | "/hypothesis" | "/experiment/start" | "/experiment/capture"
   | "/observation" | "/mitigation/apply" | "/validation/start"
-  | "/validation/capture" | "/reset";
+  | "/validation/capture" | "/conclusion" | "/reset";
 
 async function readSnapshot(response: Response): Promise<SliceSnapshot> {
   if (!response.ok) {
@@ -48,6 +54,8 @@ export default function App() {
   const [snapshot, setSnapshot] = useState<SliceSnapshot | null>(null);
   const [shippingOverview, setShippingOverview] = useState<ShippingSnapshot | null>(null);
   const [experimentOverview, setExperimentOverview] = useState<ExperimentSnapshot | null>(null);
+  const [gameDayOverview, setGameDayOverview] = useState<GameDaySnapshot | null>(null);
+  const [globalResetError, setGlobalResetError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [busy, setBusy] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -59,6 +67,11 @@ export default function App() {
   const [hypothesisConfirmed, setHypothesisConfirmed] = useState("");
   const [why, setWhy] = useState("");
   const [selectedMitigation, setSelectedMitigation] = useState("");
+  const [testedDependency, setTestedDependency] = useState("");
+  const [steadyStateMetrics, setSteadyStateMetrics] = useState<string[]>([]);
+  const [mitigationReason, setMitigationReason] = useState("");
+  const [expectedEvidence, setExpectedEvidence] = useState("");
+  const [conclusion, setConclusion] = useState("");
 
   useEffect(() => {
     const syncView = () => setView(viewFromHash());
@@ -74,6 +87,9 @@ export default function App() {
     fetch("/api/challenge-3").then(async (response) => {
       if (response.ok) setExperimentOverview(await response.json() as ExperimentSnapshot);
     }).catch(() => setExperimentOverview(null));
+    fetch("/api/challenge-4").then(async (response) => {
+      if (response.ok) setGameDayOverview(await response.json() as GameDaySnapshot);
+    }).catch(() => setGameDayOverview(null));
   }, [view]);
 
   function navigate(next: WorkshopView): void {
@@ -124,6 +140,15 @@ export default function App() {
       setSelectedMitigation(snapshot.challenge.mitigationId);
     }
   }, [snapshot?.challenge.mitigationId]);
+  useEffect(() => {
+    if (snapshot?.challenge.testedDependency) setTestedDependency(snapshot.challenge.testedDependency);
+    if (snapshot?.challenge.steadyStateMetrics?.length) setSteadyStateMetrics(snapshot.challenge.steadyStateMetrics);
+    if (snapshot?.challenge.mitigationReason) setMitigationReason(snapshot.challenge.mitigationReason);
+    if (snapshot?.challenge.expectedEvidence) setExpectedEvidence(snapshot.challenge.expectedEvidence);
+    if (snapshot?.challenge.conclusion) setConclusion(snapshot.challenge.conclusion);
+  }, [snapshot?.challenge.testedDependency, snapshot?.challenge.steadyStateMetrics,
+      snapshot?.challenge.mitigationReason, snapshot?.challenge.expectedEvidence,
+      snapshot?.challenge.conclusion]);
 
   async function act(path: ActionPath, body?: object): Promise<void> {
     setBusy(true);
@@ -140,6 +165,8 @@ export default function App() {
         setExpectedBehavior(""); setReason(""); setWhatChanged("");
         setMetricChangedMost(""); setHypothesisConfirmed(""); setWhy("");
         setSelectedMitigation("");
+        setTestedDependency(""); setSteadyStateMetrics([]); setMitigationReason(""); setExpectedEvidence("");
+        setConclusion("");
       }
     } catch (reason: unknown) {
       setActionError(reason instanceof Error ? reason.message : "The action failed");
@@ -150,7 +177,7 @@ export default function App() {
 
   const challenge = snapshot?.challenge;
   const step = challenge?.step ?? "MEASURE";
-  const currentIndex = step === "COMPLETED" ? progressSteps.length
+  const currentIndex = step === "COMPLETED" || step === "CONCLUDE" ? progressSteps.length
     : progressSteps.findIndex((item) => item.id === step);
   const enough = !!challenge && challenge.currentWindowSamples >= challenge.minimumSamples;
   const selectedLabel = challenge?.mitigationOptions.find(
@@ -160,11 +187,12 @@ export default function App() {
 
   if (view === "overview") {
     return <main className="shell">
-      <header className="hero"><p className="eyebrow">CHAOS ENGINEERING WORKSHOP</p><h1>Choose a challenge</h1><p className="intro">Measure a normal system, test a controlled failure, and improve what breaks. Each challenge is local and can be opened directly.</p></header>
+      <header className="hero"><p className="eyebrow">CHAOS ENGINEERING WORKSHOP</p><h1>Choose an engineering assignment</h1><p className="intro">Define healthy behavior, test a controlled failure, interpret evidence, and validate an improvement. Plan about 45–55 minutes for all four assignments.</p><div className="header-actions"><button className="text-button" onClick={() => navigate("toolbox")}>Chaos Engineering Toolbox</button><button className="text-button" onClick={() => navigate("architecture")}>Architecture</button><button className="text-button" onClick={() => { if (window.confirm("Reset the entire workshop? All traffic, faults, settings, answers, and saved measurements will be cleared.")) { fetch("/api/workshop/reset", { method: "POST" }).then(async response => { if (!response.ok) throw new Error("The local workshop could not reset. Check Docker Desktop and try again."); window.location.reload(); }).catch(cause => setGlobalResetError(cause instanceof Error ? cause.message : "Reset failed")); } }}>Reset Entire Workshop</button></div>{globalResetError && <p className="error" role="alert">{globalResetError}</p>}</header>
       <div className="overview-grid">
         <section className="challenge-card"><p className="eyebrow">CHALLENGE 1 · GUIDED</p><h2>Network Latency</h2><p>Investigate a slow Inventory Service.</p><span className="challenge-state">{snapshot?.challenge.completed ? "Completed" : "Available"}</span><button onClick={() => navigate("challenge-1")}>Open Challenge 1</button></section>
         <section className="challenge-card"><p className="eyebrow">CHALLENGE 2 · INTERMEDIATE</p><h2>Service Unavailable</h2><p>Investigate an unavailable Shipping Service.</p><span className="challenge-state">{shippingOverview?.challenge.completed ? "Completed" : "Available"}</span><button onClick={() => navigate("challenge-2")}>Open Challenge 2</button></section>
         <section className="challenge-card"><p className="eyebrow">CHALLENGE 3 · ADVANCED</p><h2>Independent Experiment</h2><p>Choose a stock-service fault and test your own resilience settings.</p><span className="challenge-state">{experimentOverview?.challenge.completed ? "Completed" : "Available"}</span><button onClick={() => navigate("challenge-3")}>Open Challenge 3</button></section>
+        <section className="challenge-card"><p className="eyebrow">CHALLENGE 4 · CAPSTONE</p><h2>Mini GameDay</h2><p>Investigate an unknown incident using Grafana, then design and validate a controlled response.</p><span className="challenge-state">{gameDayOverview?.challenge.completed ? "Completed" : "Available"}</span><button onClick={() => navigate("challenge-4")}>Open Challenge 4</button></section>
       </div>
     </main>;
   }
@@ -175,6 +203,9 @@ export default function App() {
   if (view === "challenge-3") {
     return <Challenge3App onBack={() => navigate("overview")} />;
   }
+  if (view === "challenge-4") return <Challenge4App onBack={() => navigate("overview")} />;
+  if (view === "toolbox") return <Toolbox onBack={() => navigate("overview")} />;
+  if (view === "architecture") return <Architecture onBack={() => navigate("overview")} />;
 
   return (
     <main className="shell">
@@ -197,6 +228,8 @@ export default function App() {
         </div>
       </header>
 
+      <AssignmentCard challenge="Challenge 1" scenario="Customers report slow product pages when stock information is retrieved." assignment="Determine the impact of 1500 ms extra stock latency" criteria="Measure normal behavior, predict the impact, inject the fault, compare evidence, justify a mitigation, and rerun the identical fault to show whether resilience improved." tools="Workshop dashboard and controlled fault buttons; optional toolbox and architecture pages." deliverable="A saved experiment record with baseline, hypothesis, failure evidence, observation, mitigation, validation, and conclusion." />
+
       <ol className="progress" aria-label="Challenge progress">
         {progressSteps.map((item, index) => (
           <li key={item.id} className={index < currentIndex ? "done" : index === currentIndex ? "active" : "locked"} aria-current={index === currentIndex ? "step" : undefined}>
@@ -214,7 +247,7 @@ export default function App() {
 
       {(connectionError || actionError) && <p className="error" role="alert">{actionError ?? connectionError}</p>}
 
-      {challenge && !challenge.completed && (
+      {challenge && !challenge.completed && step !== "CONCLUDE" && (
         <section className="work-card" aria-labelledby="step-title">
           <p className="eyebrow">STEP {currentIndex + 1} OF 5 · CURRENT STEP</p>
           <h2 id="step-title">{instruction?.title ?? progressSteps[currentIndex]?.label}</h2>
@@ -223,8 +256,10 @@ export default function App() {
           {step === "MEASURE" && (
             <div className="step-content">
               <p>Start traffic, watch normal latency and successful responses, then capture at least {challenge.minimumSamples} completed requests. This saved snapshot is your steady state for comparison.</p>
+              <label>Which dependency will this experiment test?<select value={testedDependency} onChange={event => setTestedDependency(event.target.value)}><option value="">Choose the dependency</option><option value="inventory">Stock information</option><option value="shipping">Shipping estimate</option></select></label>
+              <fieldset className="indicator-options"><legend>Which metrics define healthy behavior?</legend>{[["responseLatency", "Response latency"], ["successRate", "Success rate"]].map(([id, label]) => <label key={id}><input type="checkbox" checked={steadyStateMetrics.includes(id)} onChange={event => setSteadyStateMetrics(event.target.checked ? [...steadyStateMetrics, id] : steadyStateMetrics.filter(value => value !== id))} /> {label}</label>)}</fieldset>
               <SampleProgress count={challenge.currentWindowSamples} minimum={challenge.minimumSamples} />
-              <button disabled={busy || !snapshot?.trafficRunning || !enough || !snapshot.proxyAvailable} onClick={() => void act("/baseline/capture")}>Capture Baseline</button>
+              <button disabled={busy || !snapshot?.trafficRunning || !enough || !snapshot.proxyAvailable || testedDependency !== "inventory" || !steadyStateMetrics.includes("responseLatency")} onClick={() => void act("/baseline/capture", { metrics: steadyStateMetrics, dependency: testedDependency })}>Capture Baseline</button>
             </div>
           )}
 
@@ -284,7 +319,9 @@ export default function App() {
                   </label>
                 ))}
               </fieldset>
-              <button disabled={busy || !selectedMitigation || challenge.validationActive} onClick={() => void act("/mitigation/apply", { optionId: selectedMitigation })}>Apply Mitigation</button>
+              <label>What problem in your measurements are you trying to address?<textarea value={mitigationReason} onChange={event => setMitigationReason(event.target.value)} minLength={10} /></label>
+              <label>What evidence would convince you this worked?<textarea value={expectedEvidence} onChange={event => setExpectedEvidence(event.target.value)} minLength={10} /></label>
+              <button disabled={busy || !selectedMitigation || mitigationReason.trim().length < 10 || expectedEvidence.trim().length < 10 || challenge.validationActive} onClick={() => void act("/mitigation/apply", { optionId: selectedMitigation, reason: mitigationReason, expectedEvidence })}>Apply Mitigation</button>
               {challenge.mitigationId && <p className="callout">Applied in Storefront: {selectedLabel}. The next run uses the same Inventory latency fault.</p>}
               {challenge.mitigationId && !challenge.validationActive && <button className="fault-button" disabled={busy || !snapshot?.trafficRunning || !snapshot.proxyAvailable} onClick={() => void act("/validation/start")}>Rerun the 1500 ms Experiment</button>}
               {challenge.validationActive && <><p className="callout">Validation experiment active. Watch whether Storefront remains responsive.</p><SampleProgress count={challenge.currentWindowSamples} minimum={challenge.minimumSamples} /><button disabled={busy || !enough} onClick={() => void act("/validation/capture")}>Capture Post-Mitigation Results</button></>}
@@ -295,6 +332,8 @@ export default function App() {
         </section>
       )}
 
+      {step === "CONCLUDE" && challenge && <section className="work-card step-content"><p className="eyebrow">VALIDATION PASSED · CONCLUSION</p><h2>What did the same-fault comparison prove?</h2><SummaryTable baseline={challenge.baseline} experiment={challenge.experiment} validation={challenge.validation} /><label>Your evidence-based conclusion<textarea value={conclusion} onChange={event => setConclusion(event.target.value)} placeholder="Cite the change in p95, success, and fallback results." required /></label><button disabled={busy || conclusion.trim().length < 10} onClick={() => void act("/conclusion", { text: conclusion })}>Complete Experiment Record</button></section>}
+
       {challenge?.completed && (
         <section className="work-card completion" aria-labelledby="completion-title">
           <p className="eyebrow">CHALLENGE COMPLETED</p>
@@ -302,10 +341,12 @@ export default function App() {
           <p>The same 1500 ms Inventory delay was applied before and after your mitigation. Compare the three saved measurements below to see the failure and the improvement.</p>
           <SummaryTable baseline={challenge.baseline} experiment={challenge.experiment} validation={challenge.validation} />
           <div className="completion-notes"><p><strong>Hypothesis confirmed:</strong> {formatConfirmation(challenge.observation?.hypothesisConfirmed)}</p><p><strong>Mitigation applied:</strong> {selectedLabel ?? "—"}</p></div>
+          <p><strong>Experiment record:</strong> Steady-state metrics: {challenge.steadyStateMetrics.join(", ")}. Tested dependency: Stock information. Hypothesis: {challenge.hypothesis?.expectedBehavior} because {challenge.hypothesis?.reason}. Fault: +{challenge.latencyMs} ms. Observation: {challenge.observation?.why}. Mitigation reason: {challenge.mitigationReason}. Expected evidence: {challenge.expectedEvidence}. Conclusion: {challenge.conclusion}.</p>
+          <p><strong>In the real world:</strong> You have just performed a controlled network fault experiment using Toxiproxy. Teams may also use Gremlin, Chaos Mesh, or Linux network emulation.</p>
         </section>
       )}
 
-      {challenge?.baseline && step !== "OBSERVE" && step !== "COMPLETED" && (
+      {challenge?.baseline && step !== "OBSERVE" && step !== "CONCLUDE" && step !== "COMPLETED" && (
         <section className="evidence-card"><div className="section-heading"><h2>Saved evidence</h2><span className="subtle">Captured windows are separate from the live chart</span></div><SummaryTable baseline={challenge.baseline} experiment={challenge.experiment} validation={challenge.validation} /></section>
       )}
 

@@ -47,8 +47,8 @@ public class Challenge2Controller {
     }
 
     @PostMapping("/baseline/capture")
-    public ShippingSliceService.ShippingSnapshot captureBaseline() {
-        challenge.captureBaseline();
+    public ShippingSliceService.ShippingSnapshot captureBaseline(@RequestBody BaselineInput input) {
+        challenge.captureBaseline(input.indicators());
         return slice.snapshot();
     }
 
@@ -95,6 +95,12 @@ public class Challenge2Controller {
         return slice.snapshot();
     }
 
+    @PostMapping("/reflection")
+    public ShippingSliceService.ShippingSnapshot reflection(@RequestBody ReflectionInput input) {
+        challenge.saveBlastRadiusConclusion(input.answer());
+        return slice.snapshot();
+    }
+
     @PostMapping("/reset")
     public ShippingSliceService.ShippingSnapshot reset() {
         challenge.reset();
@@ -114,6 +120,12 @@ public class Challenge2Controller {
     }
 
     public record HypothesisInput(String text) {
+    }
+
+    public record BaselineInput(java.util.List<String> indicators) {
+    }
+
+    public record ReflectionInput(String answer) {
     }
 
     public record MitigationInput(String optionId, String reason) {

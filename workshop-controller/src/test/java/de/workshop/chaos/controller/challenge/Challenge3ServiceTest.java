@@ -67,6 +67,24 @@ class Challenge3ServiceTest {
     }
 
     @Test
+    void experimentPlanRequiresBlastRadiusAndAbortCondition() {
+        baseline();
+        assertThatThrownBy(() -> challenge.saveExperimentPlan(
+                "Stock delay will raise user-facing p95.", "latency-1000", null,
+                "Latency above 3000 ms")).isInstanceOf(ChallengeStateException.class);
+        assertThatThrownBy(() -> challenge.saveExperimentPlan(
+                "Stock delay will raise user-facing p95.", "latency-1000",
+                "Entire product page", null)).isInstanceOf(ChallengeStateException.class);
+        challenge.saveExperimentPlan("Stock delay will raise user-facing p95.",
+                "latency-1000", "Entire product page", "Latency above 3000 ms");
+        assertThat(challenge.view().blastRadius()).isEqualTo("Entire product page");
+        assertThat(challenge.view().abortCondition()).isEqualTo("Latency above 3000 ms");
+        challenge.reset();
+        assertThat(challenge.view().blastRadius()).isNull();
+        assertThat(challenge.view().abortCondition()).isNull();
+    }
+
+    @Test
     void requiresBaselineIndicatorsHypothesisAndSupportedFaultBeforeInjection() {
         assertThatThrownBy(() -> challenge.captureBaseline(List.of("p95Latency")))
                 .isInstanceOf(ChallengeStateException.class);

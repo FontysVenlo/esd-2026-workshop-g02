@@ -16,10 +16,10 @@ class WorkshopStatusControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    void exposesPhaseFiveStatus() throws Exception {
+    void exposesPhaseSixStatus() throws Exception {
         mockMvc.perform(get("/api/workshop/status"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.phase").value("phase-5"))
+                .andExpect(jsonPath("$.phase").value("phase-6"))
                 .andExpect(jsonPath("$.trafficImplemented").value(true));
     }
 }

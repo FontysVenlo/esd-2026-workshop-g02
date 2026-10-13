@@ -24,6 +24,9 @@ public class ToxiproxyClient {
     static final String SHIPPING_PROXY = "shipping-proxy";
     static final String EXPERIMENT_PROXY = "experiment-inventory-proxy";
     static final String EXPERIMENT_LATENCY_TOXIC = "experiment-latency";
+    static final String GAMEDAY_INVENTORY_PROXY = "gameday-inventory-proxy";
+    static final String GAMEDAY_SHIPPING_PROXY = "gameday-shipping-proxy";
+    static final String GAMEDAY_TOXIC = "gameday-fault";
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
@@ -52,11 +55,18 @@ public class ToxiproxyClient {
                 "upstream", "shipping-service:8080"), Map.of(
                 "name", EXPERIMENT_PROXY,
                 "listen", "0.0.0.0:8668",
-                "upstream", "inventory-service:8080")), false);
+                "upstream", "inventory-service:8080"), Map.of(
+                "name", GAMEDAY_INVENTORY_PROXY,
+                "listen", "0.0.0.0:8669",
+                "upstream", "inventory-service:8080"), Map.of(
+                "name", GAMEDAY_SHIPPING_PROXY,
+                "listen", "0.0.0.0:8670",
+                "upstream", "shipping-service:8080")), false);
         send("POST", "/proxies/" + PROXY, Map.of("enabled", true), false);
         removeLatency();
         restoreShipping();
         restoreExperiment();
+        restoreGameDay();
     }
 
     public synchronized void injectLatency(int latencyMs) {
@@ -74,6 +84,10 @@ public class ToxiproxyClient {
     public synchronized void removeLatency() {
         send("DELETE", "/proxies/" + PROXY + "/toxics/" + LATENCY_TOXIC,
                 null, true);
+    }
+
+    public synchronized void restoreInventory() {
+        restoreProxy(PROXY);
     }
 
     public synchronized boolean latencyActive() {
@@ -163,6 +177,81 @@ public class ToxiproxyClient {
     }
 
     public record ExperimentProxyState(boolean enabled, Integer latencyMs, int toxicCount) {
+    }
+
+    public synchronized void injectGameDayFault(String target, String type, int latencyMs) {
+        if (!"inventory".equals(target) && !"shipping".equals(target)) {
+            throw new IllegalArgumentException("Unsupported GameDay dependency");
+        }
+        if (!"LATENCY".equals(type) && !"UNAVAILABLE".equals(type)
+                && !"TIMEOUT".equals(type)) {
+            throw new IllegalArgumentException("Unsupported GameDay fault");
+        }
+        restoreGameDay();
+        String proxy = "inventory".equals(target)
+                ? GAMEDAY_INVENTORY_PROXY : GAMEDAY_SHIPPING_PROXY;
+        if ("UNAVAILABLE".equals(type)) {
+            send("POST", "/proxies/" + proxy, Map.of("enabled", false), false);
+        } else {
+            send("POST", "/proxies/" + proxy + "/toxics", Map.of(
+                    "name", GAMEDAY_TOXIC,
+                    "type", "LATENCY".equals(type) ? "latency" : "timeout",
+                    "stream", "downstream", "toxicity", 1.0,
+                    "attributes", "LATENCY".equals(type)
+                            ? Map.of("latency", latencyMs, "jitter", 0)
+                            : Map.of("timeout", 5000)), false);
+        }
+    }
+
+    public synchronized void restoreGameDay() {
+        restoreProxy(GAMEDAY_INVENTORY_PROXY);
+        restoreProxy(GAMEDAY_SHIPPING_PROXY);
+    }
+
+    public synchronized GameDayState gameDayState() {
+        return new GameDayState(gameDayProxyState(GAMEDAY_INVENTORY_PROXY),
+                gameDayProxyState(GAMEDAY_SHIPPING_PROXY));
+    }
+
+    private GameDayProxyState gameDayProxyState(String name) {
+        JsonNode proxy = proxyState(name);
+        String type = null;
+        int latencyMs = 0;
+        int toxics = 0;
+        for (JsonNode toxic : proxy.path("toxics")) {
+            toxics++;
+            if (GAMEDAY_TOXIC.equals(toxic.path("name").asText())) {
+                type = toxic.path("type").asText();
+                latencyMs = toxic.path("attributes").path("latency").asInt(0);
+            }
+        }
+        return new GameDayProxyState(proxy.path("enabled").asBoolean(false),
+                type, latencyMs, toxics);
+    }
+
+    private void restoreProxy(String name) {
+        JsonNode proxy = proxyState(name);
+        for (JsonNode toxic : proxy.path("toxics")) {
+            String toxicName = toxic.path("name").asText();
+            if (!toxicName.isBlank()) {
+                send("DELETE", "/proxies/" + name + "/toxics/" + toxicName, null, true);
+            }
+        }
+        send("POST", "/proxies/" + name, Map.of("enabled", true), false);
+    }
+
+    private JsonNode proxyState(String name) {
+        try {
+            return objectMapper.readTree(send("GET", "/proxies/" + name, null, false));
+        } catch (IOException exception) {
+            throw new IllegalStateException("Could not read connection state", exception);
+        }
+    }
+
+    public record GameDayProxyState(boolean enabled, String toxicType,
+            int latencyMs, int toxicCount) {
+    }
+    public record GameDayState(GameDayProxyState inventory, GameDayProxyState shipping) {
     }
 
     private JsonNode shippingProxy() {

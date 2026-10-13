@@ -9,6 +9,8 @@ import de.workshop.chaos.controller.slice.MetricsStore.MeasurementSummary;
 import de.workshop.chaos.controller.slice.ToxiproxyClient;
 import de.workshop.chaos.controller.slice.TrafficGenerator;
 import de.workshop.chaos.controller.slice.ShippingTrafficGenerator;
+import de.workshop.chaos.controller.slice.GameDayTrafficGenerator;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /** The small, ordered workflow for the first guided exercise. */
@@ -16,13 +18,14 @@ import org.springframework.stereotype.Service;
 public class Challenge1Service {
 
     public enum Step {
-        MEASURE, HYPOTHESIS, EXPERIMENT, OBSERVE, IMPROVE, COMPLETED
+        MEASURE, HYPOTHESIS, EXPERIMENT, OBSERVE, IMPROVE, CONCLUDE, COMPLETED
     }
 
     private final Challenge1Definition definition;
     private final ToxiproxyClient toxiproxy;
     private final TrafficGenerator traffic;
     private final ShippingTrafficGenerator shippingTraffic;
+    private GameDayTrafficGenerator gameDayTraffic;
     private final MetricsStore metrics;
     private final StorefrontSettingsClient storefront;
 
@@ -39,6 +42,11 @@ public class Challenge1Service {
     private Observation observation;
     private Challenge1Definition.MitigationOption mitigation;
     private List<String> validationFeedback = List.of();
+    private List<String> steadyStateMetrics = List.of();
+    private String testedDependency;
+    private String mitigationReason;
+    private String expectedEvidence;
+    private String conclusion;
 
     public Challenge1Service(Challenge1Definition definition, ToxiproxyClient toxiproxy,
             TrafficGenerator traffic, MetricsStore metrics, StorefrontSettingsClient storefront,
@@ -66,12 +74,14 @@ public class Challenge1Service {
                 currentWindowSamples, step, experimentActive, validationActive,
                 baseline, hypothesis, experiment, observation,
                 mitigation == null ? null : mitigation.id(), validation,
-                validationFeedback, step == Step.COMPLETED);
+                validationFeedback, step == Step.COMPLETED, steadyStateMetrics,
+                testedDependency, mitigationReason, expectedEvidence, conclusion);
     }
 
     public synchronized void startTraffic() {
         require(step != Step.COMPLETED, "Reset the challenge before starting new traffic.");
         shippingTraffic.stop();
+        if (gameDayTraffic != null) gameDayTraffic.stop();
         if (step == Step.MEASURE && baselineWindowId == 0) {
             baselineWindowId = traffic.beginWindow();
             metrics.addEvent("TRAFFIC_STARTED", "Baseline traffic started");
@@ -91,6 +101,21 @@ public class Challenge1Service {
         baseline = enoughSamples(baselineWindowId);
         metrics.addEvent("BASELINE_CAPTURED", "Baseline captured");
         step = Step.HYPOTHESIS;
+    }
+
+    @Autowired
+    void gameDayTraffic(GameDayTrafficGenerator generator) {
+        this.gameDayTraffic = generator;
+    }
+
+    public synchronized void captureBaseline(List<String> metrics, String dependency) {
+        require(metrics != null && metrics.contains("responseLatency")
+                        && metrics.stream().allMatch(Set.of("responseLatency", "successRate")::contains),
+                "Select response latency as a steady-state metric.");
+        require("inventory".equals(dependency), "Identify the Stock dependency being tested.");
+        captureBaseline();
+        steadyStateMetrics = List.copyOf(metrics);
+        testedDependency = dependency;
     }
 
     public synchronized void saveHypothesis(Hypothesis input) {
@@ -152,6 +177,15 @@ public class Challenge1Service {
         metrics.addEvent("MITIGATION_APPLIED", selected.label());
     }
 
+    public synchronized void applyMitigation(String optionId, String reason, String evidence) {
+        require(reason != null && reason.trim().length() >= 10
+                        && evidence != null && evidence.trim().length() >= 10,
+                "Explain the problem you are addressing and what evidence would show improvement.");
+        applyMitigation(optionId);
+        mitigationReason = reason.trim();
+        expectedEvidence = evidence.trim();
+    }
+
     public synchronized void startValidation() {
         require(step == Step.IMPROVE && mitigation != null && !validationActive,
                 "Apply a mitigation before rerunning the experiment.");
@@ -174,10 +208,19 @@ public class Challenge1Service {
         metrics.addEvent("FAILURE_REMOVED", "Latency removed after validation");
         validationFeedback = evaluate(captured);
         if (validationFeedback.isEmpty()) {
-            step = Step.COMPLETED;
+            step = Step.CONCLUDE;
             traffic.stop();
-            metrics.addEvent("CHALLENGE_COMPLETED", "Challenge 1 completed");
+            metrics.addEvent("VALIDATION_PASSED", "Challenge 1 validation passed");
         }
+    }
+
+    public synchronized void saveConclusion(String text) {
+        require(step == Step.CONCLUDE, "Validate an improvement before concluding.");
+        require(text != null && text.trim().length() >= 10,
+                "Summarize what the saved measurements show.");
+        conclusion = text.trim();
+        step = Step.COMPLETED;
+        metrics.addEvent("CHALLENGE_COMPLETED", "Challenge 1 completed");
     }
 
     public synchronized void reset() {
@@ -198,6 +241,8 @@ public class Challenge1Service {
         observation = null;
         mitigation = null;
         validationFeedback = List.of();
+        steadyStateMetrics = List.of();
+        testedDependency = mitigationReason = expectedEvidence = conclusion = null;
     }
 
     private MeasurementSummary enoughSamples(long windowId) {
@@ -258,6 +303,8 @@ public class Challenge1Service {
             MeasurementSummary baseline, Hypothesis hypothesis,
             MeasurementSummary experiment, Observation observation,
             String mitigationId, MeasurementSummary validation,
-            List<String> validationFeedback, boolean completed) {
+            List<String> validationFeedback, boolean completed,
+            List<String> steadyStateMetrics, String testedDependency,
+            String mitigationReason, String expectedEvidence, String conclusion) {
     }
 }
