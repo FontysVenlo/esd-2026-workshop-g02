@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Network Faults — Northstar Supply</title>
+  <link rel="stylesheet" href="/site.css">
+</head>
+<body>
+  <header><div class="header-inner"><a class="brand" href="http://localhost:8088/">Northstar Supply / Network faults</a><nav class="links"><a href="http://localhost:8088/">Workshop overview</a><a href="http://localhost:3008/d/field-workshop/field-workshop" target="_blank" rel="noopener">Grafana</a></nav></div></header>
+  <main>
+    <div class="intro"><div class="eyebrow">Operator tool</div><h1>Network faults</h1><p>Change one dependency path, then measure the customer impact.</p></div>
+    <div class="tabs" role="tablist" aria-label="Network fault console views">
+      <button id="controls-tab" class="tab" role="tab" aria-selected="true" aria-controls="controls-panel" type="button">Controls</button>
+      <button id="info-tab" class="tab" role="tab" aria-selected="false" aria-controls="info-panel" type="button">Info &amp; commands</button>
+    </div>
+    <section id="controls-panel" class="panel" role="tabpanel" aria-labelledby="controls-tab">
+      <h2>Current state</h2>
+      <button id="refresh" class="secondary" type="button">Refresh</button>
+      <div id="state" class="status-grid" aria-live="polite">Loading…</div>
+      <h2>Apply a fault</h2>
+      <div class="controls">
+        <label>Dependency<select id="proxy"><option value="inventory">Inventory</option><option value="shipping">Shipping</option></select></label>
+        <label>Response delay (ms)<input id="latency" type="number" min="50" max="5000" step="1" value="1500"></label>
+      </div>
+      <div class="actions">
+        <button class="action" type="button" data-action="set-latency">Apply delay</button>
+        <button class="action secondary" type="button" data-action="remove-latency">Remove delay</button>
+        <button class="action danger" type="button" data-action="disconnect">Disconnect</button>
+        <button class="action secondary" type="button" data-action="reconnect">Reconnect</button>
+      </div>
+      <button id="reset-faults" class="secondary" type="button">Clear all faults</button>
+      <p class="meta">Clears Toxiproxy faults only; notes, metrics, and mitigation settings remain.</p>
+      <p id="message" class="message" role="status"></p>
+    </section>
+    <section id="info-panel" class="panel" role="tabpanel" aria-labelledby="info-tab" hidden>
+      <h2>Underlying API commands</h2>
+      <p>These controls send HTTP requests to Toxiproxy. The Storefront uses the affected paths.</p>
+      <ul>
+        <li><strong>Apply delay:</strong> <code>POST /proxies/{dependency}/toxics</code> with a downstream latency toxic. An existing console delay is updated at <code>POST /proxies/{dependency}/toxics/workshop-latency</code>.</li>
+        <li><strong>Remove delay:</strong> <code>DELETE /proxies/{dependency}/toxics/workshop-latency</code>.</li>
+        <li><strong>Disconnect / reconnect:</strong> <code>POST /proxies/{dependency}</code> with <code>{"enabled":false}</code> or <code>{"enabled":true}</code>.</li>
+        <li><strong>Clear all faults:</strong> <code>POST /reset</code>. Reconnects both paths and removes all toxics.</li>
+        <li><strong>Refresh:</strong> <code>GET /proxies</code>. Reads state without changing it.</li>
+      </ul>
+      <h3>Example: 1500 ms Inventory delay</h3>
+      <pre>POST /proxies/inventory/toxics
+Content-Type: application/json
+
+{"name":"workshop-latency","type":"latency","stream":"downstream","attributes":{"latency":1500,"jitter":0}}</pre>
+      <h3>Last command sent</h3>
+      <pre id="last-command">No command sent yet.</pre>
+      <p class="meta">The raw API is at <code>http://localhost:8478</code>. <a href="http://localhost:8088/tools" target="_blank" rel="noopener">Windows and Mac commands</a></p>
+    </section>
+  </main>
+  <script type="module" src="/fault-console.mjs"></script>
+</body>
+</html>

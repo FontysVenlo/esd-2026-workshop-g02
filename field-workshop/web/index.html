@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Northstar Supply — Desk Lamp</title>
+  <link rel="stylesheet" href="/site.css">
+</head>
+<body class="storefront-body">
+  <header><div class="header-inner storefront-header">
+    <a class="brand" href="/storefront">Northstar Supply<span class="brand-dot">.</span></a>
+    <nav class="links"><a href="/">← Workshop overview</a></nav>
+  </div></header>
+  <main class="storefront-main">
+    <div class="storefront-breadcrumb">HOME OFFICE <span>/</span> LIGHTING <span>/</span> LAMP-01</div>
+    <section class="storefront-layout" aria-labelledby="product-title">
+      <div class="product-stage" aria-label="Illustration of a desk lamp">
+        <div class="stage-orbit orbit-one" aria-hidden="true"></div>
+        <div class="stage-orbit orbit-two" aria-hidden="true"></div>
+        <svg class="lamp-art" viewBox="0 0 520 560" role="img" aria-label="Desk Lamp">
+          <defs>
+            <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4d78f" stop-opacity=".46"/><stop offset="1" stop-color="#f4d78f" stop-opacity="0"/></linearGradient>
+            <linearGradient id="shade" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#285346"/><stop offset="1" stop-color="#112f29"/></linearGradient>
+          </defs>
+          <ellipse class="lamp-floor" cx="263" cy="503" rx="191" ry="29" fill="#9cbca8" opacity=".35"/>
+          <path class="lamp-beam" d="M119 245 287 245 416 489 25 489Z" fill="url(#beam)"/>
+          <g class="lamp-object">
+            <ellipse cx="276" cy="483" rx="115" ry="24" fill="#173d33"/>
+            <path d="M276 472V323L195 217" fill="none" stroke="#173d33" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="276" cy="323" r="17" fill="#295e4b"/>
+            <circle cx="195" cy="217" r="17" fill="#295e4b"/>
+            <path d="M131 217C151 169 232 165 262 217L282 260C236 281 165 281 111 260Z" fill="url(#shade)"/>
+            <path d="M112 258C167 277 235 279 281 258" fill="none" stroke="#5e8971" stroke-width="8" stroke-linecap="round"/>
+            <ellipse cx="198" cy="259" rx="27" ry="9" fill="#f3d994" opacity=".95"/>
+            <path d="M253 472h46" fill="none" stroke="#6c9b7b" stroke-width="5" stroke-linecap="round"/>
+          </g>
+        </svg>
+        <span class="stage-label">NORTHSTAR / 01</span>
+        <span class="stage-caption">A little light for the everyday.</span>
+      </div>
+      <div class="product-info">
+        <div class="eyebrow">HOME OFFICE · LAMP-01</div>
+        <h1 id="product-title">Desk Lamp</h1>
+        <p class="product-description">A considered piece for your desk, designed to make the everyday feel a little brighter.</p>
+        <div class="product-price">€29.90 <span>incl. VAT</span></div>
+        <div class="product-divider"></div>
+        <div class="product-check-header"><h2>Live product check</h2><span class="live-pill"><span></span> LIVE SERVICE</span></div>
+        <p class="product-help">Check stock or preview delivery. Results come from the running services.</p>
+        <div class="storefront-actions">
+          <button id="refresh" class="primary" type="button">Check availability <span aria-hidden="true">↗</span></button>
+          <button id="preview" class="secondary" type="button">Order preview</button>
+        </div>
+        <div id="request-card" class="request-card is-loading" aria-busy="true">
+          <div class="request-card-top"><span id="request-label">Checking availability</span><span id="request-time">— ms</span></div>
+          <div class="request-progress" aria-hidden="true"><span></span></div>
+          <div id="status" class="request-result" role="status" aria-live="polite">Connecting to the Storefront…</div>
+        </div>
+        <p class="preview-note">Order preview only. No purchase is made.</p>
+      </div>
+    </section>
+  </main>
+  <script>
+    const requestCard = document.querySelector('#request-card');
+    const requestLabel = document.querySelector('#request-label');
+    const requestTime = document.querySelector('#request-time');
+    const status = document.querySelector('#status');
+    const refresh = document.querySelector('#refresh');
+    const preview = document.querySelector('#preview');
+    async function load(path) {
+      const isPreview = path === '/api/order-preview';
+      refresh.disabled = true;
+      preview.disabled = true;
+      requestCard.className = 'request-card is-loading';
+      requestCard.setAttribute('aria-busy', 'true');
+      requestLabel.textContent = isPreview ? 'Building order preview' : 'Checking availability';
+      requestTime.textContent = '— ms';
+      status.textContent = 'Waiting for the service…';
+      const started = performance.now();
+      try {
+        const response = await fetch(path, { cache: 'no-store' });
+        const data = await response.json();
+        const elapsed = Math.round(performance.now() - started);
+        requestTime.textContent = `${elapsed} ms`;
+        if (!response.ok) {
+          requestCard.className = 'request-card is-error';
+          requestLabel.textContent = `Request failed · ${response.status}`;
+          status.textContent = data.error || 'Product information is temporarily unavailable.';
+          return;
+        }
+        const availability = data.inventory.source === 'live'
+          ? `${data.inventory.quantity} in stock`
+          : 'Stock unconfirmed';
+        const shipping = data.shipping
+          ? data.shipping.source === 'live' ? ` · Shipping €${data.shipping.priceEur.toFixed(2)} · About ${data.shipping.etaDays} days` : ' · Shipping quote unavailable'
+          : '';
+        requestCard.className = data.degraded ? 'request-card is-degraded' : 'request-card is-success';
+        requestLabel.textContent = data.degraded ? 'Details incomplete' : isPreview ? 'Preview ready' : 'Availability confirmed';
+        status.textContent = `${availability}${shipping}`;
+      } catch {
+        requestCard.className = 'request-card is-error';
+        requestLabel.textContent = 'Connection failed';
+        requestTime.textContent = `${Math.round(performance.now() - started)} ms`;
+        status.textContent = 'Could not reach the Storefront.';
+      } finally {
+        requestCard.setAttribute('aria-busy', 'false');
+        refresh.disabled = false;
+        preview.disabled = false;
+      }
+    }
+    refresh.addEventListener('click', () => load('/api/product'));
+    preview.addEventListener('click', () => load('/api/order-preview'));
+    load('/api/product');
+  </script>
+</body>
+</html>

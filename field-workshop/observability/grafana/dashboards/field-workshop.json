@@ -1,0 +1,55 @@
+{
+  "id": null,
+  "uid": "field-workshop",
+  "title": "Northstar Supply — service health",
+  "tags": ["field-workshop", "reliability"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "timeseries", "title": "Customer request rate",
+      "datasource": { "type": "prometheus", "uid": "field-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [{ "refId": "A", "expr": "sum by (route, status) (rate(workshop_http_requests_total{service=\"storefront\"}[1m]))", "legendFormat": "{{route}} · {{status}}" }]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "Customer-facing p95 latency",
+      "datasource": { "type": "prometheus", "uid": "field-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [{ "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, route) (rate(workshop_http_request_duration_seconds_bucket{service=\"storefront\"}[1m])))", "legendFormat": "{{route}}" }]
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Customer request success rate",
+      "datasource": { "type": "prometheus", "uid": "field-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
+      "targets": [{ "refId": "A", "expr": "sum by (route) (rate(workshop_http_requests_total{service=\"storefront\",status=~\"2..\"}[1m])) / clamp_min(sum by (route) (rate(workshop_http_requests_total{service=\"storefront\"}[1m])), 0.001)", "legendFormat": "{{route}}" }]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Dependency outcomes",
+      "datasource": { "type": "prometheus", "uid": "field-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [{ "refId": "A", "expr": "sum by (dependency, outcome) (rate(workshop_dependency_calls_total[1m]))", "legendFormat": "{{dependency}} · {{outcome}}" }]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Dependency p95 latency",
+      "datasource": { "type": "prometheus", "uid": "field-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [{ "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, dependency) (rate(workshop_dependency_duration_seconds_bucket[1m])))", "legendFormat": "{{dependency}}" }]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Fallback activity",
+      "datasource": { "type": "prometheus", "uid": "field-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [{ "refId": "A", "expr": "sum by (dependency) (rate(workshop_fallbacks_total[1m]))", "legendFormat": "{{dependency}}" }]
+    }
+  ]
+}

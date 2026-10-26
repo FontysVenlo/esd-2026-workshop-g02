@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: storefront
+    static_configs:
+      - targets: ["storefront:8080"]
+  - job_name: inventory
+    static_configs:
+      - targets: ["inventory:8080"]
+  - job_name: shipping
+    static_configs:
+      - targets: ["shipping:8080"]

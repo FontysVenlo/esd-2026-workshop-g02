@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: Field workshop
+    orgId: 1
+    folder: Field workshop
+    type: file
+    disableDeletion: true
+    editable: false
+    options:
+      path: /var/lib/grafana/dashboards

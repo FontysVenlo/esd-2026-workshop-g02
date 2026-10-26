@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Northstar Supply — Reliability Workshop</title>
+  <link rel="stylesheet" href="/site.css">
+</head>
+<body class="workshop-body">
+  <header><div class="header-inner workshop-header">
+    <a class="brand" href="#home">Northstar Supply <span>/ Workshop</span></a>
+    <span class="header-note">Reliability workshop</span>
+  </div></header>
+  <main class="workshop-shell">
+    <aside class="workshop-sidebar" aria-label="Workshop navigation">
+      <a id="home-link" class="home-link" href="#home">Home <span>Welcome &amp; setup</span></a>
+      <div class="sidebar-heading">Challenges</div>
+      <nav id="challenge-nav" class="challenge-nav" aria-label="Challenges"></nav>
+      <div class="sidebar-progress">
+        <strong id="progress-label">0 of 4 submitted</strong>
+        <div class="progress-track" aria-hidden="true"><span id="progress-fill"></span></div>
+        <div class="sidebar-actions">
+          <button id="export-record" type="button" class="text-button">Download notes</button>
+          <button id="reset-progress" type="button" class="text-button">Clear notes</button>
+        </div>
+        <span id="storage-warning" class="meta" role="status"></span>
+      </div>
+    </aside>
+    <div class="workshop-main">
+      <div id="unlock-announcement" class="visually-hidden" role="status" aria-live="polite"></div>
+      <section id="home-page" class="home-page" aria-labelledby="welcome-title"></section>
+      <article id="challenge-detail" class="challenge-page" aria-live="polite" hidden></article>
+    </div>
+  </main>
+  <div id="unlock-toast" class="unlock-toast" hidden>
+    <span class="unlock-toast-symbol" aria-hidden="true">🔓</span>
+    <span class="unlock-toast-copy"><strong id="unlock-toast-title">Challenge unlocked</strong><span>Ready in your sidebar</span></span>
+    <a id="unlock-toast-link" href="#challenge-2">Open →</a>
+  </div>
+  <script type="module" src="/workshop-app.mjs"></script>
+</body>
+</html>

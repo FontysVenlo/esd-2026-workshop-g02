@@ -1,0 +1,95 @@
+name: field-workshop
+
+services:
+  inventory:
+    build: .
+    command: ["node", "services/inventory.mjs"]
+    environment:
+      PORT: 8080
+    expose: ["8080"]
+
+  shipping:
+    build: .
+    command: ["node", "services/shipping.mjs"]
+    environment:
+      PORT: 8080
+    expose: ["8080"]
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.12.0
+    ports:
+      - "127.0.0.1:8478:8474"
+    expose: ["8666", "8667"]
+
+  proxy-init:
+    build: .
+    command: ["node", "services/proxy-init.mjs"]
+    environment:
+      TOXIPROXY_API: http://toxiproxy:8474
+    depends_on:
+      - toxiproxy
+
+  storefront:
+    build: .
+    command: ["node", "services/storefront.mjs"]
+    environment:
+      PORT: 8080
+      INVENTORY_URL: http://toxiproxy:8666
+      SHIPPING_URL: http://toxiproxy:8667
+      INVENTORY_TIMEOUT_MS: ${INVENTORY_TIMEOUT_MS:-3000}
+      SHIPPING_TIMEOUT_MS: ${SHIPPING_TIMEOUT_MS:-3000}
+      INVENTORY_FALLBACK: ${INVENTORY_FALLBACK:-false}
+      SHIPPING_FALLBACK: ${SHIPPING_FALLBACK:-false}
+    depends_on:
+      proxy-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8088:8080"
+
+  fault-console:
+    build: .
+    command: ["node", "services/fault-console.mjs"]
+    environment:
+      PORT: 8080
+      TOXIPROXY_API: http://toxiproxy:8474
+    depends_on:
+      proxy-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8089:8080"
+
+  loadgen:
+    build: .
+    command: ["node", "services/loadgen.mjs"]
+    environment:
+      STOREFRONT_URL: http://storefront:8080
+    depends_on:
+      - storefront
+    profiles: ["load"]
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=2d
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:9098:9090"
+    depends_on:
+      - storefront
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:3008:3000"
+    depends_on:
+      - prometheus

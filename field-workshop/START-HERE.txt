@@ -1,0 +1,18 @@
+NORTHSTAR SUPPLY WORKSHOP - WINDOWS AND MAC
+
+1. Install and start Docker Desktop.
+2. Extract the downloaded ZIP fully. Do not run a launcher inside a ZIP preview.
+   Windows: right-click the ZIP and choose "Extract All...".
+   Mac: double-click the ZIP, then open the extracted folder.
+3. Start from the extracted folder:
+   Windows: double-click "Start Workshop.bat".
+   Mac: double-click "Start Workshop.command".
+4. Wait for the browser to open http://localhost:8088.
+5. Work through the challenges in the browser.
+6. Stop from the same folder with "Stop Workshop.bat" (Windows) or
+   "Stop Workshop.command" (Mac).
+
+The first start needs internet to download container images and may take minutes.
+Keep the status window open until the browser opens.
+On a Mac, macOS may ask you to approve opening a downloaded script. Only approve
+if you received this ZIP from your trusted workshop organizer.
