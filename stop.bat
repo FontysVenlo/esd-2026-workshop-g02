@@ -1,8 +1,10 @@
 @echo off
 setlocal EnableExtensions
-cd /d "%~dp0"
+set "WORKSHOP_DIR=%~dp0"
+if exist "%~dp0field-workshop\compose.yaml" set "WORKSHOP_DIR=%~dp0field-workshop\"
+cd /d "%WORKSHOP_DIR%"
 
-if not exist "%~dp0compose.yaml" goto not_extracted
+if not exist "%WORKSHOP_DIR%compose.yaml" goto not_extracted
 
 set "DOCKER_EXE=docker.exe"
 where docker.exe >nul 2>&1
@@ -13,7 +15,7 @@ if "%DOCKER_EXE%"=="docker.exe" goto no_docker
 
 :docker_found
 echo Stopping the Northstar Supply workshop...
-"%DOCKER_EXE%" compose -f "%~dp0compose.yaml" --profile load down
+"%DOCKER_EXE%" compose -f "%WORKSHOP_DIR%compose.yaml" --profile load down
 if errorlevel 1 goto stop_failed
 echo Workshop stopped. Browser notes remain saved in your browser.
 exit /b 0
@@ -24,7 +26,7 @@ goto failed
 
 :not_extracted
 echo The workshop files are not together in this folder.
-echo Extract the ZIP first, then run "Stop Workshop.bat" from the extracted folder.
+echo Extract the ZIP first, then run "stop.bat" from the extracted folder.
 goto failed
 
 :stop_failed

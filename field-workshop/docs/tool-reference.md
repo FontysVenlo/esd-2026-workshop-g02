@@ -1,6 +1,16 @@
 # Tool reference (Windows PowerShell and Mac Terminal)
 
-These are real tool/API operations. The [Network Faults console](http://localhost:8089) offers graphical controls for routine latency and disconnection experiments, and its **Info & commands** tab shows the underlying HTTP requests. Run the commands below from the extracted workshop folder unless stated otherwise. Inspect the response after each change. The Toxiproxy API is exposed only on localhost. The PowerShell commands are for Windows; Mac equivalents follow.
+These are real tool/API operations. The [Network Faults console](http://localhost:8089) offers graphical controls for routine latency and disconnection experiments, and its **Info & commands** tab shows the underlying HTTP requests. Run the commands below from the folder containing `compose.yaml`: `field-workshop` in a source checkout, or the extracted ZIP folder. Inspect the response after each change. The Toxiproxy API is exposed only on localhost. The PowerShell commands are for Windows; Mac equivalents follow.
+
+## What is a fallback, and how do I enable it?
+
+A fallback is the response the shop uses when a dependency cannot answer. The workshop already implements it; you do not need to write code. Inventory fallback returns **Stock unconfirmed**. Shipping fallback keeps the preview available while reporting **Shipping quote unavailable**. Neither invents stock or delivery information.
+
+Open **Fallbacks & timeouts**, the second tab in [Network Faults](http://localhost:8089/#mitigations). Use the Challenge 1/2 preset or edit a dependency's timeout and fallback checkbox, then click Apply. Settings affect new requests immediately; no terminal or restart is needed. Use **Restore default settings** to turn both fallbacks off and restore 3000 ms timeouts. Reapply the identical fault to test the behavior.
+
+## What is Prometheus for?
+
+Prometheus collects the services' counters and timing measurements every five seconds and stores them as time series. Grafana queries those measurements and presents charts. You can complete the guided experiments using Grafana; opening Prometheus is optional for inspecting raw measurements or writing queries. It does not inject faults or enable fallbacks.
 
 ## Start and observe
 
@@ -41,51 +51,33 @@ Invoke-RestMethod -Method Post -Uri "$proxyApi/proxies/shipping" -ContentType 'a
 Invoke-RestMethod -Method Post -Uri "$proxyApi/proxies/shipping" -ContentType 'application/json' -Body '{"enabled":true}' -UserAgent 'field-workshop/1.0'
 ```
 
-Use the same API for either proxy. Do not reconfigure proxy upstream targets. For a clean reset, remove faults, re-enable both proxies, stop the load generator, and reset mitigation variables; `docker compose down` followed by `docker compose up --build -d` recreates the whole local stack.
+Use the same API for either proxy. Do not reconfigure proxy upstream targets. For a clean experiment baseline, click **Clear all faults** in Fault injection and **Restore default settings** in Fallbacks & timeouts. Keep the supplied light traffic.
 
-## Change the Storefront's behavior
+## Change Storefront behavior in the browser
 
-The Storefront begins with 3000 ms timeouts and no fallback. These variables are deliberately ordinary deployment configuration; recreate only the Storefront after changing them:
+Use the **Fallbacks & timeouts** tab on Windows or Mac. Inventory's preset applies a 400 ms timeout and enables fallback; Shipping's preset enables fallback with a 3000 ms timeout. You can also choose a timeout from 50 to 5000 ms and independently enable or disable either fallback.
+
+Settings are held by the running Storefront. New requests use the updated settings; an in-flight request keeps the policy it started with. The console does not restart containers, clear metrics, or change network faults. Restarting Storefront discards runtime changes and reloads its startup configuration (normally 3000 ms timeouts with fallbacks off). Environment variables in Compose are startup overrides for maintainers, not the live settings display.
+
+The console exposes GET and POST at /api/mitigations. A POST accepts either a configure action with dependency, timeoutMs, and a boolean fallback, or a reset action. It forwards only to a fixed internal Storefront settings listener on port 8081, which is not published to the host. No Docker socket, shell commands, or extra platform-specific services are needed.
+
+## Optional command examples
+
+Participants do not need to type these. The console's **Info & commands** tab has a Windows/Mac selector and produces an equivalent command after each successful fault or mitigation change. The [Commands page](http://localhost:8088/tools) has self-contained examples. Both platforms call the same HTTP endpoints.
+
+Windows PowerShell, Inventory example:
 
 ```powershell
-$env:INVENTORY_TIMEOUT_MS = '400'
-$env:INVENTORY_FALLBACK = 'true'
-docker compose up -d --force-recreate storefront
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":true}'
 ```
 
-For Shipping, use `SHIPPING_TIMEOUT_MS` and `SHIPPING_FALLBACK`. To return to defaults in the same PowerShell session:
-
-```powershell
-Remove-Item Env:INVENTORY_TIMEOUT_MS,Env:INVENTORY_FALLBACK,Env:SHIPPING_TIMEOUT_MS,Env:SHIPPING_FALLBACK -ErrorAction SilentlyContinue
-docker compose up -d --force-recreate storefront
-```
-
-The code is in `services/storefront.mjs` if your GameDay calls for a code change. Rebuild with `docker compose up --build -d storefront`. A fallback changes business behavior: it keeps an informational page available, but does **not** assert stock or a shipping price that could not be verified.
-
-## Mac Terminal equivalents
-
-The Mac **Start Workshop.command** and **Stop Workshop.command** files handle normal startup and shutdown without typing commands. For an experiment, open Terminal in the extracted workshop folder. To use the Dock or Finder, you can type `cd ` in Terminal, drag the extracted folder into the window, and press Return. Docker Desktop must already be running.
-
-Use [Network Faults](http://localhost:8089) to add/remove latency or disconnect/reconnect a dependency. In Terminal, apply the example Inventory timeout and fallback with:
+Mac Terminal, the same change:
 
 ```sh
-INVENTORY_TIMEOUT_MS=400 INVENTORY_FALLBACK=true docker compose up -d --force-recreate storefront
+curl -f -sS -X POST 'http://localhost:8089/api/mitigations' -H 'Content-Type: application/json' --data '{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":true}'
 ```
 
-For the Shipping fallback:
-
-```sh
-SHIPPING_FALLBACK=true docker compose up -d --force-recreate storefront
-```
-
-The values before `docker compose` apply to that one command; Compose writes them into the recreated Storefront container. To return to defaults, ensure no earlier exported settings remain in your shell and recreate it:
-
-```sh
-unset INVENTORY_TIMEOUT_MS INVENTORY_FALLBACK SHIPPING_TIMEOUT_MS SHIPPING_FALLBACK
-docker compose up -d --force-recreate storefront
-```
-
-For manual status or logs, run `docker compose ps` or `docker compose logs -f storefront`. The command-line Docker binary comes with Docker Desktop; if Terminal cannot find it, check Docker Desktop's CLI tools setting and reopen Terminal.
+For Shipping use dependency shipping and the desired timeout. To restore defaults, POST only an action of reset. Reapply the fault and use Storefront to validate the customer result.
 
 ## Raw monitoring
 

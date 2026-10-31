@@ -9,54 +9,38 @@
 <body>
   <header><div class="header-inner"><a class="brand" href="/">Northstar Supply / Commands</a><nav class="links"><a href="/">Workshop overview</a><a href="http://localhost:8089" target="_blank" rel="noopener">Network faults</a></nav></div></header>
   <main class="reference">
-    <div class="intro"><h1>Commands</h1><p>Run these from the extracted workshop folder: PowerShell on Windows or Terminal on Mac. Use the <a href="http://localhost:8089" target="_blank" rel="noopener">Network Faults console</a> for graphical fault controls.</p></div>
+    <div class="intro"><h1>Optional command reference</h1><p>The workshop can be completed entirely in the browser on Windows and Mac. Use <a href="http://localhost:8089" target="_blank" rel="noopener">Fault injection</a> to create the problem and <a href="http://localhost:8089/#mitigations" target="_blank" rel="noopener">Fallbacks &amp; timeouts</a> to change the shop's response.</p><p>You do not need to type any of the commands below. The console's <strong>Info &amp; commands</strong> tab also shows the last request with a Windows/Mac selector.</p></div>
+    <section>
+      <h2>What changes when I enable a fallback?</h2>
+      <p>Inventory fallback returns <strong>Stock unconfirmed</strong> if stock cannot be checked. Shipping fallback keeps the preview useful with <strong>Shipping quote unavailable</strong>. A timeout limits the dependency wait. These controls change the real running Storefront immediately; they do not remove the injected fault or restart the container.</p>
+      <p>Restore defaults in <strong>Fallbacks &amp; timeouts</strong>, then clear the fault in <strong>Fault injection</strong>. Your answers remain saved. Runtime settings last until Storefront restarts and reloads its startup configuration.</p>
+    </section>
     <section>
       <h2>Windows · PowerShell</h2>
-      <h3>Start and check</h3>
-      <pre>docker compose up --build -d
-docker compose --profile load up -d loadgen
-docker compose ps</pre>
-      <p><a href="http://localhost:3008/d/field-workshop/field-workshop" target="_blank" rel="noopener">Grafana</a> · <a href="http://localhost:9098/targets" target="_blank" rel="noopener">Prometheus targets</a></p>
-      <pre>$proxyApi = 'http://localhost:8478'
-$ua = 'field-workshop/1.0'
-Invoke-RestMethod "$proxyApi/proxies" -UserAgent $ua</pre>
-    </section>
-    <section>
+      <h3>Inventory timeout and fallback</h3>
+      <pre>Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":true}'</pre>
+      <h3>Shipping fallback</h3>
+      <pre>Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{"action":"configure","dependency":"shipping","timeoutMs":3000,"fallback":true}'</pre>
+      <h3>Restore default settings</h3>
+      <pre>Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{"action":"reset"}'</pre>
       <h3>Inventory latency</h3>
-      <pre>$fault = @{ name='inventory-lag'; type='latency'; stream='downstream'; attributes=@{latency=1500; jitter=0} } | ConvertTo-Json -Depth 4
-Invoke-RestMethod -Method Post -Uri "$proxyApi/proxies/inventory/toxics" -ContentType 'application/json' -Body $fault -UserAgent $ua</pre>
-      <p>Remove it:</p>
-      <pre>Invoke-RestMethod -Method Delete -Uri "$proxyApi/proxies/inventory/toxics/inventory-lag" -UserAgent $ua</pre>
-      <p>Example mitigation:</p>
-      <pre>$env:INVENTORY_TIMEOUT_MS = '400'
-$env:INVENTORY_FALLBACK = 'true'
-docker compose up -d --force-recreate storefront</pre>
-    </section>
-    <section>
-      <h3>Shipping outage</h3>
-      <pre>Invoke-RestMethod -Method Post -Uri "$proxyApi/proxies/shipping" -ContentType 'application/json' -Body '{"enabled":false}' -UserAgent $ua
-Invoke-RestMethod -Method Post -Uri "$proxyApi/proxies/shipping" -ContentType 'application/json' -Body '{"enabled":true}' -UserAgent $ua</pre>
-      <p>Example mitigation:</p>
-      <pre>$env:SHIPPING_FALLBACK = 'true'
-docker compose up -d --force-recreate storefront</pre>
-    </section>
-    <section>
-      <h3>Restore defaults</h3>
-      <pre>Remove-Item Env:INVENTORY_TIMEOUT_MS,Env:INVENTORY_FALLBACK,Env:SHIPPING_TIMEOUT_MS,Env:SHIPPING_FALLBACK -ErrorAction SilentlyContinue
-docker compose up -d --force-recreate storefront</pre>
-      <p>Clear faults in the console, or restart the stack with <code>docker compose down</code> then the start commands above.</p>
+      <pre>Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/action' -ContentType 'application/json' -Body '{"action":"set-latency","proxy":"inventory","latencyMs":1500}'</pre>
     </section>
     <section>
       <h2>Mac · Terminal</h2>
-      <p>Open Terminal in the extracted folder. Docker Desktop must be running. Faults can be applied and cleared in <a href="http://localhost:8089" target="_blank" rel="noopener">Network Faults</a>.</p>
       <h3>Inventory timeout and fallback</h3>
-      <pre>INVENTORY_TIMEOUT_MS=400 INVENTORY_FALLBACK=true docker compose up -d --force-recreate storefront</pre>
+      <pre>curl -f -sS -X POST 'http://localhost:8089/api/mitigations' -H 'Content-Type: application/json' --data '{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":true}'</pre>
       <h3>Shipping fallback</h3>
-      <pre>SHIPPING_FALLBACK=true docker compose up -d --force-recreate storefront</pre>
-      <h3>Restore defaults</h3>
-      <pre>unset INVENTORY_TIMEOUT_MS INVENTORY_FALLBACK SHIPPING_TIMEOUT_MS SHIPPING_FALLBACK
-docker compose up -d --force-recreate storefront</pre>
-      <p>These variables change the Storefront container when it is recreated. The Storefront never guesses stock or a shipping quote.</p>
+      <pre>curl -f -sS -X POST 'http://localhost:8089/api/mitigations' -H 'Content-Type: application/json' --data '{"action":"configure","dependency":"shipping","timeoutMs":3000,"fallback":true}'</pre>
+      <h3>Restore default settings</h3>
+      <pre>curl -f -sS -X POST 'http://localhost:8089/api/mitigations' -H 'Content-Type: application/json' --data '{"action":"reset"}'</pre>
+      <h3>Inventory latency</h3>
+      <pre>curl -f -sS -X POST 'http://localhost:8089/api/action' -H 'Content-Type: application/json' --data '{"action":"set-latency","proxy":"inventory","latencyMs":1500}'</pre>
+    </section>
+    <section>
+      <h2>What happens underneath?</h2>
+      <p>Fault requests change the real <strong>Toxiproxy</strong> paths. Mitigation requests change the Storefront's live timeout and fallback policies through an internal Docker listener. No Docker socket or host shell is exposed to the console.</p>
+      <p><a href="/docs/tool-reference.md">Full technical reference</a> · <a href="http://localhost:3008/d/field-workshop/field-workshop" target="_blank" rel="noopener">Grafana</a></p>
     </section>
   </main>
 </body>

@@ -3,16 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Network Faults — Northstar Supply</title>
+  <title>Network Faults &amp; Fallbacks — Northstar Supply</title>
   <link rel="stylesheet" href="/site.css">
 </head>
 <body>
   <header><div class="header-inner"><a class="brand" href="http://localhost:8088/">Northstar Supply / Network faults</a><nav class="links"><a href="http://localhost:8088/">Workshop overview</a><a href="http://localhost:3008/d/field-workshop/field-workshop" target="_blank" rel="noopener">Grafana</a></nav></div></header>
   <main>
-    <div class="intro"><div class="eyebrow">Operator tool</div><h1>Network faults</h1><p>Change one dependency path, then measure the customer impact.</p></div>
+    <div class="intro"><div class="eyebrow">Operator tool</div><h1>Network faults &amp; fallbacks</h1><p>Create a dependency problem in the first tab, then change how the shop responds in the second. All controls work in the browser on Windows and Mac; no terminal is needed.</p></div>
     <div class="tabs" role="tablist" aria-label="Network fault console views">
-      <button id="controls-tab" class="tab" role="tab" aria-selected="true" aria-controls="controls-panel" type="button">Controls</button>
-      <button id="info-tab" class="tab" role="tab" aria-selected="false" aria-controls="info-panel" type="button">Info &amp; commands</button>
+      <button id="controls-tab" class="tab" role="tab" aria-selected="true" aria-controls="controls-panel" type="button">Fault injection</button>
+      <button id="mitigations-tab" class="tab" role="tab" aria-selected="false" aria-controls="mitigations-panel" tabindex="-1" type="button">Fallbacks &amp; timeouts</button>
+      <button id="info-tab" class="tab" role="tab" aria-selected="false" aria-controls="info-panel" tabindex="-1" type="button">Info &amp; commands</button>
     </div>
     <section id="controls-panel" class="panel" role="tabpanel" aria-labelledby="controls-tab">
       <h2>Current state</h2>
@@ -33,6 +34,43 @@
       <p class="meta">Clears Toxiproxy faults only; notes, metrics, and mitigation settings remain.</p>
       <p id="message" class="message" role="status"></p>
     </section>
+    <section id="mitigations-panel" class="panel" role="tabpanel" aria-labelledby="mitigations-tab" hidden>
+      <h2>Change the shop's response</h2>
+      <p>A <strong>timeout</strong> is how long Storefront waits for a dependency. A <strong>fallback</strong> provides a useful, honest response when that dependency fails or takes too long. A shorter timeout without a fallback can still produce an error.</p>
+      <p>Changes apply to new customer requests immediately. You do not need to restart Docker. Keep or reapply the same fault to compare the customer experience before and after mitigation.</p>
+      <button id="refresh-mitigations" class="secondary" type="button">Refresh settings</button>
+      <div class="mitigation-controls">
+        <form id="inventory-settings" class="status-card">
+          <h3>Inventory · stock checks</h3>
+          <p>With fallback enabled, an unavailable stock check returns <strong>Stock unconfirmed</strong>. It never guesses the stock quantity.</p>
+          <p id="inventory-current" class="meta" role="status">Reading current settings…</p>
+          <label for="inventory-timeout">Inventory timeout (ms)</label>
+          <input id="inventory-timeout" type="number" min="50" max="5000" step="1" required disabled>
+          <label class="checkbox-label"><input id="inventory-fallback" type="checkbox" disabled> Enable Inventory fallback</label>
+          <div class="actions">
+            <button class="primary" type="submit" disabled>Apply Inventory settings</button>
+            <button id="inventory-preset" class="secondary" type="button" disabled>Use Challenge 1 settings</button>
+          </div>
+          <p class="meta">Challenge 1 uses a 400 ms timeout with fallback enabled.</p>
+        </form>
+        <form id="shipping-settings" class="status-card">
+          <h3>Shipping · delivery quotes</h3>
+          <p>With fallback enabled, the preview returns available stock and <strong>Shipping quote unavailable</strong>. It never invents a price or delivery date.</p>
+          <p id="shipping-current" class="meta" role="status">Reading current settings…</p>
+          <label for="shipping-timeout">Shipping timeout (ms)</label>
+          <input id="shipping-timeout" type="number" min="50" max="5000" step="1" required disabled>
+          <label class="checkbox-label"><input id="shipping-fallback" type="checkbox" disabled> Enable Shipping fallback</label>
+          <div class="actions">
+            <button class="primary" type="submit" disabled>Apply Shipping settings</button>
+            <button id="shipping-preset" class="secondary" type="button" disabled>Use Challenge 2 settings</button>
+          </div>
+          <p class="meta">Challenge 2 enables fallback with the default 3000 ms timeout.</p>
+        </form>
+      </div>
+      <button id="reset-mitigations" class="secondary" type="button" disabled>Restore default settings</button>
+      <p class="meta">Restores both timeouts to 3000 ms and turns both fallbacks off. Network faults and your answers remain. Settings last until Storefront restarts; restarting reloads its startup configuration.</p>
+      <p id="mitigation-message" class="message" role="status"></p>
+    </section>
     <section id="info-panel" class="panel" role="tabpanel" aria-labelledby="info-tab" hidden>
       <h2>Underlying API commands</h2>
       <p>These controls send HTTP requests to Toxiproxy. The Storefront uses the affected paths.</p>
@@ -50,6 +88,13 @@ Content-Type: application/json
 {"name":"workshop-latency","type":"latency","stream":"downstream","attributes":{"latency":1500,"jitter":0}}</pre>
       <h3>Last command sent</h3>
       <pre id="last-command">No command sent yet.</pre>
+      <h3>Optional command for your computer</h3>
+      <p>The browser controls above work the same on both platforms. This selector changes only the optional command example, not how faults or fallbacks work.</p>
+      <label for="command-platform">Command platform</label>
+      <select id="command-platform"><option value="windows">Windows · PowerShell</option><option value="mac">Mac · Terminal</option></select>
+      <pre id="platform-command">Apply a fault or mitigation to see the equivalent command here.</pre>
+      <h3>Fallback settings API</h3>
+      <p><code>GET /api/mitigations</code> reads current settings. <code>POST /api/mitigations</code> applies a dependency's timeout and fallback, or restores defaults. The console forwards these requests to Storefront's internal settings listener.</p>
       <p class="meta">The raw API is at <code>http://localhost:8478</code>. <a href="http://localhost:8088/tools" target="_blank" rel="noopener">Windows and Mac commands</a></p>
     </section>
   </main>

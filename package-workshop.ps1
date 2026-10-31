@@ -4,14 +4,16 @@ $workshop = Join-Path $PSScriptRoot 'field-workshop'
 $output = Join-Path $PSScriptRoot 'dist'
 $archive = Join-Path $output 'northstar-workshop.zip'
 $legacyArchive = Join-Path $output 'northstar-workshop-windows.zip'
-$macLaunchers = @('Start Workshop.command', 'Stop Workshop.command')
+$macLaunchers = @('start.command', 'stop.command')
+$launchers = @('start.bat', 'stop.bat') + $macLaunchers
 
 if (-not (Test-Path -LiteralPath (Join-Path $workshop 'compose.yaml'))) {
   throw 'The field-workshop directory is missing.'
 }
-foreach ($name in $macLaunchers) {
-  $path = Join-Path $workshop $name
-  if (-not (Test-Path -LiteralPath $path)) { throw "Missing Mac launcher: $name" }
+foreach ($name in $launchers) {
+  $path = Join-Path $PSScriptRoot $name
+  if (-not (Test-Path -LiteralPath $path)) { throw "Missing launcher: $name" }
+  if ($macLaunchers -notcontains $name) { continue }
   $content = [IO.File]::ReadAllBytes($path)
   if ([Text.Encoding]::ASCII.GetString($content, 0, [Math]::Min(11, $content.Length)) -ne '#!/bin/bash') {
     throw "Mac launcher has no valid shell header: $name"
@@ -26,6 +28,9 @@ Compress-Archive -Path (Join-Path $workshop '*') -DestinationPath $archive -Forc
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zip = [IO.Compression.ZipFile]::Open($archive, [IO.Compression.ZipArchiveMode]::Update)
 try {
+  foreach ($name in $launchers) {
+    [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, (Join-Path $PSScriptRoot $name), $name) | Out-Null
+  }
   foreach ($name in $macLaunchers) {
     $entry = $zip.GetEntry($name)
     if ($null -eq $entry) { throw "Missing Mac launcher in package: $name" }

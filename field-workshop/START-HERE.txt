@@ -5,14 +5,19 @@ NORTHSTAR SUPPLY WORKSHOP - WINDOWS AND MAC
    Windows: right-click the ZIP and choose "Extract All...".
    Mac: double-click the ZIP, then open the extracted folder.
 3. Start from the extracted folder:
-   Windows: double-click "Start Workshop.bat".
-   Mac: double-click "Start Workshop.command".
-4. Wait for the browser to open http://localhost:8088.
+   Windows: double-click "start.bat".
+   Mac: double-click "start.command".
+4. Wait for the browser to open the workshop overview at http://localhost:8088,
+   Storefront, Network Faults, Grafana, and Prometheus.
 5. Work through the challenges in the browser.
-6. Stop from the same folder with "Stop Workshop.bat" (Windows) or
-   "Stop Workshop.command" (Mac).
+   In Network Faults, use "Fault injection" to create the problem and
+   "Fallbacks & timeouts" to change the shop's response. No terminal is needed.
+6. Stop from the same folder with "stop.bat" (Windows) or
+   "stop.command" (Mac).
 
 The first start needs internet to download container images and may take minutes.
+Everything runs in Docker; no Node.js, npm install, or IDE is needed.
+Later starts reuse the downloaded images. Pages open after readiness checks pass.
 Keep the status window open until the browser opens.
 On a Mac, macOS may ask you to approve opening a downloaded script. Only approve
 if you received this ZIP from your trusted workshop organizer.

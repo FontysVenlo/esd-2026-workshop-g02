@@ -1,6 +1,9 @@
 #!/bin/bash
 
 workshop_dir="$(cd "$(dirname "$0")" && pwd -P)"
+if [ -f "$workshop_dir/field-workshop/compose.yaml" ]; then
+  workshop_dir="$workshop_dir/field-workshop"
+fi
 
 fail() {
   printf '\n%s\n' "$1"
@@ -10,7 +13,7 @@ fail() {
 }
 
 if [ ! -f "$workshop_dir/compose.yaml" ]; then
-  fail 'The workshop files are not together. Run Stop Workshop.command from the extracted folder.'
+  fail 'The workshop files are not together. Run stop.command from the extracted folder.'
 fi
 
 docker_bin="$(command -v docker 2>/dev/null || true)"

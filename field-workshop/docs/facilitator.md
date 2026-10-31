@@ -4,7 +4,7 @@ Keep this file away from participants until after Assignment 3. At <http://local
 
 ## Before participants arrive
 
-Generate `northstar-workshop.zip` with `package-workshop.ps1` and distribute it to participants. Have them extract it fully. Pull/build the images while online, start the stack with **Start Workshop.bat** (Windows) or **Start Workshop.command** (Mac), and verify Grafana plus Prometheus targets. If Docker images are already present, the workshop can run without Internet. Ensure ports 8088, 8089, 3008, 9098 and 8478 are free. Test both launchers on representative participant laptops before the session; archive metadata checks alone do not prove macOS Gatekeeper behavior.
+Generate `northstar-workshop.zip` with `package-workshop.ps1` and distribute it to participants. Have them extract it fully. Pull/build the images while online, start the stack with **start.bat** (Windows) or **start.command** (Mac), and verify Grafana plus Prometheus targets. If Docker images are already present, the workshop can run without Internet. Ensure ports 8088, 8089, 3008, 9098 and 8478 are free. Test both launchers on representative participant laptops before the session; archive metadata checks alone do not prove macOS Gatekeeper behavior.
 
 ## Expected behavior
 
@@ -17,7 +17,7 @@ Numbers depend on the host and browser. Ask teams to compare same-route, same-fa
 
 ## Seed Assignment 3
 
-First restore clean proxy/configuration state. Choose exactly one scenario. Tell participants only that there is a controlled incident.
+First restore clean proxy/configuration state: click **Clear all faults** in Fault injection and **Restore default settings** in Fallbacks & timeouts. Choose exactly one scenario. Tell participants only that there is a controlled incident. Participants can enable mitigations in the second tab without a terminal or container restart.
 
 On Windows or Mac, the facilitator can seed scenario A in [Network Faults](http://localhost:8089) by choosing **Inventory**, entering **1200 ms**, and clicking **Apply delay**. For scenario B, choose **Shipping** and click **Disconnect**. Use **Clear all faults** afterward. The PowerShell commands below are an alternative for scenario A if you want the toxic named `incident` rather than `workshop-latency`.
 
@@ -38,7 +38,7 @@ Do not announce the selected scenario before teams submit their diagnosis. The s
 
 ## Cleanup and safety
 
-Remove the `incident` toxic if A was used. Re-enable Shipping if B was used. Clear all mitigation environment variables, recreate Storefront, and confirm both routes work. Before each GameDay, ask teams to state blast radius and an abort condition. If impact exceeds the condition, remove the toxic or re-enable the proxy immediately. There is no automatic abort. End with `docker compose down`; no Docker volume stores challenge state.
+Use **Clear all faults** in Fault injection, then **Restore default settings** in Fallbacks & timeouts, and confirm both Storefront actions return live information. Before each GameDay, ask teams to state blast radius and an abort condition. If impact exceeds the condition, remove the fault or reconnect the dependency immediately. There is no automatic abort. End with **stop.bat** on Windows or **stop.command** on Mac; challenge answers remain in the participant's browser. Runtime mitigation settings reset to the startup configuration when Storefront restarts.
 
 ## Discussion prompts
 

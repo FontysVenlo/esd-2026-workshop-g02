@@ -13,7 +13,8 @@ Expected outcomes below are predictions from the implementation, **not measured 
 | [Network Faults](http://localhost:8089) | Delay or disconnect Inventory/Shipping; clear faults |
 | [Grafana](http://localhost:3008/d/field-workshop/field-workshop) | Compare customer latency/success, dependency outcomes, and fallbacks |
 | [Prometheus](http://localhost:9098) | Run the queries below; check [scrape targets](http://localhost:9098/targets) |
-| [Commands page](http://localhost:8088/tools) | Windows and Mac configuration examples |
+| [Fallbacks & timeouts](http://localhost:8089/#mitigations) | Enable fallbacks, edit timeouts, and restore defaults without a terminal |
+| [Commands page](http://localhost:8088/tools) | Optional Windows and Mac API examples |
 
 **The loop for every challenge:** baseline -> hypothesis + abort condition -> inject one fault -> measure -> remove fault -> mitigate -> repeat the identical fault -> compare -> clean up -> submit notes.
 
@@ -46,9 +47,13 @@ A **timeout** limits how long Storefront waits. A **fallback** defines what it r
 
 ## 2. Start and prepare
 
-Start Docker Desktop. From the repository, double-click **Start Workshop.bat** inside `field-workshop/` on Windows, or **Start Workshop.command** on Mac. If using the distributed ZIP, extract it fully before launching.
+Start Docker Desktop. From the repository root, double-click **start.bat** on Windows, or **start.command** on Mac. If using the distributed ZIP, extract it fully before launching the same files from the extracted folder.
 
-For the commands in this cheatsheet, open PowerShell at the repository root and enter the workshop directory **once**:
+For one-command startup from the repository root, run `.\start.bat` on Windows or `bash ./start.command` on Mac. This starts the full stack plus light traffic and opens all five workshop websites in your default browser.
+
+All four challenges can be completed in the browser on Windows and Mac. In Network Faults, use **Fault injection** to create the problem and **Fallbacks & timeouts** to change the shop's response. The **Info & commands** tab has a platform selector for optional command examples.
+
+For optional maintainer commands only, open PowerShell at the repository root and enter the workshop directory **once**:
 
 ```powershell
 Set-Location .\field-workshop
@@ -66,7 +71,7 @@ The supplied load generator sends about three requests per second across both cu
 Before each challenge:
 
 1. Confirm both proxy paths are connected and have no active faults, except the intentionally seeded incident in Challenge 3.
-2. Restore default mitigation settings using the cleanup commands below.
+2. In Fallbacks & timeouts, click **Restore default settings**.
 3. Try both customer actions and check Prometheus targets: Storefront, Inventory, Shipping should be `UP`.
 4. Collect a healthy baseline. A practical choice is **60-90 seconds per stable phase**, with the same duration for each comparison. This is a suggested method, not a required course threshold.
 5. Write down the route, metric, prediction, and an abort condition **before** injecting a fault.
@@ -81,15 +86,9 @@ An abort condition must be observable. Example: "Stop if the product route retur
 2. **Predict:** "Adding 1500 ms Inventory response delay will add roughly 1.5 seconds to product response time while calls still normally succeed, since the default timeout is 3 seconds." Set your abort condition.
 3. **Inject:** in Network Faults choose **Inventory**, enter **1500**, then **Apply delay**.
 4. **Observe:** repeat the product action. Compare Grafana's **Customer-facing p95 latency**, **Customer request success rate**, and **Dependency p95 latency**. The preview also depends on Inventory, so it can slow too.
-5. **Remove delay**, then apply a mitigation in PowerShell:
+5. **Remove delay**, then open **Fallbacks & timeouts** and click **Use Challenge 1 settings**. Alternatively, set Inventory timeout to **400**, enable Inventory fallback, and click **Apply Inventory settings**. The change is immediate.
 
-   ```powershell
-   $env:INVENTORY_TIMEOUT_MS = '400'
-   $env:INVENTORY_FALLBACK = 'true'
-   docker compose up -d --force-recreate storefront
-   ```
-
-6. **Retest:** after Storefront is ready, apply the identical **1500 ms Inventory delay**. Use the same route and a fresh measurement window.
+6. **Retest:** apply the identical **1500 ms Inventory delay**. Use the same route and a fresh measurement window.
 7. **Expect:** the API should return after roughly the 400 ms wait plus overhead, with HTTP 200 and unconfirmed stock. Inventory timeouts and Inventory fallbacks should appear. Grafana p95 is a histogram estimate, so it need not read exactly 0.400 seconds.
 8. **Conclude:** the page is faster and available as an informational page, but stock is unknown. HTTP 200 does not mean the item is confirmed available. A short timeout without fallback would instead expose timeout errors.
 9. **Clean up:** remove the delay, restore default configuration, and verify live stock returns. Fill all Challenge 1 fields and select **Submit notes**.
@@ -103,12 +102,7 @@ An abort condition must be observable. Example: "Stop if the product route retur
 1. **Baseline both routes:** product and order preview should succeed with live information. Record each separately and state your expected blast radius and abort condition.
 2. **Inject:** choose **Shipping** in Network Faults and click **Disconnect**.
 3. **Compare:** `/api/product` should remain healthy. `/api/order-preview` should fail by default, normally with HTTP 503. Confirm Shipping failures in **Dependency outcomes**. A disconnect can fail quickly; low latency alone is not proof of health.
-4. **Reconnect** Shipping, then enable an honest preview fallback:
-
-   ```powershell
-   $env:SHIPPING_FALLBACK = 'true'
-   docker compose up -d --force-recreate storefront
-   ```
+4. **Reconnect** Shipping, then open **Fallbacks & timeouts** and click **Use Challenge 2 settings**. Alternatively, keep the Shipping timeout at **3000**, enable Shipping fallback, and click **Apply Shipping settings**.
 
 5. **Repeat the same outage:** disconnect Shipping again, then test both routes over a fresh window.
 6. **Expect:** product still works; preview now returns HTTP 200 with `degraded: true` and unavailable shipping price/delivery information. Shipping calls still fail, and Shipping fallback activity rises.
@@ -135,7 +129,7 @@ An abort condition must be observable. Example: "Stop if the product route retur
    These are diagnostic clues, not proof. A healthy dependency scrape does not prove Storefront can reach it through Toxiproxy: Prometheus scrapes dependencies directly.
 
 5. **Only after recording the hypothesis**, inspect Network Faults or `GET /proxies` to check it. Do not clear the incident before recording its configuration.
-6. Choose a mitigation for the observed failure mode. Use a timeout/fallback configuration from Challenges 1-2, or justify a small code change. If you temporarily remove the fault to configure, restore the **exact same fault and magnitude** for validation.
+6. Choose a mitigation for the observed failure mode. Apply a timeout/fallback configuration in the second console tab, using the same controls as Challenges 1-2. If you temporarily remove the fault to configure, restore the **exact same fault and magnitude** for validation.
 7. Compare the same routes and signals in fresh windows. Report whether customer behavior improves even if dependency failures remain.
 8. Submit the diagnosis, then ask the facilitator to reveal the seed. Record the reveal and cleanup; update the submission if needed.
 
@@ -157,22 +151,16 @@ One optional plan, distinct from the first two challenges:
 | Hypothesis | Preview slows by roughly 2 seconds; product stays healthy |
 | Blast radius | Local preview information only; watch product as a control |
 | Abort | Remove fault if product fails continuously for 15 seconds or preview p95 exceeds 4 seconds for a full minute |
-| Mitigation | `SHIPPING_TIMEOUT_MS=500`, `SHIPPING_FALLBACK=true`, recreate Storefront |
+| Mitigation | In Fallbacks & timeouts, set Shipping timeout to 500 ms, enable fallback, and Apply |
 | Validation | Identical 2000 ms Shipping delay; compare preview latency/success and Shipping fallback activity |
 | Trade-off | Faster preview with no confirmed shipping quote or ETA |
-| Rollback | Clear faults, unset mitigation variables, recreate Storefront, verify both routes |
+| Rollback | Clear all faults, Restore default settings, verify both routes |
 
-For that example's mitigation:
+For that example, use the Shipping form in **Fallbacks & timeouts**. No terminal or source-code change is required.
 
-```powershell
-$env:SHIPPING_TIMEOUT_MS = '500'
-$env:SHIPPING_FALLBACK = 'true'
-docker compose up -d --force-recreate storefront
-```
+Only the **two local Toxiproxy proxies** are in scope. Keep the supplied light traffic. Record exact browser settings and fault settings so the experiment is reproducible. If changing code, the implementation is `field-workshop/services/storefront.mjs`; rebuild from the workshop directory with `docker compose up --build -d storefront` and document how to undo your specific edit.
 
-Only the **two local Toxiproxy proxies** are in scope. Keep the supplied light traffic. Record exact commands and fault settings so the experiment is reproducible. If changing code, the implementation is `field-workshop/services/storefront.mjs`; rebuild from the workshop directory with `docker compose up --build -d storefront` and document how to undo your specific edit.
-
-**Hand in:** a complete [experiment record](field-workshop/docs/experiment-record.md), including plan, actual commands, measurements, conclusion, trade-off, and completed rollback. Submit Challenge 4 notes.
+**Hand in:** a complete [experiment record](field-workshop/docs/experiment-record.md), including plan, actual settings, measurements, conclusion, trade-off, and completed rollback. Submit Challenge 4 notes.
 
 ## 7. Read the monitoring correctly
 
@@ -213,9 +201,9 @@ sum by (dependency, outcome) (increase(workshop_dependency_calls_total{service="
 
 `rate()` is per second, not a count. `increase()` estimates counts over the selected range and may return fractional values due to extrapolation. Convert seconds to milliseconds by multiplying by 1000. To calculate a route's success percentage, divide its 2xx request rate by its total request rate and multiply by 100; explicitly check error-only routes when a success series is absent.
 
-## 8. Command and cleanup reference (Windows PowerShell)
+## 8. Browser cleanup and optional technical checks
 
-Run Compose commands from `field-workshop/`. Changing a shell variable alone does not update a running container; recreate Storefront after changing it. Keep experiments and cleanup in the **same PowerShell session**, or verify the effective environment explicitly.
+The browser controls are sufficient for experiments and cleanup. The following PowerShell checks are optional. Run Compose commands from `field-workshop/`. Read live policy from `/api/mitigations`; container environment values describe startup settings, not subsequent browser changes.
 
 ```powershell
 # Check both API response bodies
@@ -225,7 +213,7 @@ Invoke-RestMethod http://localhost:8088/api/order-preview
 # Inspect state and logs
 docker compose ps
 docker compose logs --tail 50 storefront
-docker compose exec storefront printenv INVENTORY_TIMEOUT_MS INVENTORY_FALLBACK SHIPPING_TIMEOUT_MS SHIPPING_FALLBACK
+Invoke-RestMethod http://localhost:8089/api/mitigations
 
 # Inspect raw proxy state (Challenge 3: only after writing your hypothesis)
 $proxyApi = 'http://localhost:8478'
@@ -237,21 +225,16 @@ For HTTP errors, `Invoke-RestMethod` reports an error instead of returning a nor
 After each experiment:
 
 1. Select **Clear all faults** in Network Faults and confirm both paths are connected with no active faults.
-2. Restore the default settings:
+2. In **Fallbacks & timeouts**, click **Restore default settings**. Both fallbacks should be off and both timeouts should read **3000 ms**.
 
-   ```powershell
-   Remove-Item Env:INVENTORY_TIMEOUT_MS,Env:INVENTORY_FALLBACK,Env:SHIPPING_TIMEOUT_MS,Env:SHIPPING_FALLBACK -ErrorAction SilentlyContinue
-   docker compose up -d --force-recreate storefront
-   ```
-
-3. Verify both APIs return live information. If settings remain unexpected, check for a Compose `.env` file or other overrides as well as the container environment.
-4. Submit and export your notes. When finished, use **Stop Workshop.bat** or:
+3. Verify both APIs return live information. Use **Refresh settings** to read the active policy.
+4. Submit and export your notes. When finished, use **stop.bat** or:
 
    ```powershell
    docker compose --profile load down
    ```
 
-**Reset distinctions:** Clear all faults resets network faults only. Unsetting variables plus recreating Storefront resets configuration. Clear notes resets browser progress only. None of these substitutes for the others. Stopping and restarting the entire stack recreates network state, but exported shell configuration can still reapply mitigations.
+**Reset distinctions:** Clear all faults resets network faults only. Restore default settings resets timeout/fallback configuration. Clear notes resets browser progress only. None of these substitutes for the others. Stopping and restarting the entire stack recreates network state and reloads Storefront startup settings. Browser mitigation changes do not persist across a Storefront restart; maintainer environment overrides can still affect its startup configuration.
 
 ## 9. What to submit
 

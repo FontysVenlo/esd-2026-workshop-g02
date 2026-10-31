@@ -1,6 +1,9 @@
 #!/bin/bash
 
 workshop_dir="$(cd "$(dirname "$0")" && pwd -P)"
+if [ -f "$workshop_dir/field-workshop/compose.yaml" ]; then
+  workshop_dir="$workshop_dir/field-workshop"
+fi
 
 fail() {
   printf '\n%s\n' "$1"
@@ -10,7 +13,7 @@ fail() {
 }
 
 if [ ! -f "$workshop_dir/compose.yaml" ]; then
-  fail 'The workshop files are not together. Extract the ZIP, open the extracted folder, and run Start Workshop.command there.'
+  fail 'The workshop files are not together. Extract the ZIP, open the extracted folder, and run start.command there.'
 fi
 
 docker_bin="$(command -v docker 2>/dev/null || true)"
@@ -33,9 +36,17 @@ fi
 
 printf 'Starting the Northstar Supply workshop...\n'
 printf 'The first start downloads container images and may take several minutes.\n'
-if ! "$docker_bin" compose -f "$workshop_dir/compose.yaml" --profile load up --build -d --wait; then
+printf 'Waiting for the workshop websites to be ready before opening your browser.\n'
+if ! "$docker_bin" compose -f "$workshop_dir/compose.yaml" --profile load up --build -d --wait --wait-timeout 120; then
+  "$docker_bin" compose -f "$workshop_dir/compose.yaml" --profile load ps -a
   fail 'The workshop could not start. Check Docker Desktop for container errors, then try again.'
 fi
 
 printf '\nWorkshop ready: http://localhost:8088\n'
-open 'http://localhost:8088'
+printf 'Opening the overview, Storefront, Network Faults, Grafana, and Prometheus...\n'
+open \
+  'http://localhost:8088' \
+  'http://localhost:8088/storefront' \
+  'http://localhost:8089' \
+  'http://localhost:3008/d/field-workshop/field-workshop' \
+  'http://localhost:9098'

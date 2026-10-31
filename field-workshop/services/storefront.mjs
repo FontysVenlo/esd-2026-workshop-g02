@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
 import { Metrics } from './metrics.mjs';
+import { createMitigations, createMitigationServer } from './mitigations.mjs';
 
 const page = readFileSync(new URL('../web/index.html', import.meta.url));
 const workshopPage = readFileSync(new URL('../web/workshop.html', import.meta.url));
@@ -29,6 +30,10 @@ export function createStorefrontServer(config = {}) {
   for (const timeout of [settings.inventoryTimeoutMs, settings.shippingTimeoutMs]) {
     if (!Number.isFinite(timeout) || timeout < 1) throw new Error('Dependency timeouts must be positive milliseconds');
   }
+  const mitigations = config.mitigations ?? createMitigations({
+    inventory: { timeoutMs: settings.inventoryTimeoutMs, fallback: settings.inventoryFallback },
+    shipping: { timeoutMs: settings.shippingTimeoutMs, fallback: settings.shippingFallback }
+  });
   const metrics = new Metrics('storefront');
 
   async function dependency(name, baseUrl, path, timeoutMs) {
@@ -48,24 +53,24 @@ export function createStorefrontServer(config = {}) {
     }
   }
 
-  async function stock() {
+  async function stock(policy) {
     try {
-      const data = await dependency('inventory', settings.inventoryUrl, '/stock?sku=LAMP-01', settings.inventoryTimeoutMs);
+      const data = await dependency('inventory', settings.inventoryUrl, '/stock?sku=LAMP-01', policy.timeoutMs);
       return { available: data.quantity > 0, quantity: data.quantity, source: 'live' };
     } catch (error) {
-      if (!settings.inventoryFallback) throw error;
+      if (!policy.fallback) throw error;
       metrics.fallback('inventory');
       // A fallback must not claim the item is in stock when the source of truth is unavailable.
       return { available: null, quantity: null, source: 'unconfirmed', warning: 'Availability cannot be confirmed.' };
     }
   }
 
-  async function shipping() {
+  async function shipping(policy) {
     try {
-      const data = await dependency('shipping', settings.shippingUrl, '/quote?sku=LAMP-01', settings.shippingTimeoutMs);
+      const data = await dependency('shipping', settings.shippingUrl, '/quote?sku=LAMP-01', policy.timeoutMs);
       return { ...data, source: 'live' };
     } catch (error) {
-      if (!settings.shippingFallback) throw error;
+      if (!policy.fallback) throw error;
       metrics.fallback('shipping');
       return { method: null, priceEur: null, etaDays: null, source: 'unavailable', warning: 'Shipping quote is temporarily unavailable.' };
     }
@@ -106,12 +111,15 @@ export function createStorefrontServer(config = {}) {
     if (route !== '/api/product' && route !== '/api/order-preview') return send(404, { error: 'Not found' });
 
     const started = performance.now();
+    // Keep one consistent policy for the entire customer request, even if the
+    // operator changes settings while a dependency request is in flight.
+    const policy = mitigations.snapshot();
     try {
       if (route === '/api/product') {
-        const inventory = await stock();
+        const inventory = await stock(policy.inventory);
         return sendApi(200, { product, inventory, degraded: inventory.source !== 'live' });
       }
-      const [inventory, delivery] = await Promise.all([stock(), shipping()]);
+      const [inventory, delivery] = await Promise.all([stock(policy.inventory), shipping(policy.shipping)]);
       return sendApi(200, {
         product, inventory, shipping: delivery,
         degraded: inventory.source !== 'live' || delivery.source !== 'live',
@@ -137,5 +145,10 @@ export function createStorefrontServer(config = {}) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  createStorefrontServer().listen(Number(process.env.PORT ?? 8080), '0.0.0.0');
+  const mitigations = createMitigations({
+    inventory: { timeoutMs: Number(process.env.INVENTORY_TIMEOUT_MS ?? 3000), fallback: process.env.INVENTORY_FALLBACK === 'true' },
+    shipping: { timeoutMs: Number(process.env.SHIPPING_TIMEOUT_MS ?? 3000), fallback: process.env.SHIPPING_FALLBACK === 'true' }
+  });
+  createStorefrontServer({ mitigations }).listen(Number(process.env.PORT ?? 8080), '0.0.0.0');
+  createMitigationServer(mitigations).listen(Number(process.env.MITIGATION_PORT ?? 8081), '0.0.0.0');
 }

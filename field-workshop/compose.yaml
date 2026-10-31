@@ -1,5 +1,13 @@
 name: field-workshop
 
+# Check the HTTP servers themselves so workshop faults do not block startup.
+x-app-healthcheck: &app-healthcheck
+  test: ["CMD", "node", "--eval", "fetch('http://127.0.0.1:8080/health', { signal: AbortSignal.timeout(2000) }).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+  interval: 2s
+  timeout: 3s
+  retries: 30
+  start_period: 10s
+
 services:
   inventory:
     build: .
@@ -7,6 +15,7 @@ services:
     environment:
       PORT: 8080
     expose: ["8080"]
+    healthcheck: *app-healthcheck
 
   shipping:
     build: .
@@ -14,6 +23,7 @@ services:
     environment:
       PORT: 8080
     expose: ["8080"]
+    healthcheck: *app-healthcheck
 
   toxiproxy:
     image: ghcr.io/shopify/toxiproxy:2.12.0
@@ -40,11 +50,14 @@ services:
       SHIPPING_TIMEOUT_MS: ${SHIPPING_TIMEOUT_MS:-3000}
       INVENTORY_FALLBACK: ${INVENTORY_FALLBACK:-false}
       SHIPPING_FALLBACK: ${SHIPPING_FALLBACK:-false}
+      MITIGATION_PORT: 8081
+    expose: ["8081"]
     depends_on:
       proxy-init:
         condition: service_completed_successfully
     ports:
       - "127.0.0.1:8088:8080"
+    healthcheck: *app-healthcheck
 
   fault-console:
     build: .
@@ -52,11 +65,15 @@ services:
     environment:
       PORT: 8080
       TOXIPROXY_API: http://toxiproxy:8474
+      STOREFRONT_ADMIN_URL: http://storefront:8081
     depends_on:
       proxy-init:
         condition: service_completed_successfully
+      storefront:
+        condition: service_healthy
     ports:
       - "127.0.0.1:8089:8080"
+    healthcheck: *app-healthcheck
 
   loadgen:
     build: .
@@ -64,7 +81,8 @@ services:
     environment:
       STOREFRONT_URL: http://storefront:8080
     depends_on:
-      - storefront
+      storefront:
+        condition: service_healthy
     profiles: ["load"]
 
   prometheus:
@@ -76,6 +94,12 @@ services:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
       - "127.0.0.1:9098:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "-T", "3", "http://127.0.0.1:9090/-/ready"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
     depends_on:
       - storefront
 
@@ -91,5 +115,11 @@ services:
       - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports:
       - "127.0.0.1:3008:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "-T", "3", "http://127.0.0.1:3000/api/health"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
     depends_on:
       - prometheus
