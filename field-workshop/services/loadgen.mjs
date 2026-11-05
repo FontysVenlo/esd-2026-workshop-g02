@@ -13,9 +13,13 @@ async function request(path) {
   }
 }
 
-// Roughly three real requests per second, to both customer-facing paths.
+// Three lamp requests per second can exhaust two workers under a 1.5 s delay.
+// The other products use the SAME services through separate healthy proxy paths.
+// Keep this traffic fixed across healthy, faulted and mitigated measurements.
 setInterval(() => request('/api/product'), 500);
 setInterval(() => request('/api/order-preview'), 1000);
+setInterval(() => request('/api/product?sku=CHAIR-02'), 1000);
+setInterval(() => request('/api/product?sku=DESK-03'), 1000);
 setInterval(() => {
   console.log(`Last 10 seconds: ${requests} requests, ${failures} failures`);
   requests = 0;

@@ -1,44 +1,45 @@
 {
   "id": "challenge-4",
   "number": 4,
-  "title": "Your Mini GameDay",
+  "title": "Your containment GameDay",
   "level": "Capstone",
-  "scenario": "Your team owns the lamp shop and is preparing a release. The team lead asks: “If one of our providers becomes slow or unavailable, can customers still get useful information?” You have time to test one concrete failure in this local Docker shop and recommend a response.",
-  "why": "The earlier challenges gave you an incident and a path to follow. Now you turn a customer risk into your own repeatable experiment that a teammate could run from your notes.",
-  "reproduce": "Choose one dependency and one fault: an Inventory or Shipping response delay, or a disconnection. Choose the customer action you want to protect. For example, investigate slow Shipping replies during “Order preview”; record your chosen delay before applying it.",
-  "ready": "Clear old faults and restore default settings. Use only the two local dependency paths and keep the supplied light traffic. Choose one fault, not a combination, so you can explain what caused the result.",
-  "assignment": "Design and run one test that answers a specific customer-facing reliability question, then recommend a mitigation with evidence.",
+  "scenario": "Your team wants evidence that one faulty lamp dependency cannot unnecessarily hide the chair and desk. Design one repeatable local experiment that demonstrates impact beyond the lamp, then test whether your mitigation contains it.",
+  "why": "A fallback is justified by useful behavior preserved under a specific fault, not by an enabled checkbox. Your recommendation needs before-and-after evidence for the catalog or healthy products and an explicit statement of lost certainty.",
+  "reproduce": "Choose Inventory or Shipping on the lamp branch and one fault: a measured delay or disconnection. Choose availability or delivery catalog. A +1500 ms delay can pressure shared workers; disconnection demonstrates aggregate error propagation.",
+  "ready": "Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total. Use only the two exposed lamp fault controls; the other product paths are the healthy comparison group.",
+  "assignment": "Can you reproduce a wider customer impact and then contain it to the affected product’s missing information?",
   "tasks": [
     {
-      "title": "Write a customer question and a test plan",
-      "instruction": "Name the Storefront button/API route, the dependency, the exact fault and magnitude, and the metric you will watch. Predict the customer effect. State an abort condition: a specific unexpected result that means you will remove the fault immediately."
+      "title": "Define a propagation hypothesis",
+      "instruction": "Name the catalog view, lamp dependency, exact fault/magnitude, healthy comparison products, propagation mechanism and abort condition. Choose customer results and worker/product metrics that could disprove your hypothesis."
     },
     {
-      "title": "Measure normal behavior",
-      "instruction": "Run the chosen customer action and record a healthy baseline. Choose a consistent observation window, for example 60–90 seconds, for every phase. Keep the supplied traffic unchanged."
+      "title": "Record a healthy comparison window",
+      "instruction": "Measure all three products, catalog latency/status, worker queue and changes in cumulative rejections over a fixed window. Keep supplied traffic unchanged for every phase."
     },
     {
-      "title": "Run your chosen failure",
-      "instruction": "Use Network Faults to apply only the planned delay or disconnection. Repeat the customer action and record timings, route/status outcomes, and the relevant dependency signals. Decide whether your original prediction matched the evidence."
+      "title": "Reproduce impact beyond the lamp",
+      "instruction": "Apply only your chosen fault. Measure the same view and healthy products. Record whether impact spreads by queuing, rejection, aggregate failure or a combination. If no wider effect appears, report that honestly and revise the experiment before recommending mitigation."
     },
     {
-      "title": "Make a justified change",
-      "instruction": "Remove the fault first. Choose and apply a timeout/fallback change in the Fallbacks & timeouts tab. You can complete this experiment entirely in the browser. Explain what customer behavior it protects and what information or certainty may be lost."
+      "title": "Choose a mechanism-specific mitigation",
+      "instruction": "Remove the fault before configuring. Use a short dependency timeout for a slow call, enable fallback/breaker for the relevant dependency, and justify the missing-data behavior. Do not claim fallback alone releases workers."
     },
     {
-      "title": "Repeat the exact test and recommend a response",
-      "instruction": "Apply the same fault to the same dependency at the same magnitude. Repeat the action and compare equivalent windows. State whether your change helped, document its trade-off and exact reproduction steps, then remove the fault, undo the mitigation, verify recovery, and submit your record."
+      "title": "Repeat exactly and recommend",
+      "instruction": "Reapply the identical fault at the same magnitude and traffic. Show whether chair/desk remain useful, whether catalog status/time improves, and what lamp information remains unavailable. Include probe behavior and exact rollback instructions. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements."
     }
   ],
   "done": [
-    "A teammate can reproduce your chosen customer action, fault, mitigation, and rollback from the submitted record.",
-    "Your recommendation compares healthy, faulted, and mitigated results under the identical fault.",
-    "You explained the remaining risk and restored the clean system."
+    "A teammate can reproduce the fault, traffic, three-phase measurements, mitigation and rollback.",
+    "You demonstrated and measured a wider impact before mitigation, then compared healthy products and catalog usefulness under the identical fault.",
+    "You distinguished timeout, breaker and fallback, described remaining uncertainty/probe spikes, and restored all three products."
   ],
   "solution": [
-    "There is no single correct experiment. A valid record has a baseline, written hypothesis, limited fault, abort condition, measured outcome, mitigation, identical retest, and rollback.",
-    "Worked example: test /api/product with +1500 ms Inventory latency. Expect roughly +1500 ms customer latency before mitigation. Use a 400 ms timeout and unconfirmed-stock fallback, then repeat +1500 ms; the response should be faster but stock uncertain.",
-    "Check comparable time windows and the same route. Report request count, latency, success/failure, and fallback activity. Remove the fault and mitigation after the test."
+    "There is no single correct experiment. It needs healthy, faulted and mitigated phases, the exact same fault/traffic, a wider customer impact and an honest remaining trade-off.",
+    "Example: +1500 ms on lamp Shipping during delivery catalog refresh. Default waiting can consume shared workers and delay the aggregate. Set a 400 ms Shipping timeout with fallback/breaker, then repeat the exact delay.",
+    "Chair and desk should retain live stock/quotes while the lamp quote becomes unavailable. The breaker probes every 5 seconds and may cause short spikes. Compare queue pressure and rejection-rate changes, not lifetime totals.",
+    "If your chosen fault causes only aggregate failure and no capacity pressure, state that distinction. Finish with verified live results for all three products."
   ],
   "fields": [
     {
@@ -49,22 +50,22 @@
     {
       "key": "steadyState",
       "label": "Steady state and hypothesis",
-      "prompt": "What did you measure before the fault, and what do you predict?"
+      "prompt": "What did you measure before the fault, and what do you predict? Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
     },
     {
       "key": "faultEvidence",
       "label": "Fault result",
-      "prompt": "Record your actual fault commands, time window, customer effect, and dependency signals."
+      "prompt": "Record your actual fault commands, time window, customer effect, and dependency signals. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
     },
     {
       "key": "mitigation",
       "label": "Mitigation and reason",
-      "prompt": "Which timeout/fallback settings did you change, and why?"
+      "prompt": "Which timeout/fallback settings did you change, and why? Distinguish the roles of timeout, circuit breaker and fallback."
     },
     {
       "key": "validation",
       "label": "Identical-fault validation",
-      "prompt": "Reapply the same fault and compare route latency, success, and fallback behavior."
+      "prompt": "Reapply the same fault and compare route latency, success, and fallback behavior. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
     },
     {
       "key": "conclusion",
@@ -73,7 +74,7 @@
     }
   ],
   "overview": {
-    "title": "4 · Your own experiment",
-    "description": "Choose one customer risk, reproduce it, and support a mitigation with your own measurements."
+    "title": "4 · Prove useful containment",
+    "description": "Design an experiment whose mitigation visibly protects the catalog or healthy products, and document its trade-off."
   }
 }

@@ -1,52 +1,52 @@
 {
   "id": "challenge-1",
   "number": 1,
-  "title": "Slow stock information",
+  "title": "One slow product blocks the shop",
   "level": "Guided entry",
-  "scenario": "You maintain an online shop that sells a desk lamp. A customer clicks “Check availability” before deciding to buy, but the stock check keeps them waiting. The lamp description and price are already visible; the shop is waiting for a separate Inventory service to confirm stock.",
-  "why": "A slow dependency can make a working shop feel unresponsive. You need to decide how long the customer should wait and what the shop can honestly show when it cannot confirm stock.",
-  "reproduce": "Make Inventory replies 1500 ms (1.5 seconds) slower in Network Faults. Then click “Check availability” in Storefront. You are reproducing a slow stock check, not a complete outage.",
-  "ready": "The stack starts healthy. Before this experiment, use “Clear all faults” in Network Faults and “Restore default settings” in the Fallbacks & timeouts tab if you changed mitigation settings earlier. Confirm that “Check availability” shows live stock. Opening this challenge does not apply a fault.",
-  "assignment": "Can the shop respond sooner during a slow stock check without pretending the lamp is in stock?",
+  "scenario": "Desk Lamp, Task Chair and Writing Desk share two Storefront workers. Only the lamp’s Inventory network branch becomes slow. Repeated lamp requests hold the workers; healthy chair and desk requests now queue or are rejected. The complete catalog also waits for the lamp result.",
+  "why": "The mitigation now protects other products. A 400 ms timeout releases a worker, the 5-second circuit breaker stops repeated waiting on the lamp, and the fallback lets the catalog show chair and desk while lamp stock is unconfirmed. These are three different mechanisms; fallback alone does not free capacity.",
+  "reproduce": "Choose Inventory in Network Faults and apply a 1500 ms response delay. It affects only Desk Lamp’s branch. Use “Refresh all availability” in Storefront and watch the fixed background traffic fill the two shared workers.",
+  "ready": "Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total.",
+  "assignment": "Can you keep the healthy chair and desk available while temporarily disabling an unconfirmed lamp availability check?",
   "mitigationGuide": "inventory",
   "tasks": [
     {
-      "title": "Try the healthy customer journey",
-      "instruction": "Open Storefront and click “Check availability” a few times. Record the displayed milliseconds and stock result. In Grafana, find /api/product under “Customer-facing p95 latency”. Write what you expect a 1.5-second Inventory delay to do and when you would stop the test."
+      "title": "Measure the healthy catalog",
+      "instruction": "Use “Refresh all availability”. Record all three stock results, catalog time, workers, queue size and the starting rejected count. In Grafana inspect “Product p95 latency” and “Shared workers and queue”. Predict which products can be affected despite having healthy dependency branches; state an abort condition."
     },
     {
-      "title": "Reproduce the customer complaint",
-      "instruction": "Open Network Faults, choose Inventory, set “Response delay (ms)” to 1500, and click “Apply delay”. Return to Storefront and click “Check availability” again. Look for the longer wait; with default settings, the request should normally still succeed."
+      "title": "Create a lamp-only slowdown",
+      "instruction": "Apply +1500 ms to Inventory in Network Faults. Keep supplied traffic unchanged and refresh the catalog. Record lamp delay, chair/desk queue time or failures, catalog status, and the change in rejected requests over a fresh window. The slow request consumes actual shared workers; the indicators are measured state."
     },
     {
-      "title": "Find evidence of the cause",
-      "instruction": "Record the new request times and compare them with your healthy measurements. In Grafana, compare /api/product in “Customer-facing p95 latency” with inventory in “Dependency p95 latency”. Use a fresh 60–90-second window per phase so old data does not dominate the comparison."
+      "title": "Trace the propagation",
+      "instruction": "Compare “Dependency p95 latency”, “Product p95 latency”, “Shared workers and queue”, and “Capacity rejection rate”. Explain the path: lamp Inventory delay → occupied workers → healthy products waiting/rejected, plus the catalog waiting for every product. A queue can fluctuate; use a full window."
     },
     {
-      "title": "Change how the shop handles the delay",
-      "instruction": "Remove the Inventory delay first. In Network Faults, open “Fallbacks & timeouts” and click “Use Challenge 1 settings”. This enables Inventory fallback with a 400 ms timeout immediately. The timeout limits the wait; the fallback lets the shop return “Stock unconfirmed”. No source-code edit is required."
+      "title": "Apply containment",
+      "instruction": "Remove the fault first. Open Fallbacks & timeouts and use Challenge 1 settings. This applies a 400 ms Inventory timeout and enables fallback plus the product/dependency circuit breaker. Predict the distinct effect of each mechanism."
     },
     {
-      "title": "Repeat, compare, and clean up",
-      "instruction": "Apply the same 1500 ms Inventory delay again. Repeat “Check availability” and record the response time, displayed stock message, and “Fallback activity” in Grafana. Explain the speed-versus-certainty trade-off. Clear faults, click “Restore default settings” in Fallbacks & timeouts, check live stock returns, then submit your notes below."
+      "title": "Repeat the same fault and verify recovery",
+      "instruction": "Reapply the identical +1500 ms Inventory delay. Refresh several times, including within and after a 5-second cooldown. Compare chair/desk live results, queue pressure, rejection-rate changes, catalog latency, and lamp stock uncertainty. The lamp availability action should be disabled while stock is unconfirmed. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements."
     }
   ],
   "done": [
-    "You recorded the same customer action in three states: healthy, delayed, and delayed with mitigation.",
-    "You explained whether the response became faster and why “Stock unconfirmed” is different from confirmed availability.",
-    "You removed the fault, restored the defaults, and submitted your own measurements."
+    "You measured healthy, delayed and mitigated phases under unchanged traffic.",
+    "You observed and explained impact on chair/desk or the complete catalog, then verified that impact shrank while lamp stock remained unconfirmed.",
+    "You distinguished timeout, circuit breaker and fallback; compared equal windows; and verified cleanup."
   ],
   "solution": [
-    "Healthy: product requests succeed with low local latency. Record your own baseline; exact numbers vary.",
-    "With +1500 ms Inventory latency and the default 3000 ms timeout, product latency should rise by roughly 1500 ms. Inventory call latency rises too; requests normally still succeed.",
-    "Example mitigation: in Fallbacks & timeouts, apply a 400 ms Inventory timeout with Inventory fallback enabled. Under the same fault, the page should return sooner with stock marked unconfirmed. Fallback counts rise.",
-    "Trade-off: a fast HTTP 200 is not confirmed stock. Clear the fault, click “Restore default settings”, and check that normal stock returns."
+    "Healthy: all three product branches answer quickly and the complete catalog is live. Record actual local timings.",
+    "With +1500 ms on the lamp Inventory branch, repeated lamp requests can exceed two workers of capacity. Chair/desk requests wait or are rejected even though their own dependency paths are healthy. A complete catalog also waits for or fails on one missing result.",
+    "With a 400 ms timeout, a failed lamp call releases its worker sooner. The circuit breaker then skips that product/dependency path for 5 seconds; the fallback returns unknown stock instead of rejecting the entire catalog. Chair and desk can return live information.",
+    "Expect a probe and possible short latency spike every cooldown while the fault persists. HTTP 200 is not confirmed lamp stock. Remove the fault and restore defaults; verify all three recover."
   ],
   "fields": [
     {
       "key": "steadyState",
       "label": "Healthy baseline and metric",
-      "prompt": "Which route and metric did you choose? Include your measured baseline."
+      "prompt": "Which route and metric did you choose? Include your measured baseline. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
     },
     {
       "key": "hypothesis",
@@ -56,17 +56,17 @@
     {
       "key": "faultEvidence",
       "label": "Fault evidence",
-      "prompt": "Record the same route under fault: latency, success rate, Inventory signal, and time window."
+      "prompt": "Record the same route under fault: latency, success rate, Inventory signal, and time window. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
     },
     {
       "key": "mitigation",
       "label": "Mitigation and reason",
-      "prompt": "What timeout/fallback did you use, and why is it safe for a product page?"
+      "prompt": "What timeout/fallback did you use, and why is it safe for a product page? Distinguish the roles of timeout, circuit breaker and fallback."
     },
     {
       "key": "validation",
       "label": "Same-fault validation",
-      "prompt": "What happened when you applied the identical fault after mitigation?"
+      "prompt": "What happened when you applied the identical fault after mitigation? Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
     },
     {
       "key": "conclusion",
@@ -75,11 +75,11 @@
     }
   ],
   "overview": {
-    "title": "1 · Slow stock check",
-    "description": "Add a 1.5-second Inventory delay. Can the shop respond sooner while saying stock is unconfirmed?"
+    "title": "1 · A slow lamp blocks healthy products",
+    "description": "Watch shared workers fill, then protect chair and desk with bounded waiting and honest partial results."
   },
   "mitigationHelp": {
-    "description": "The fallback is already implemented. Enable it with these settings: wait at most 400 ms for Inventory, then return “Stock unconfirmed” if it cannot answer. The delay itself remains a separate setting in Network Faults.",
-    "instruction": "In Network Faults, open “Fallbacks & timeouts” and click “Use Challenge 1 settings”. Or set Inventory timeout to 400, check “Enable Inventory fallback”, and click “Apply Inventory settings”."
+    "description": "Use the built-in 400 ms timeout, fallback and 5-second per-product/dependency circuit breaker. Under the same delay the lamp becomes unconfirmed; chair and desk should stay live.",
+    "instruction": "In Network Faults → Fallbacks & timeouts, click “Use Challenge 1 settings”. Repeat the same fault and watch the catalog, queue and product latency."
   }
 }

@@ -8,10 +8,12 @@ Generate `northstar-workshop.zip` with `package-workshop.ps1` and distribute it 
 
 ## Expected behavior
 
-- Healthy Inventory and Shipping: product and order preview succeed with low local latency.
-- Inventory +1500 ms: product and preview latency rise by roughly 1.5 seconds without a short timeout.
-- Inventory timeout around 400 ms plus fallback: the informational response returns sooner with **unconfirmed** stock; fallback metrics rise. A real purchase should not rely on it.
-- Shipping disconnected: product availability still works; order preview fails by default. Shipping fallback can keep the preview available but without an invented quote.
+- Three products share two Storefront workers. Four fixed Toxiproxy branches lead to the same Inventory/Shipping services: two faultable lamp branches and two healthy branches used by chair/desk. The controls fault only the lamp; the healthy branches are the comparison group.
+- Healthy: all product and catalog views succeed quickly. The load profile supplies five requests per second: three lamp requests plus one each for chair and desk.
+- Inventory +1500 ms: repeated lamp calls can occupy both workers. Healthy products then queue or are rejected after a 1000 ms queue wait (queue bound: 12); catalog aggregation also waits for every product. Observe a full window, not a single refresh.
+- Inventory timeout 400 ms plus fallback: workers are released sooner. Failed product/dependency circuits pause calls for five seconds, then permit one probe. Lamp stock is unconfirmed and its availability action is disabled; chair and desk can stay live. A probe can cause a brief spike.
+- Shipping disconnected: availability works, but the complete delivery catalog fails because one required quote fails. This is aggregate error propagation, not necessarily worker exhaustion. Shipping fallback preserves all three cards with an unavailable lamp quote and live chair/desk quotes.
+- The deliberately coupled baseline makes the dependency risk visible. Discuss alternatives such as independently rendering product cards, bulkheads, or partial aggregation as well as timeout/breaker/fallback. Do not present a circuit breaker as a fallback alone.
 
 Numbers depend on the host and browser. Ask teams to compare same-route, same-fault windows, not a single sample. Grafana's one-minute rates need a fresh observation window after each change.
 
@@ -19,12 +21,12 @@ Numbers depend on the host and browser. Ask teams to compare same-route, same-fa
 
 First restore clean proxy/configuration state: click **Clear all faults** in Fault injection and **Restore default settings** in Fallbacks & timeouts. Choose exactly one scenario. Tell participants only that there is a controlled incident. Participants can enable mitigations in the second tab without a terminal or container restart.
 
-On Windows or Mac, the facilitator can seed scenario A in [Network Faults](http://localhost:8089) by choosing **Inventory**, entering **1200 ms**, and clicking **Apply delay**. For scenario B, choose **Shipping** and click **Disconnect**. Use **Clear all faults** afterward. The PowerShell commands below are an alternative for scenario A if you want the toxic named `incident` rather than `workshop-latency`.
+On Windows or Mac, the facilitator can seed scenario A in [Network Faults](http://localhost:8089) by choosing **Inventory**, entering **1500 ms**, and clicking **Apply delay**. For scenario B, choose **Shipping** and click **Disconnect**. Keep the load profile running and use **Clear all faults** afterward. The PowerShell commands below are an alternative for scenario A if you want the toxic named `incident` rather than `workshop-latency`.
 
 **A — slow Inventory.** Using PowerShell, set `$proxyApi='http://localhost:8478'`, then:
 
 ```powershell
-$fault = @{ name='incident'; type='latency'; stream='downstream'; attributes=@{latency=1200; jitter=0} } | ConvertTo-Json -Depth 4
+$fault = @{ name='incident'; type='latency'; stream='downstream'; attributes=@{latency=1500; jitter=0} } | ConvertTo-Json -Depth 4
 Invoke-RestMethod -Method Post -Uri "$proxyApi/proxies/inventory/toxics" -ContentType 'application/json' -Body $fault -UserAgent 'field-workshop/1.0'
 ```
 

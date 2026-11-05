@@ -30,6 +30,7 @@ export class Metrics {
     this.dependencies = new Map();
     this.dependencyDurations = new Map();
     this.fallbacks = new Map();
+    this.productDurations = new Map();
   }
 
   request(route, status, seconds) {
@@ -45,6 +46,10 @@ export class Metrics {
 
   fallback(name) {
     add(this.fallbacks, { service: this.service, dependency: name });
+  }
+
+  product(sku, seconds) {
+    observe(this.productDurations, { service: this.service, sku }, seconds);
   }
 
   render() {
@@ -67,6 +72,7 @@ export class Metrics {
     counter('workshop_dependency_calls_total', 'Completed calls from the storefront to a dependency.', this.dependencies);
     histogram('workshop_dependency_duration_seconds', 'Storefront dependency call duration.', this.dependencyDurations);
     counter('workshop_fallbacks_total', 'Fallback responses used by the storefront.', this.fallbacks);
+    histogram('workshop_product_duration_seconds', 'Product processing including shared worker queue time.', this.productDurations);
     return `${lines.join('\n')}\n`;
   }
 }

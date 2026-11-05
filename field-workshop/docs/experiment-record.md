@@ -13,8 +13,12 @@ Copy this section for each assignment. Short, specific answers are better than l
 | Expected blast radius | |
 | Abort condition | |
 | Actual fault window and measurements | |
+| Chair/desk live results and catalog status/time | |
+| Worker occupancy, queue and rejected-count change | |
+| Propagation mechanism: shared capacity / aggregate failure | |
 | What changed? What did not? | |
 | Mitigation and reason | |
+| Separate roles of timeout, breaker and fallback | |
 | Same-fault validation window and measurements | |
 | Trade-off or new risk | |
 | Conclusion: did resilience improve? | |

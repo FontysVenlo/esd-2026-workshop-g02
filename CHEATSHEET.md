@@ -43,7 +43,9 @@ The product's name and base price are local to Storefront, but a failed Inventor
 
 Default dependency timeout: **3000 ms each**. Default fallback: **off for both dependencies**. A dependency timeout produces HTTP **504**; another dependency failure produces **503**. A successful fallback produces **200** with `degraded: true`.
 
-A **timeout** limits how long Storefront waits. A **fallback** defines what it returns when the call fails. Inventory fallback returns unconfirmed stock (`available: null`, `quantity: null`). Shipping fallback returns unavailable quote information (`priceEur: null`, `etaDays: null`). Neither repairs the dependency. The system only previews an order; it never places one.
+All three products share two Storefront workers and a complete-catalog response. The lamp branches are faultable; chair and desk use healthy branches to the same Inventory/Shipping services. A slow lamp can consume the workers, causing healthy products to queue or be rejected (queue wait limit: 1000 ms; queue capacity: 12). A missing lamp result can reject the complete catalog. Use `/api/catalog` for availability and `/api/catalog?preview=true` for delivery. `/api/system` reports real worker/queue/circuit state. Individual APIs accept `?sku=LAMP-01`, `?sku=CHAIR-02`, or `?sku=DESK-03`.
+
+Enabling a fallback also enables a per-product/dependency **circuit breaker**. After failure it pauses that path for five seconds, then admits one recovery probe. A **timeout** limits how long Storefront waits. A **fallback** defines what it returns when the call fails. Inventory fallback returns unconfirmed stock (`available: null`, `quantity: null`). Shipping fallback returns unavailable quote information (`priceEur: null`, `etaDays: null`). Neither repairs the dependency. The system only previews an order; it never places one.
 
 ## 2. Start and prepare
 
@@ -66,11 +68,11 @@ docker compose --profile load up --build -d
 docker compose ps
 ```
 
-The supplied load generator sends about three requests per second across both customer APIs. Keep that load consistent across comparisons. Do not increase it for this assignment.
+The supplied load generator sends five requests per second (three lamp requests and one each for chair and desk) across both customer APIs. Keep that load consistent across comparisons. Do not increase it for this assignment.
 
 Before each challenge:
 
-1. Confirm both proxy paths are connected and have no active faults, except the intentionally seeded incident in Challenge 3.
+1. Confirm both faultable lamp proxy paths are connected and have no active faults, except the intentionally seeded incident in Challenge 3.
 2. In Fallbacks & timeouts, click **Restore default settings**.
 3. Try both customer actions and check Prometheus targets: Storefront, Inventory, Shipping should be `UP`.
 4. Collect a healthy baseline. A practical choice is **60-90 seconds per stable phase**, with the same duration for each comparison. This is a suggested method, not a required course threshold.
@@ -78,91 +80,73 @@ Before each challenge:
 
 An abort condition must be observable. Example: "Stop if the product route returns errors continuously for 15 seconds, or an unrelated route becomes unavailable." Choose a condition compatible with the intended experiment: preview errors are expected during the Shipping outage. There is **no automatic abort**; you must remove the fault yourself.
 
-## 3. Challenge 1: slow stock information
+## 3. Challenge 1: One slow product blocks the shop
 
-**Question:** Does slow Inventory make the customer wait, and can you bound that wait while being honest about unavailable stock?
+**Question:** Can you keep the healthy chair and desk available while temporarily disabling an unconfirmed lamp availability check?
 
-1. **Baseline:** use `/api/product` through the Storefront. Record latency, success rate, Inventory latency, and the observation window.
-2. **Predict:** "Adding 1500 ms Inventory response delay will add roughly 1.5 seconds to product response time while calls still normally succeed, since the default timeout is 3 seconds." Set your abort condition.
-3. **Inject:** in Network Faults choose **Inventory**, enter **1500**, then **Apply delay**.
-4. **Observe:** repeat the product action. Compare Grafana's **Customer-facing p95 latency**, **Customer request success rate**, and **Dependency p95 latency**. The preview also depends on Inventory, so it can slow too.
-5. **Remove delay**, then open **Fallbacks & timeouts** and click **Use Challenge 1 settings**. Alternatively, set Inventory timeout to **400**, enable Inventory fallback, and click **Apply Inventory settings**. The change is immediate.
+1. **Measure the healthy catalog.** Use “Refresh all availability”. Record all three stock results, catalog time, workers, queue size and the starting rejected count. In Grafana inspect “Product p95 latency” and “Shared workers and queue”. Predict which products can be affected despite having healthy dependency branches; state an abort condition.
 
-6. **Retest:** apply the identical **1500 ms Inventory delay**. Use the same route and a fresh measurement window.
-7. **Expect:** the API should return after roughly the 400 ms wait plus overhead, with HTTP 200 and unconfirmed stock. Inventory timeouts and Inventory fallbacks should appear. Grafana p95 is a histogram estimate, so it need not read exactly 0.400 seconds.
-8. **Conclude:** the page is faster and available as an informational page, but stock is unknown. HTTP 200 does not mean the item is confirmed available. A short timeout without fallback would instead expose timeout errors.
-9. **Clean up:** remove the delay, restore default configuration, and verify live stock returns. Fill all Challenge 1 fields and select **Submit notes**.
+2. **Create a lamp-only slowdown.** Apply +1500 ms to Inventory in Network Faults. Keep supplied traffic unchanged and refresh the catalog. Record lamp delay, chair/desk queue time or failures, catalog status, and the change in rejected requests over a fresh window. The slow request consumes actual shared workers; the indicators are measured state.
 
-**Hand in:** baseline/fault/mitigated latency and success, Inventory call latency/outcomes, fallback activity, time windows, chosen timeout, business trade-off, and cleanup.
+3. **Trace the propagation.** Compare “Dependency p95 latency”, “Product p95 latency”, “Shared workers and queue”, and “Capacity rejection rate”. Explain the path: lamp Inventory delay → occupied workers → healthy products waiting/rejected, plus the catalog waiting for every product. A queue can fluctuate; use a full window.
 
-## 4. Challenge 2: Shipping is unavailable
+4. **Apply containment.** Remove the fault first. Open Fallbacks & timeouts and use Challenge 1 settings. This applies a 400 ms Inventory timeout and enables fallback plus the product/dependency circuit breaker. Predict the distinct effect of each mechanism.
 
-**Question:** How far does the Shipping outage spread, and can the order preview remain useful without a quote?
+5. **Repeat the same fault and verify recovery.** Reapply the identical +1500 ms Inventory delay. Refresh several times, including within and after a 5-second cooldown. Compare chair/desk live results, queue pressure, rejection-rate changes, catalog latency, and lamp stock uncertainty. The lamp availability action should be disabled while stock is unconfirmed. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.
 
-1. **Baseline both routes:** product and order preview should succeed with live information. Record each separately and state your expected blast radius and abort condition.
-2. **Inject:** choose **Shipping** in Network Faults and click **Disconnect**.
-3. **Compare:** `/api/product` should remain healthy. `/api/order-preview` should fail by default, normally with HTTP 503. Confirm Shipping failures in **Dependency outcomes**. A disconnect can fail quickly; low latency alone is not proof of health.
-4. **Reconnect** Shipping, then open **Fallbacks & timeouts** and click **Use Challenge 2 settings**. Alternatively, keep the Shipping timeout at **3000**, enable Shipping fallback, and click **Apply Shipping settings**.
+**Interpretation:** Healthy: all three product branches answer quickly and the complete catalog is live. Record actual local timings. With +1500 ms on the lamp Inventory branch, repeated lamp requests can exceed two workers of capacity. Chair/desk requests wait or are rejected even though their own dependency paths are healthy. A complete catalog also waits for or fails on one missing result. With a 400 ms timeout, a failed lamp call releases its worker sooner. The circuit breaker then skips that product/dependency path for 5 seconds; the fallback returns unknown stock instead of rejecting the entire catalog. Chair and desk can return live information. Expect a probe and possible short latency spike every cooldown while the fault persists. HTTP 200 is not confirmed lamp stock. Remove the fault and restore defaults; verify all three recover.
 
-5. **Repeat the same outage:** disconnect Shipping again, then test both routes over a fresh window.
-6. **Expect:** product still works; preview now returns HTTP 200 with `degraded: true` and unavailable shipping price/delivery information. Shipping calls still fail, and Shipping fallback activity rises.
-7. **Conclude:** the default blast radius is the order-preview API. With fallback, the visible impact can shrink to missing quote information. That can be acceptable for an informational preview; it does not establish that an actual purchase could proceed safely. Never invent a shipping price or ETA.
-8. **Clean up:** reconnect Shipping, restore defaults, check both APIs, submit Challenge 2 notes.
+## 4. Challenge 2: One missing quote breaks the catalog
 
-**Hand in:** both routes' before/after statuses and latency, Shipping failures, fallback counts/rates, blast-radius statement, mitigation rationale, and restoration.
+**Question:** Can one unavailable lamp quote be contained to that quote instead of taking down the complete delivery catalog?
 
-## 5. Challenge 3: investigate an unknown incident
+1. **Compare both healthy catalog views.** Refresh availability, then preview all deliveries. Record all three results, timings, queue state and an abort condition. Predict why Shipping affects one view but not the other.
 
-**Question:** Can you identify the cause from customer and monitoring evidence before looking at the injected fault?
+2. **Disconnect only lamp Shipping.** Choose Shipping → Disconnect. Repeat both views. Record the failed whole-catalog response, the working availability view, and Shipping failures. Do not claim worker exhaustion if the queue stays empty.
 
-1. Start from a clean state and ask the facilitator to seed one controlled incident. Record when investigation begins. If working alone, have someone else seed it to preserve the unknown-incident exercise.
-2. Try **both customer routes**. Record which is slow or failing, including status and browser latency.
-3. Inspect Grafana and Prometheus first. Compare route latency/status with each dependency's latency and `success`, `timeout`, or `failure` outcomes. Record a timeline and the relevant panel/query.
-4. Write a data-backed hypothesis, supporting/contradicting evidence, and remaining uncertainty. A useful heuristic:
+3. **Identify the coupling.** Inspect “Customer request rate”, “Dependency outcomes” and worker indicators. Explain why one rejected quote prevents the aggregate catalog from returning its healthy products. Distinguish this from Challenge 1’s shared-capacity slowdown.
 
-   | Observed pattern | Candidate explanation to investigate |
-   | --- | --- |
-   | Both routes slow; Inventory calls slow | Inventory path latency |
-   | Product healthy; preview failing; Shipping calls failing | Shipping path unavailable |
-   | Both routes failing; Inventory calls failing | Inventory dependency/path failure |
+4. **Allow an honest partial catalog.** Reconnect Shipping first, then apply Challenge 2 settings in Fallbacks & timeouts. Shipping fallback and its 5-second circuit breaker are enabled; the timeout stays 3000 ms because disconnection fails immediately. Stock is still authoritative.
 
-   These are diagnostic clues, not proof. A healthy dependency scrape does not prove Storefront can reach it through Toxiproxy: Prometheus scrapes dependencies directly.
+5. **Repeat and measure the smaller impact.** Disconnect Shipping again. Preview all deliveries: the catalog should return all three products, chair/desk with live quotes, and the lamp with an unavailable quote. Compare statuses, useful information and fallback activity. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.
 
-5. **Only after recording the hypothesis**, inspect Network Faults or `GET /proxies` to check it. Do not clear the incident before recording its configuration.
-6. Choose a mitigation for the observed failure mode. Apply a timeout/fallback configuration in the second console tab, using the same controls as Challenges 1-2. If you temporarily remove the fault to configure, restore the **exact same fault and magnitude** for validation.
-7. Compare the same routes and signals in fresh windows. Report whether customer behavior improves even if dependency failures remain.
-8. Submit the diagnosis, then ask the facilitator to reveal the seed. Record the reveal and cleanup; update the submission if needed.
+**Interpretation:** Without mitigation, a missing lamp quote rejects /api/catalog?preview=true. Availability still works because it does not call Shipping. Shipping fallback converts the missing lamp quote into an explicit unavailable value. The complete delivery catalog returns useful live chair/desk information and lamp stock; it never invents a lamp delivery price or date. The circuit breaker skips repeated lamp Shipping failures for 5 seconds and probes afterward. This outage primarily demonstrates error containment; queue pressure may stay low. Reconnect, restore defaults and confirm live information for all products. Compare equivalent observation windows.
 
-**Hand in:** timeline, customer symptom, panel/PromQL evidence, diagnosis and uncertainty, mitigation reasoning, comparable results, reveal, and rollback. The facilitator's seed instructions are intentionally unnecessary for this walkthrough.
+## 5. Challenge 3: Investigate a spreading incident
 
-## 6. Challenge 4: design a Mini GameDay
+**Question:** Which lamp dependency is faulty, how does its impact spread to healthy products, and which mitigation contains that mechanism?
 
-**Question:** Can another teammate reproduce your experiment and understand the result?
+1. **Arrange one hidden incident.** From a clean baseline, ask a partner to seed Assignment 3. Leave the exact fault secret and keep supplied traffic fixed. Write an abort condition.
 
-Choose the route, dependency, fault type/magnitude, steady-state measure, expected blast radius, abort condition, and rollback **before acting**. Then run the same measurement/mitigation/retest loop yourself.
+2. **Collect the customer symptoms.** Compare availability and delivery catalog views. Record catalog times/statuses, chair/desk usefulness, active workers, queue state, and the rejected-count change with timestamps. Leave fault controls unopened.
 
-One optional plan, distinct from the first two challenges:
+3. **Write a supported diagnosis.** Use dependency outcomes/latency, product latency, and worker/queue charts. Predict the faulty dependency and whether the impact spreads through shared capacity, aggregate failure, or both. Record an alternative explanation before inspecting controls.
 
-| Decision | Example plan; adapt and justify it |
-| --- | --- |
-| Route and target | `/api/order-preview`, Shipping path |
-| Fault | Shipping downstream latency, 2000 ms, jitter 0 |
-| Baseline | Record preview p95 and success rate, Shipping latency, product behavior |
-| Hypothesis | Preview slows by roughly 2 seconds; product stays healthy |
-| Blast radius | Local preview information only; watch product as a control |
-| Abort | Remove fault if product fails continuously for 15 seconds or preview p95 exceeds 4 seconds for a full minute |
-| Mitigation | In Fallbacks & timeouts, set Shipping timeout to 500 ms, enable fallback, and Apply |
-| Validation | Identical 2000 ms Shipping delay; compare preview latency/success and Shipping fallback activity |
-| Trade-off | Faster preview with no confirmed shipping quote or ETA |
-| Rollback | Clear all faults, Restore default settings, verify both routes |
+4. **Confirm and contain the mechanism.** Inspect Network Faults with the facilitator after recording your hypothesis. Apply a justified timeout/fallback setting. For slow calls use a short timeout plus fallback/breaker; for immediate disconnection use an honest partial quote. Preserve the exact original fault.
 
-For that example, use the Shipping form in **Fallbacks & timeouts**. No terminal or source-code change is required.
+5. **Validate the healthy products and reveal.** Retest the same catalog views and fresh windows. Compare healthy product usefulness, queue pressure, catalog time/status and the affected product’s uncertainty. Ask for the reveal and compare it with your hypothesis. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.
 
-Only the **two local Toxiproxy proxies** are in scope. Keep the supplied light traffic. Record exact browser settings and fault settings so the experiment is reproducible. If changing code, the implementation is `field-workshop/services/storefront.mjs`; rebuild from the workshop directory with `docker compose up --build -d storefront` and document how to undo your specific edit.
+**Interpretation:** Slow Inventory can increase latency in both catalog views and occupy shared workers. Chair/desk latency or rejection signals can worsen despite healthy dependency branches. Disconnected lamp Shipping should fail delivery aggregation but leave availability working. It can fail fast without filling the worker queue. A short timeout bounds slow worker occupancy; the breaker pauses repeated failed product calls; fallback preserves honest partial catalog results. Choose the combination supported by the evidence. Validate under the same fault and traffic. State which signals improved and which information remains unavailable, then restore and verify all products.
 
-**Hand in:** a complete [experiment record](field-workshop/docs/experiment-record.md), including plan, actual settings, measurements, conclusion, trade-off, and completed rollback. Submit Challenge 4 notes.
+## 6. Challenge 4: Your containment GameDay
+
+**Question:** Can you reproduce a wider customer impact and then contain it to the affected product’s missing information?
+
+1. **Define a propagation hypothesis.** Name the catalog view, lamp dependency, exact fault/magnitude, healthy comparison products, propagation mechanism and abort condition. Choose customer results and worker/product metrics that could disprove your hypothesis.
+
+2. **Record a healthy comparison window.** Measure all three products, catalog latency/status, worker queue and changes in cumulative rejections over a fixed window. Keep supplied traffic unchanged for every phase.
+
+3. **Reproduce impact beyond the lamp.** Apply only your chosen fault. Measure the same view and healthy products. Record whether impact spreads by queuing, rejection, aggregate failure or a combination. If no wider effect appears, report that honestly and revise the experiment before recommending mitigation.
+
+4. **Choose a mechanism-specific mitigation.** Remove the fault before configuring. Use a short dependency timeout for a slow call, enable fallback/breaker for the relevant dependency, and justify the missing-data behavior. Do not claim fallback alone releases workers.
+
+5. **Repeat exactly and recommend.** Reapply the identical fault at the same magnitude and traffic. Show whether chair/desk remain useful, whether catalog status/time improves, and what lamp information remains unavailable. Include probe behavior and exact rollback instructions. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.
+
+**Interpretation:** There is no single correct experiment. It needs healthy, faulted and mitigated phases, the exact same fault/traffic, a wider customer impact and an honest remaining trade-off. Example: +1500 ms on lamp Shipping during delivery catalog refresh. Default waiting can consume shared workers and delay the aggregate. Set a 400 ms Shipping timeout with fallback/breaker, then repeat the exact delay. Chair and desk should retain live stock/quotes while the lamp quote becomes unavailable. The breaker probes every 5 seconds and may cause short spikes. Compare queue pressure and rejection-rate changes, not lifetime totals. If your chosen fault causes only aggregate failure and no capacity pressure, state that distinction. Finish with verified live results for all three products.
 
 ## 7. Read the monitoring correctly
+
+Start with the Storefront catalog time/status and healthy chair/desk results. In Grafana compare **Product p95 latency**, **Shared workers and queue**, **Capacity rejection rate**, and **Open product dependency circuits**. Product latency includes queue time; backend dependency latency does not. Rejected counts are cumulative: compare their change over equal windows. After clearing a fault, allow a five-second breaker cooldown or restore defaults; a recovery probe can produce a short spike. A fast disconnection may show no queue pressure while still failing the aggregate delivery catalog.
 
 | Signal | Meaning and caveat |
 | --- | --- |

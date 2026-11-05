@@ -1,137 +1,119 @@
 # Engineering assignments
 
-Open the workshop overview at <http://localhost:8088>. You are the engineer responsible for a lamp shop. Customers use **Check availability** to ask Inventory for stock, and **Order preview** to ask Inventory and Shipping for stock and delivery information. No purchase is made.
+Open <http://localhost:8088> for the guided workflow and <http://localhost:8088/storefront> for the three-product catalog. The start launcher supplies five requests per second. Fault controls target only the lamp branch; chair and desk use separate healthy network branches to the same services. All products share two workers and one catalog response.
 
-The stack normally starts healthy. You deliberately create a problem in Challenges 1, 2, and 4; a facilitator or teammate prepares the hidden incident in Challenge 3. Opening a challenge or submitting notes does not inject a fault.
+Compare healthy, faulted and mitigated phases using fresh 60–90-second windows and unchanged traffic. No purchases are made.
 
-For each experiment, compare the same customer action in three states: **healthy**, **fault active**, and **the same fault with mitigation**. Then remove the fault, restore default settings, and submit your own measurements. Submitting reveals an example solution and unlocks the next challenge; there is no automatic grading.
+Timeouts bound dependency waiting; a circuit breaker pauses a failed product/dependency for five seconds and permits one recovery probe; fallback supplies an honest incomplete result. They serve different purposes.
 
-## Know your tools and terms
+## 1 — One slow product blocks the shop (Guided entry)
 
-- **Storefront:** act as a customer. Read the result and request time shown under the buttons.
-- **Network Faults:** introduce a response delay or disconnection and clear it afterward.
-- **Grafana:** read charts of customer latency, request outcomes, dependency behavior, and fallback activity.
-- **Prometheus:** collects service measurements every five seconds and supplies Grafana. Its website is optional for raw queries; you do not need to enter anything there for the guided tasks.
-- **Fallbacks & timeouts:** the second tab in Network Faults enables and resets the built-in mitigation behavior immediately. No terminal or code changes are required. The optional Info & commands tab has a Windows/Mac selector for command examples.
-- **Baseline:** your measurements before adding a fault.
-- **Timeout:** how long Storefront waits for a dependency.
-- **Fallback:** the response returned when a dependency cannot answer. The code already supports it: Inventory can return “Stock unconfirmed”, and Shipping can return an unavailable quote. Enable it in [Fallbacks & timeouts](http://localhost:8089/#mitigations); no terminal or code edit is required.
-- **Abort condition:** an unexpected result at which you stop and remove the fault.
+**The customer problem.** Desk Lamp, Task Chair and Writing Desk share two Storefront workers. Only the lamp’s Inventory network branch becomes slow. Repeated lamp requests hold the workers; healthy chair and desk requests now queue or are rejected. The complete catalog also waits for the lamp result.
 
-Use comparable fresh observation windows, for example 60–90 seconds in each phase. Grafana uses one-minute rates, so old data can linger after a change. Charts labeled in seconds use 1.5 s for 1500 ms. Record measured results rather than copying expected numbers.
+**Why this matters.** The mitigation now protects other products. A 400 ms timeout releases a worker, the 5-second circuit breaker stops repeated waiting on the lamp, and the fallback lets the catalog show chair and desk while lamp stock is unconfirmed. These are three different mechanisms; fallback alone does not free capacity.
 
-## 1 — Slow stock information (Guided entry)
+**The issue to reproduce.** Choose Inventory in Network Faults and apply a 1500 ms response delay. It affects only Desk Lamp’s branch. Use “Refresh all availability” in Storefront and watch the fixed background traffic fill the two shared workers.
 
-**The customer problem.** You maintain an online shop that sells a desk lamp. A customer clicks “Check availability” before deciding to buy, but the stock check keeps them waiting. The lamp description and price are already visible; the shop is waiting for a separate Inventory service to confirm stock.
+**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total.
 
-**Why this matters.** A slow dependency can make a working shop feel unresponsive. You need to decide how long the customer should wait and what the shop can honestly show when it cannot confirm stock.
+**Your question.** Can you keep the healthy chair and desk available while temporarily disabling an unconfirmed lamp availability check?
 
-**The issue to reproduce.** Make Inventory replies 1500 ms (1.5 seconds) slower in Network Faults. Then click “Check availability” in Storefront. You are reproducing a slow stock check, not a complete outage.
+1. **Measure the healthy catalog.** Use “Refresh all availability”. Record all three stock results, catalog time, workers, queue size and the starting rejected count. In Grafana inspect “Product p95 latency” and “Shared workers and queue”. Predict which products can be affected despite having healthy dependency branches; state an abort condition.
 
-**Before you start.** The stack starts healthy. Before this experiment, use “Clear all faults” in Network Faults and “Restore default settings” in the Fallbacks & timeouts tab if you changed mitigation settings earlier. Confirm that “Check availability” shows live stock. Opening this challenge does not apply a fault.
+2. **Create a lamp-only slowdown.** Apply +1500 ms to Inventory in Network Faults. Keep supplied traffic unchanged and refresh the catalog. Record lamp delay, chair/desk queue time or failures, catalog status, and the change in rejected requests over a fresh window. The slow request consumes actual shared workers; the indicators are measured state.
 
-**Your question.** Can the shop respond sooner during a slow stock check without pretending the lamp is in stock?
+3. **Trace the propagation.** Compare “Dependency p95 latency”, “Product p95 latency”, “Shared workers and queue”, and “Capacity rejection rate”. Explain the path: lamp Inventory delay → occupied workers → healthy products waiting/rejected, plus the catalog waiting for every product. A queue can fluctuate; use a full window.
 
-1. **Try the healthy customer journey.** Open Storefront and click “Check availability” a few times. Record the displayed milliseconds and stock result. In Grafana, find /api/product under “Customer-facing p95 latency”. Write what you expect a 1.5-second Inventory delay to do and when you would stop the test.
+4. **Apply containment.** Remove the fault first. Open Fallbacks & timeouts and use Challenge 1 settings. This applies a 400 ms Inventory timeout and enables fallback plus the product/dependency circuit breaker. Predict the distinct effect of each mechanism.
 
-2. **Reproduce the customer complaint.** Open Network Faults, choose Inventory, set “Response delay (ms)” to 1500, and click “Apply delay”. Return to Storefront and click “Check availability” again. Look for the longer wait; with default settings, the request should normally still succeed.
-
-3. **Find evidence of the cause.** Record the new request times and compare them with your healthy measurements. In Grafana, compare /api/product in “Customer-facing p95 latency” with inventory in “Dependency p95 latency”. Use a fresh 60–90-second window per phase so old data does not dominate the comparison.
-
-4. **Change how the shop handles the delay.** Remove the Inventory delay first. In Network Faults, open “Fallbacks & timeouts” and click “Use Challenge 1 settings”. This enables Inventory fallback with a 400 ms timeout immediately. The timeout limits the wait; the fallback lets the shop return “Stock unconfirmed”. No source-code edit is required.
-
-5. **Repeat, compare, and clean up.** Apply the same 1500 ms Inventory delay again. Repeat “Check availability” and record the response time, displayed stock message, and “Fallback activity” in Grafana. Explain the speed-versus-certainty trade-off. Clear faults, click “Restore default settings” in Fallbacks & timeouts, check live stock returns, then submit your notes below.
+5. **Repeat the same fault and verify recovery.** Reapply the identical +1500 ms Inventory delay. Refresh several times, including within and after a 5-second cooldown. Compare chair/desk live results, queue pressure, rejection-rate changes, catalog latency, and lamp stock uncertainty. The lamp availability action should be disabled while stock is unconfirmed. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.
 
 **You are finished when:**
 
-- You recorded the same customer action in three states: healthy, delayed, and delayed with mitigation.
-- You explained whether the response became faster and why “Stock unconfirmed” is different from confirmed availability.
-- You removed the fault, restored the defaults, and submitted your own measurements.
+- You measured healthy, delayed and mitigated phases under unchanged traffic.
+- You observed and explained impact on chair/desk or the complete catalog, then verified that impact shrank while lamp stock remained unconfirmed.
+- You distinguished timeout, circuit breaker and fallback; compared equal windows; and verified cleanup.
 
-## 2 — Shipping is unavailable (Intermediate)
+## 2 — One missing quote breaks the catalog (Intermediate)
 
-**The customer problem.** A customer can check that the desk lamp is in stock, but clicks “Order preview” to see delivery cost and time. The external shipping provider is unavailable. The shop currently treats that missing quote as a failure of the whole preview.
+**The customer problem.** The delivery catalog contains three products, but its response requires every quote to succeed. Disconnecting only the lamp’s Shipping path rejects the complete catalog, hiding the healthy chair and desk too. Availability does not require Shipping and should still work.
 
-**Why this matters.** A shipping outage should have a limited effect on the customer journey. You need to decide whether an informational preview is still useful when it can show stock but cannot promise a delivery price or date.
+**Why this matters.** This is error propagation through a coupled catalog response. A fast disconnect need not exhaust workers. An explicit unavailable lamp quote can preserve healthy products and stock information without inventing a delivery promise.
 
-**The issue to reproduce.** Choose Shipping in Network Faults and click “Disconnect”. In Storefront, try both “Check availability” and “Order preview”. Compare which customer action still works and which fails.
+**The issue to reproduce.** Choose Shipping and click Disconnect in Network Faults. Compare “Refresh all availability” with “Preview all deliveries”. The complete delivery catalog should fail even though chair and desk have healthy Shipping paths.
 
-**Before you start.** Clear all faults and click “Restore default settings” in Fallbacks & timeouts. Verify that both Storefront buttons work before disconnecting Shipping. This is an order preview only; no purchase is made.
+**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total.
 
-**Your question.** Can a shipping outage be limited to missing delivery information instead of a failed preview?
+**Your question.** Can one unavailable lamp quote be contained to that quote instead of taking down the complete delivery catalog?
 
-1. **Check both healthy actions.** Click “Check availability” and “Order preview” in Storefront. Record the stock result, shipping quote, and timings. These actions call /api/product and /api/order-preview respectively. Predict which action needs Shipping and set an abort condition.
+1. **Compare both healthy catalog views.** Refresh availability, then preview all deliveries. Record all three results, timings, queue state and an abort condition. Predict why Shipping affects one view but not the other.
 
-2. **Reproduce the provider outage.** In Network Faults, choose Shipping and click “Disconnect”. Return to Storefront and try both buttons. Record which action succeeds, which fails, and any error status shown.
+2. **Disconnect only lamp Shipping.** Choose Shipping → Disconnect. Repeat both views. Record the failed whole-catalog response, the working availability view, and Shipping failures. Do not claim worker exhaustion if the queue stays empty.
 
-3. **Measure the affected part of the shop.** Use “Customer request rate” in Grafana to compare route/status outcomes and “Dependency outcomes” to inspect shipping failures. Observe comparable 60–90-second windows. Describe the blast radius: the customer functions affected by this one dependency outage.
+3. **Identify the coupling.** Inspect “Customer request rate”, “Dependency outcomes” and worker indicators. Explain why one rejected quote prevents the aggregate catalog from returning its healthy products. Distinguish this from Challenge 1’s shared-capacity slowdown.
 
-4. **Keep the preview useful.** Reconnect Shipping first. In Network Faults, open “Fallbacks & timeouts” and click “Use Challenge 2 settings” to enable Shipping fallback immediately. This permits a preview without a shipping quote; it must not invent a price or delivery date.
+4. **Allow an honest partial catalog.** Reconnect Shipping first, then apply Challenge 2 settings in Fallbacks & timeouts. Shipping fallback and its 5-second circuit breaker are enabled; the timeout stays 3000 ms because disconnection fails immediately. Stock is still authoritative.
 
-5. **Repeat the outage and check the trade-off.** Disconnect Shipping again and repeat both customer actions. Record whether the preview is now useful, which information is missing, and the “Fallback activity” signal. Reconnect Shipping, restore defaults, verify both actions, and submit your notes.
-
-**You are finished when:**
-
-- You compared both customer actions before the outage, during the outage, and during the same outage with mitigation.
-- You identified the affected customer function and explained why an unavailable quote must not become a made-up delivery promise.
-- You restored Shipping and the default settings and submitted your evidence.
-
-## 3 — Investigate an unknown incident (Advanced)
-
-**The customer problem.** You are the engineer on call. A support ticket says: “Something is wrong with the lamp shop: checking stock or previewing delivery is slow or fails.” A facilitator or teammate introduces one hidden dependency fault. You must find the likely cause from the customer symptoms and monitoring.
-
-**Why this matters.** During a real incident, the customer reports a symptom, not the broken dependency. This challenge practices using evidence to choose a fix instead of changing settings at random.
-
-**The issue to reproduce.** Ask a facilitator or teammate to seed exactly one incident using the facilitator notes. They keep the chosen fault secret. You do not inject your own known fault in this challenge.
-
-**Before you start.** This challenge needs another person to prepare the incident. Before they seed it, clear old faults, restore default settings, and record healthy behavior. If working alone, arrange a partner or facilitator before starting; an unchanged, healthy stack has no mystery incident to diagnose. Do not clear faults after the incident has been seeded.
-
-**Your question.** Which customer action is affected, which dependency is responsible, and what evidence supports your diagnosis?
-
-1. **Prepare the incident with a partner.** Start from the clean baseline described above. Ask the facilitator or teammate to use the “Seed Assignment 3” instructions in docs/facilitator.md without showing you their choice. Once they confirm the incident is active, begin your investigation.
-
-2. **Reproduce the reported symptom.** Try “Check availability” and “Order preview”. Record which one is slow or failing, the displayed time/status, and when you observed it. Leave the fault controls and their current-state display unopened for now.
-
-3. **Write a diagnosis from monitoring.** In Grafana, compare customer latency and route/status outcomes with “Dependency p95 latency” and “Dependency outcomes”. Write the likely dependency, whether the symptom suggests delay or unavailability, and an alternative explanation before inspecting Network Faults.
-
-4. **Confirm and mitigate.** After recording your hypothesis, inspect Network Faults with the facilitator. Choose a timeout/fallback change supported by your evidence and apply it in Fallbacks & timeouts. Keep the same incident active, or have the facilitator reapply it exactly, so the comparison remains fair.
-
-5. **Validate and ask for the reveal.** Repeat the same customer actions and compare fresh observation windows before and after mitigation. Ask the facilitator to reveal the fault and compare it with your diagnosis. Clear the incident, restore defaults, verify recovery, and submit the timeline and evidence.
+5. **Repeat and measure the smaller impact.** Disconnect Shipping again. Preview all deliveries: the catalog should return all three products, chair/desk with live quotes, and the lamp with an unavailable quote. Compare statuses, useful information and fallback activity. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.
 
 **You are finished when:**
 
-- You recorded a diagnosis with supporting signals before looking at the fault state.
-- You compared the same incident before and after a justified mitigation and checked your diagnosis against the reveal.
-- You and the facilitator restored the clean system and you submitted your findings.
+- You compared both complete-catalog views before, during and after mitigation of the same outage.
+- You showed healthy chair/desk delivery information surviving while only the lamp quote remained unavailable.
+- You explained aggregate error propagation without assuming a fast failure saturates workers, then restored all paths and defaults.
 
-## 4 — Your Mini GameDay (Capstone)
+## 3 — Investigate a spreading incident (Advanced)
 
-**The customer problem.** Your team owns the lamp shop and is preparing a release. The team lead asks: “If one of our providers becomes slow or unavailable, can customers still get useful information?” You have time to test one concrete failure in this local Docker shop and recommend a response.
+**The customer problem.** Support reports that a three-product catalog is slow or unavailable, although only one lamp dependency branch has been faulted. A facilitator seeds either slow lamp Inventory or disconnected lamp Shipping. Diagnose whether shared workers or aggregate error propagation explains the wider customer impact.
 
-**Why this matters.** The earlier challenges gave you an incident and a path to follow. Now you turn a customer risk into your own repeatable experiment that a teammate could run from your notes.
+**Why this matters.** The visible failures can be healthy products downstream of a shared bottleneck or an all-or-nothing response. Fixing the wrong dependency or enabling fallback without an appropriate timeout can leave the real problem active.
 
-**The issue to reproduce.** Choose one dependency and one fault: an Inventory or Shipping response delay, or a disconnection. Choose the customer action you want to protect. For example, investigate slow Shipping replies during “Order preview”; record your chosen delay before applying it.
+**The issue to reproduce.** Ask a partner or facilitator to seed exactly one incident from docs/facilitator.md. They keep the chosen dependency and fault secret. Do not inspect Network Faults before writing your hypothesis.
 
-**Before you start.** Clear old faults and restore default settings. Use only the two local dependency paths and keep the supplied light traffic. Choose one fault, not a combination, so you can explain what caused the result.
+**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total. Record the healthy baseline before your partner seeds the incident; do not clear it afterward. This challenge requires another person.
 
-**Your question.** Design and run one test that answers a specific customer-facing reliability question, then recommend a mitigation with evidence.
+**Your question.** Which lamp dependency is faulty, how does its impact spread to healthy products, and which mitigation contains that mechanism?
 
-1. **Write a customer question and a test plan.** Name the Storefront button/API route, the dependency, the exact fault and magnitude, and the metric you will watch. Predict the customer effect. State an abort condition: a specific unexpected result that means you will remove the fault immediately.
+1. **Arrange one hidden incident.** From a clean baseline, ask a partner to seed Assignment 3. Leave the exact fault secret and keep supplied traffic fixed. Write an abort condition.
 
-2. **Measure normal behavior.** Run the chosen customer action and record a healthy baseline. Choose a consistent observation window, for example 60–90 seconds, for every phase. Keep the supplied traffic unchanged.
+2. **Collect the customer symptoms.** Compare availability and delivery catalog views. Record catalog times/statuses, chair/desk usefulness, active workers, queue state, and the rejected-count change with timestamps. Leave fault controls unopened.
 
-3. **Run your chosen failure.** Use Network Faults to apply only the planned delay or disconnection. Repeat the customer action and record timings, route/status outcomes, and the relevant dependency signals. Decide whether your original prediction matched the evidence.
+3. **Write a supported diagnosis.** Use dependency outcomes/latency, product latency, and worker/queue charts. Predict the faulty dependency and whether the impact spreads through shared capacity, aggregate failure, or both. Record an alternative explanation before inspecting controls.
 
-4. **Make a justified change.** Remove the fault first. Choose and apply a timeout/fallback change in the Fallbacks & timeouts tab. You can complete this experiment entirely in the browser. Explain what customer behavior it protects and what information or certainty may be lost.
+4. **Confirm and contain the mechanism.** Inspect Network Faults with the facilitator after recording your hypothesis. Apply a justified timeout/fallback setting. For slow calls use a short timeout plus fallback/breaker; for immediate disconnection use an honest partial quote. Preserve the exact original fault.
 
-5. **Repeat the exact test and recommend a response.** Apply the same fault to the same dependency at the same magnitude. Repeat the action and compare equivalent windows. State whether your change helped, document its trade-off and exact reproduction steps, then remove the fault, undo the mitigation, verify recovery, and submit your record.
+5. **Validate the healthy products and reveal.** Retest the same catalog views and fresh windows. Compare healthy product usefulness, queue pressure, catalog time/status and the affected product’s uncertainty. Ask for the reveal and compare it with your hypothesis. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.
 
 **You are finished when:**
 
-- A teammate can reproduce your chosen customer action, fault, mitigation, and rollback from the submitted record.
-- Your recommendation compares healthy, faulted, and mitigated results under the identical fault.
-- You explained the remaining risk and restored the clean system.
+- You recorded a diagnosis and propagation mechanism before inspecting fault controls.
+- You retested the identical incident and showed which healthy-product or catalog outcome improved, while recording the affected product’s missing data.
+- You compared the diagnosis with the reveal and restored all three products.
 
-## Your evidence
+## 4 — Your containment GameDay (Capstone)
 
-Use the answer fields in each challenge or the [experiment record](experiment-record.md). Record your actual timings and outcomes, the fault and mitigation settings used, the remaining uncertainty, and cleanup. Only the two local dependency paths are in scope; keep the supplied light traffic.
+**The customer problem.** Your team wants evidence that one faulty lamp dependency cannot unnecessarily hide the chair and desk. Design one repeatable local experiment that demonstrates impact beyond the lamp, then test whether your mitigation contains it.
+
+**Why this matters.** A fallback is justified by useful behavior preserved under a specific fault, not by an enabled checkbox. Your recommendation needs before-and-after evidence for the catalog or healthy products and an explicit statement of lost certainty.
+
+**The issue to reproduce.** Choose Inventory or Shipping on the lamp branch and one fault: a measured delay or disconnection. Choose availability or delivery catalog. A +1500 ms delay can pressure shared workers; disconnection demonstrates aggregate error propagation.
+
+**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total. Use only the two exposed lamp fault controls; the other product paths are the healthy comparison group.
+
+**Your question.** Can you reproduce a wider customer impact and then contain it to the affected product’s missing information?
+
+1. **Define a propagation hypothesis.** Name the catalog view, lamp dependency, exact fault/magnitude, healthy comparison products, propagation mechanism and abort condition. Choose customer results and worker/product metrics that could disprove your hypothesis.
+
+2. **Record a healthy comparison window.** Measure all three products, catalog latency/status, worker queue and changes in cumulative rejections over a fixed window. Keep supplied traffic unchanged for every phase.
+
+3. **Reproduce impact beyond the lamp.** Apply only your chosen fault. Measure the same view and healthy products. Record whether impact spreads by queuing, rejection, aggregate failure or a combination. If no wider effect appears, report that honestly and revise the experiment before recommending mitigation.
+
+4. **Choose a mechanism-specific mitigation.** Remove the fault before configuring. Use a short dependency timeout for a slow call, enable fallback/breaker for the relevant dependency, and justify the missing-data behavior. Do not claim fallback alone releases workers.
+
+5. **Repeat exactly and recommend.** Reapply the identical fault at the same magnitude and traffic. Show whether chair/desk remain useful, whether catalog status/time improves, and what lamp information remains unavailable. Include probe behavior and exact rollback instructions. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.
+
+**You are finished when:**
+
+- A teammate can reproduce the fault, traffic, three-phase measurements, mitigation and rollback.
+- You demonstrated and measured a wider impact before mitigation, then compared healthy products and catalog usefulness under the identical fault.
+- You distinguished timeout, breaker and fallback, described remaining uncertainty/probe spikes, and restored all three products.

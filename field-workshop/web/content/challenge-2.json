@@ -1,51 +1,52 @@
 {
   "id": "challenge-2",
   "number": 2,
-  "title": "Shipping is unavailable",
+  "title": "One missing quote breaks the catalog",
   "level": "Intermediate",
-  "scenario": "A customer can check that the desk lamp is in stock, but clicks “Order preview” to see delivery cost and time. The external shipping provider is unavailable. The shop currently treats that missing quote as a failure of the whole preview.",
-  "why": "A shipping outage should have a limited effect on the customer journey. You need to decide whether an informational preview is still useful when it can show stock but cannot promise a delivery price or date.",
-  "reproduce": "Choose Shipping in Network Faults and click “Disconnect”. In Storefront, try both “Check availability” and “Order preview”. Compare which customer action still works and which fails.",
-  "ready": "Clear all faults and click “Restore default settings” in Fallbacks & timeouts. Verify that both Storefront buttons work before disconnecting Shipping. This is an order preview only; no purchase is made.",
-  "assignment": "Can a shipping outage be limited to missing delivery information instead of a failed preview?",
+  "scenario": "The delivery catalog contains three products, but its response requires every quote to succeed. Disconnecting only the lamp’s Shipping path rejects the complete catalog, hiding the healthy chair and desk too. Availability does not require Shipping and should still work.",
+  "why": "This is error propagation through a coupled catalog response. A fast disconnect need not exhaust workers. An explicit unavailable lamp quote can preserve healthy products and stock information without inventing a delivery promise.",
+  "reproduce": "Choose Shipping and click Disconnect in Network Faults. Compare “Refresh all availability” with “Preview all deliveries”. The complete delivery catalog should fail even though chair and desk have healthy Shipping paths.",
+  "ready": "Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total.",
+  "assignment": "Can one unavailable lamp quote be contained to that quote instead of taking down the complete delivery catalog?",
   "mitigationGuide": "shipping",
   "tasks": [
     {
-      "title": "Check both healthy actions",
-      "instruction": "Click “Check availability” and “Order preview” in Storefront. Record the stock result, shipping quote, and timings. These actions call /api/product and /api/order-preview respectively. Predict which action needs Shipping and set an abort condition."
+      "title": "Compare both healthy catalog views",
+      "instruction": "Refresh availability, then preview all deliveries. Record all three results, timings, queue state and an abort condition. Predict why Shipping affects one view but not the other."
     },
     {
-      "title": "Reproduce the provider outage",
-      "instruction": "In Network Faults, choose Shipping and click “Disconnect”. Return to Storefront and try both buttons. Record which action succeeds, which fails, and any error status shown."
+      "title": "Disconnect only lamp Shipping",
+      "instruction": "Choose Shipping → Disconnect. Repeat both views. Record the failed whole-catalog response, the working availability view, and Shipping failures. Do not claim worker exhaustion if the queue stays empty."
     },
     {
-      "title": "Measure the affected part of the shop",
-      "instruction": "Use “Customer request rate” in Grafana to compare route/status outcomes and “Dependency outcomes” to inspect shipping failures. Observe comparable 60–90-second windows. Describe the blast radius: the customer functions affected by this one dependency outage."
+      "title": "Identify the coupling",
+      "instruction": "Inspect “Customer request rate”, “Dependency outcomes” and worker indicators. Explain why one rejected quote prevents the aggregate catalog from returning its healthy products. Distinguish this from Challenge 1’s shared-capacity slowdown."
     },
     {
-      "title": "Keep the preview useful",
-      "instruction": "Reconnect Shipping first. In Network Faults, open “Fallbacks & timeouts” and click “Use Challenge 2 settings” to enable Shipping fallback immediately. This permits a preview without a shipping quote; it must not invent a price or delivery date."
+      "title": "Allow an honest partial catalog",
+      "instruction": "Reconnect Shipping first, then apply Challenge 2 settings in Fallbacks & timeouts. Shipping fallback and its 5-second circuit breaker are enabled; the timeout stays 3000 ms because disconnection fails immediately. Stock is still authoritative."
     },
     {
-      "title": "Repeat the outage and check the trade-off",
-      "instruction": "Disconnect Shipping again and repeat both customer actions. Record whether the preview is now useful, which information is missing, and the “Fallback activity” signal. Reconnect Shipping, restore defaults, verify both actions, and submit your notes."
+      "title": "Repeat and measure the smaller impact",
+      "instruction": "Disconnect Shipping again. Preview all deliveries: the catalog should return all three products, chair/desk with live quotes, and the lamp with an unavailable quote. Compare statuses, useful information and fallback activity. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements."
     }
   ],
   "done": [
-    "You compared both customer actions before the outage, during the outage, and during the same outage with mitigation.",
-    "You identified the affected customer function and explained why an unavailable quote must not become a made-up delivery promise.",
-    "You restored Shipping and the default settings and submitted your evidence."
+    "You compared both complete-catalog views before, during and after mitigation of the same outage.",
+    "You showed healthy chair/desk delivery information surviving while only the lamp quote remained unavailable.",
+    "You explained aggregate error propagation without assuming a fast failure saturates workers, then restored all paths and defaults."
   ],
   "solution": [
-    "With Shipping disconnected, /api/product should still work. /api/order-preview fails by default because it needs a quote.",
-    "Example mitigation: enable Shipping fallback in the Fallbacks & timeouts tab. Repeat the same outage. The preview should return, but the shipping price and delivery time must be unavailable—not guessed.",
-    "The blast radius shrinks to missing quote information. Reconnect Shipping, click “Restore default settings”, and verify both routes."
+    "Without mitigation, a missing lamp quote rejects /api/catalog?preview=true. Availability still works because it does not call Shipping.",
+    "Shipping fallback converts the missing lamp quote into an explicit unavailable value. The complete delivery catalog returns useful live chair/desk information and lamp stock; it never invents a lamp delivery price or date.",
+    "The circuit breaker skips repeated lamp Shipping failures for 5 seconds and probes afterward. This outage primarily demonstrates error containment; queue pressure may stay low.",
+    "Reconnect, restore defaults and confirm live information for all products. Compare equivalent observation windows."
   ],
   "fields": [
     {
       "key": "steadyState",
       "label": "Healthy baseline",
-      "prompt": "Record product and order-preview behavior before the outage."
+      "prompt": "Record product and order-preview behavior before the outage. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
     },
     {
       "key": "hypothesis",
@@ -55,17 +56,17 @@
     {
       "key": "faultEvidence",
       "label": "Outage evidence",
-      "prompt": "Compare both routes and the Shipping dependency. Include statuses and a time window."
+      "prompt": "Compare both routes and the Shipping dependency. Include statuses and a time window. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
     },
     {
       "key": "mitigation",
       "label": "Mitigation and reason",
-      "prompt": "Should an unavailable quote block an informational preview? Explain your choice."
+      "prompt": "Should an unavailable quote block an informational preview? Explain your choice. Distinguish the roles of timeout, circuit breaker and fallback."
     },
     {
       "key": "validation",
       "label": "Same-outage validation",
-      "prompt": "Record the route outcomes and fallback signal under the identical outage."
+      "prompt": "Record the route outcomes and fallback signal under the identical outage. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
     },
     {
       "key": "conclusion",
@@ -74,11 +75,11 @@
     }
   ],
   "overview": {
-    "title": "2 · Missing delivery quote",
-    "description": "Disconnect Shipping. Can stock checking and a useful order preview survive the outage?"
+    "title": "2 · A missing quote hides the catalog",
+    "description": "Disconnect lamp Shipping, then shrink the impact from the complete delivery catalog to one unavailable quote."
   },
   "mitigationHelp": {
-    "description": "The fallback is already implemented. Enable it to keep the preview useful if Shipping cannot answer: show the available stock and say “Shipping quote unavailable”, without inventing a price or delivery date.",
-    "instruction": "In Network Faults, open “Fallbacks & timeouts” and click “Use Challenge 2 settings”. Or leave Shipping timeout at 3000, check “Enable Shipping fallback”, and click “Apply Shipping settings”."
+    "description": "Shipping fallback preserves the complete catalog with an explicit unavailable lamp quote. Its circuit breaker pauses failed lamp Shipping calls for 5 seconds; healthy product paths stay live.",
+    "instruction": "Use Challenge 2 settings in Fallbacks & timeouts. Keep the default timeout for an immediate disconnect; a slow Shipping experiment needs an explicitly shorter timeout too."
   }
 }

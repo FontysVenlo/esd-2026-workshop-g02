@@ -251,3 +251,18 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 @media (max-width: 760px) { .workshop-shell { display: block; } .workshop-sidebar { position: static; margin-bottom: 1rem; } .challenge-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sidebar-progress { margin-top: .65rem; } }
 @media (max-width: 520px) { .header-inner { display: block; } nav.links { margin-top: .65rem; } .header-note { display: none; } .challenge-nav, .status-grid, .controls, .home-tools, .challenge-steps { grid-template-columns: 1fr; } .product-stage { min-height: 340px; } .storefront-actions button { width: 100%; } .storefront-header nav.links { margin-top: .3rem; } .unlock-toast { left: 1rem; right: 1rem; bottom: 1rem; } }
 @media (prefers-reduced-motion: reduce) { .just-unlocked, .just-unlocked .nav-icon, .just-unlocked .nav-icon::after, .just-unlocked .lock-shackle, .unlock-toast.is-visible, .unlock-toast-symbol, .lamp-object, .lamp-beam, .request-progress span, .request-card { animation: none; } .progress-track span { transition: none; } }
+:root { --catalog-warning: #8b5515; }
+.catalog-lab { margin-bottom: 3rem; padding: 2rem; background: #fffdf7; border: 1px solid #dce3d7; border-radius: 1rem; }
+.catalog-lab h1 { margin: .5rem 0 1rem; }
+.catalog-lab > p { max-width: 85ch; line-height: 1.6; }
+.catalog-products { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1rem 0; }
+.catalog-product { padding: 1.25rem; border: 1px solid #bad2be; border-radius: .75rem; background: #f5faf4; }
+.catalog-product h2 { font-size: 1.2rem; }
+.catalog-product.degraded { border-color: #c99a54; background: #fff4dc; }
+.catalog-product button { display: block; margin-top: 1rem; }
+.catalog-product button:disabled { opacity: .55; cursor: not-allowed; }
+.system-indicators { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
+.system-indicators span { padding: .45rem .7rem; background: #e8f0e5; border-radius: .5rem; font-size: .85rem; }
+.system-indicators .pressure, .catalog-error { color: #902e22; background: #fce7df; }
+.system-indicators .paused { color: var(--catalog-warning); background: #fff0cc; }
+@media (max-width: 760px) { .catalog-products { grid-template-columns: 1fr; } .catalog-lab { padding: 1rem; } }

@@ -12,6 +12,20 @@
     <nav class="links"><a href="/">{{storefrontPage.workshop_overview}}</a></nav>
   </div></header>
   <main class="storefront-main">
+    <section class="catalog-lab" aria-labelledby="catalog-title">
+      <div class="eyebrow">{{catalog.eyebrow}}</div>
+      <h1 id="catalog-title">{{catalog.title}}</h1>
+      <p>{{catalog.description}}</p>
+      <div class="storefront-actions">
+        <button id="catalog-stock" class="primary" type="button">{{catalog.refresh_stock}}</button>
+        <button id="catalog-preview" class="secondary" type="button">{{catalog.refresh_preview}}</button>
+        <label><input id="catalog-auto" type="checkbox" checked> {{catalog.auto_refresh}}</label>
+      </div>
+      <div id="system-indicators" class="system-indicators" role="status" aria-live="polite"></div>
+      <p id="catalog-status" role="status" aria-live="polite">{{catalog.loading}}</p>
+      <div id="catalog-products" class="catalog-products"></div>
+      <p class="meta">{{catalog.explanation}}</p>
+    </section>
     <div class="storefront-breadcrumb">{{storefrontPage.home_office}} <span>{{storefrontPage.text_2}}</span> {{storefrontPage.lighting}} <span>{{storefrontPage.text_2}}</span> {{storefrontPage.lamp_01}}</div>
     <section class="storefront-layout" aria-labelledby="product-title">
       <div class="product-stage" aria-label="{{storefrontPage.illustration_of_a_desk_lamp}}">

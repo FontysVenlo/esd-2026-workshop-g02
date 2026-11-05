@@ -4,7 +4,13 @@ These are real tool/API operations. The [Network Faults console](http://localhos
 
 ## What is a fallback, and how do I enable it?
 
+The Storefront now has three products, two shared workers and a complete-catalog response. `/api/catalog` checks all stock; `/api/catalog?preview=true` also requests quotes. `/api/product?sku=CHAIR-02` and `?sku=DESK-03` check the healthy comparison products individually. `/api/system` reports real worker occupancy, queued requests, cumulative rejections and product/dependency circuits without consuming a worker.
+
+Fault controls target only the lamp branches (`inventory` and `shipping`). Chair and desk use `inventory-healthy` and `shipping-healthy`, separate Toxiproxy branches to the same backend services. Do not fault the healthy comparison branches. The standard load profile sends five requests per second and is needed to demonstrate sustained shared-capacity pressure.
+
 A fallback is the response the shop uses when a dependency cannot answer. The workshop already implements it; you do not need to write code. Inventory fallback returns **Stock unconfirmed**. Shipping fallback keeps the preview available while reporting **Shipping quote unavailable**. Neither invents stock or delivery information.
+
+In this workshop, enabling a dependency fallback also enables its per-product circuit breaker. After a failed call the circuit pauses that product/dependency for five seconds, then permits one probe. A short timeout releases workers sooner; the breaker avoids repeatedly consuming capacity on a known bad path; fallback prevents the missing result from rejecting the whole catalog. A short timeout without fallback still returns an error. The shared queue waits at most 1000 ms and holds at most 12 waiting product operations.
 
 Open **Fallbacks & timeouts**, the second tab in [Network Faults](http://localhost:8089/#mitigations). Use the Challenge 1/2 preset or edit a dependency's timeout and fallback checkbox, then click Apply. Settings affect new requests immediately; no terminal or restart is needed. Use **Restore default settings** to turn both fallbacks off and restore 3000 ms timeouts. Reapply the identical fault to test the behavior.
 
@@ -90,4 +96,4 @@ sum by (dependency, outcome) (rate(workshop_dependency_calls_total[1m]))
 sum by (dependency) (rate(workshop_fallbacks_total[1m]))
 ```
 
-The Grafana dashboard visualizes these real series. It does not invent example measurements. The customer page also reports browser-observed latency for the last action.
+The Grafana dashboard visualizes these real series. It also includes **Product p95 latency**, **Shared workers and queue**, **Capacity rejection rate**, and **Open product dependency circuits**. Product latency includes queue time; dependency latency measures the admitted backend call. Compare increments/rates for rejected requests, not the lifetime total. A fast Shipping failure can break catalog aggregation without raising queue pressure. Allow a fresh one-minute window when interpreting mitigation and up to one breaker cooldown after clearing a fault.

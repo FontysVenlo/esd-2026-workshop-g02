@@ -6,6 +6,9 @@ import { pathToFileURL } from 'node:url';
 import { Metrics } from './metrics.mjs';
 import { createMitigations, createMitigationServer } from './mitigations.mjs';
 import { renderPage, serveContentAsset } from './web-content.mjs';
+import { products } from './catalog.mjs';
+import { createCapacity } from './capacity.mjs';
+import { createBreaker } from './breaker.mjs';
 
 const page = renderPage('index.html');
 const workshopPage = renderPage('workshop.html');
@@ -16,12 +19,13 @@ const guideFiles = new Map([
   ['/docs/tool-reference.md', readFileSync(new URL('../docs/tool-reference.md', import.meta.url))],
   ['/docs/experiment-record.md', readFileSync(new URL('../docs/experiment-record.md', import.meta.url))]
 ]);
-const product = { sku: 'LAMP-01', name: text('api', 'product_name'), priceEur: 29.9 };
 
 export function createStorefrontServer(config = {}) {
   const settings = {
     inventoryUrl: config.inventoryUrl ?? process.env.INVENTORY_URL ?? 'http://localhost:8666',
     shippingUrl: config.shippingUrl ?? process.env.SHIPPING_URL ?? 'http://localhost:8667',
+    healthyInventoryUrl: config.healthyInventoryUrl ?? process.env.HEALTHY_INVENTORY_URL ?? config.inventoryUrl ?? 'http://localhost:8668',
+    healthyShippingUrl: config.healthyShippingUrl ?? process.env.HEALTHY_SHIPPING_URL ?? config.shippingUrl ?? 'http://localhost:8669',
     inventoryTimeoutMs: Number(config.inventoryTimeoutMs ?? process.env.INVENTORY_TIMEOUT_MS ?? 3000),
     shippingTimeoutMs: Number(config.shippingTimeoutMs ?? process.env.SHIPPING_TIMEOUT_MS ?? 3000),
     inventoryFallback: config.inventoryFallback ?? process.env.INVENTORY_FALLBACK === 'true',
@@ -35,6 +39,9 @@ export function createStorefrontServer(config = {}) {
     shipping: { timeoutMs: settings.shippingTimeoutMs, fallback: settings.shippingFallback }
   });
   const metrics = new Metrics('storefront');
+  const capacity = createCapacity(config.capacity);
+  const breaker = createBreaker(config.breaker);
+  let previousPolicy = JSON.stringify(mitigations.snapshot());
 
   async function dependency(name, baseUrl, path, timeoutMs) {
     const started = performance.now();
@@ -53,9 +60,27 @@ export function createStorefrontServer(config = {}) {
     }
   }
 
-  async function stock(policy) {
+  async function call(name, sku, policy) {
+    const key = `${sku}:${name}`;
+    if (!breaker.enter(key, policy.fallback)) {
+      throw Object.assign(new Error(`${name} circuit_open`), { outcome: 'circuit_open' });
+    }
+    const baseUrl = sku === 'LAMP-01'
+      ? name === 'inventory' ? settings.inventoryUrl : settings.shippingUrl
+      : name === 'inventory' ? settings.healthyInventoryUrl : settings.healthyShippingUrl;
     try {
-      const data = await dependency('inventory', settings.inventoryUrl, '/stock?sku=LAMP-01', policy.timeoutMs);
+      const result = await dependency(name, baseUrl, `${name === 'inventory' ? '/stock' : '/quote'}?sku=${sku}`, policy.timeoutMs);
+      breaker.success(key);
+      return result;
+    } catch (error) {
+      if (policy.fallback) breaker.failure(key);
+      throw error;
+    }
+  }
+
+  async function stock(policy, sku) {
+    try {
+      const data = await call('inventory', sku, policy);
       return { available: data.quantity > 0, quantity: data.quantity, source: 'live' };
     } catch (error) {
       if (!policy.fallback) throw error;
@@ -65,9 +90,9 @@ export function createStorefrontServer(config = {}) {
     }
   }
 
-  async function shipping(policy) {
+  async function shipping(policy, sku) {
     try {
-      const data = await dependency('shipping', settings.shippingUrl, '/quote?sku=LAMP-01', policy.timeoutMs);
+      const data = await call('shipping', sku, policy);
       return { ...data, source: 'live' };
     } catch (error) {
       if (!policy.fallback) throw error;
@@ -76,14 +101,47 @@ export function createStorefrontServer(config = {}) {
     }
   }
 
+  async function productResult(product, preview, policy) {
+    const queuedAt = performance.now();
+    let release;
+    try {
+      release = await capacity.acquire();
+      const queueMs = Math.round(performance.now() - queuedAt);
+      // Wait for both calls to settle before releasing a real worker. A failed
+      // Shipping call must not hide an Inventory request still using capacity.
+      const results = await Promise.allSettled([
+        stock(policy.inventory, product.sku),
+        ...(preview ? [shipping(policy.shipping, product.sku)] : [])
+      ]);
+      const failure = results.find(result => result.status === 'rejected');
+      if (failure) throw failure.reason;
+      const inventory = results[0].value;
+      const delivery = results[1]?.value;
+      const { quantity: _quantity, ...description } = product;
+      return { product: description, inventory, ...(delivery ? { shipping: delivery } : {}),
+        degraded: inventory.source !== 'live' || Boolean(delivery && delivery.source !== 'live'), queueMs };
+    } finally {
+      release?.();
+      metrics.product(product.sku, (performance.now() - queuedAt) / 1000);
+    }
+  }
+
   return http.createServer(async (req, res) => {
-    const route = new URL(req.url, 'http://localhost').pathname;
+    const url = new URL(req.url, 'http://localhost');
+    const route = url.pathname;
     if (req.method !== 'GET') return send(405, { error: text('api', 'method_not_allowed') });
     if (route === '/health') return send(200, { status: 'ok' });
     if (route === '/metrics') {
       res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4' });
-      return res.end(metrics.render());
+      const state = capacity.snapshot();
+      return res.end(metrics.render() + [
+        '# TYPE workshop_workers_active gauge', `workshop_workers_active ${state.active}`,
+        '# TYPE workshop_workers_queued gauge', `workshop_workers_queued ${state.queued}`,
+        '# TYPE workshop_capacity_rejections_total counter', `workshop_capacity_rejections_total ${state.rejected}`,
+        '# TYPE workshop_open_circuits gauge', `workshop_open_circuits ${breaker.snapshot().length}`, ''
+      ].join('\n'));
     }
+    if (route === '/api/system') return send(200, { ...capacity.snapshot(), circuits: breaker.snapshot() });
     if (route === '/storefront') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       return res.end(page);
@@ -105,26 +163,30 @@ export function createStorefrontServer(config = {}) {
       res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
       return res.end(guideFiles.get(route));
     }
-    if (route !== '/api/product' && route !== '/api/order-preview') return send(404, { error: text('api', 'not_found') });
+    if (!['/api/product', '/api/order-preview', '/api/catalog'].includes(route)) return send(404, { error: text('api', 'not_found') });
 
     const started = performance.now();
     // Keep one consistent policy for the entire customer request, even if the
     // operator changes settings while a dependency request is in flight.
     const policy = mitigations.snapshot();
+    const currentPolicy = JSON.stringify(policy);
+    if (currentPolicy !== previousPolicy) { breaker.reset(); previousPolicy = currentPolicy; }
     try {
-      if (route === '/api/product') {
-        const inventory = await stock(policy.inventory);
-        return sendApi(200, { product, inventory, degraded: inventory.source !== 'live' });
+      if (route === '/api/catalog') {
+        // The catalog is one customer response. Without fallback, one missing
+        // product rejects the complete view, demonstrating error propagation.
+        const results = await Promise.allSettled(products().map(product => productResult(product, url.searchParams.get('preview') === 'true', policy)));
+        const failure = results.find(result => result.status === 'rejected');
+        if (failure) throw failure.reason;
+        return sendApi(200, { products: results.map(result => result.value), system: capacity.snapshot(), circuits: breaker.snapshot() });
       }
-      const [inventory, delivery] = await Promise.all([stock(policy.inventory), shipping(policy.shipping)]);
-      return sendApi(200, {
-        product, inventory, shipping: delivery,
-        degraded: inventory.source !== 'live' || delivery.source !== 'live',
-        note: text('api', 'preview_note')
-      });
+      const product = products().find(product => product.sku === (url.searchParams.get('sku') ?? 'LAMP-01'));
+      if (!product) return sendApi(404, { error: text('api', 'not_found') });
+      const result = await productResult(product, route === '/api/order-preview', policy);
+      return sendApi(200, { ...result, note: text('api', 'preview_note') });
     } catch (error) {
       return sendApi(error.outcome === 'timeout' ? 504 : 503, {
-        error: text('api', 'unavailable'),
+        error: text('catalog', error.outcome === 'capacity' ? 'capacity_error' : route === '/api/catalog' ? 'catalog_error' : 'product_error'),
         failedDependency: error.message.split(' ')[0]
       });
     }
