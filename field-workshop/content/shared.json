@@ -361,7 +361,7 @@
     "desk": "Writing Desk",
     "eyebrow": "LIVE RELIABILITY LAB",
     "title": "Three products. One shared shop.",
-    "description": "Desk Lamp, Task Chair and Writing Desk use the same Inventory and Shipping services and share two Storefront workers. Network Faults targets only the lamp’s network paths. Under the supplied traffic, a slow lamp can fill the workers and make healthy products wait or fail. A missing lamp result also prevents the complete catalog from being returned.",
+    "description": "Three products share Inventory, Shipping and two Storefront workers. Introduce a fault on the lamp’s path, then watch its effect on the other products and compare after mitigation.",
     "refresh_stock": "Refresh all availability",
     "refresh_preview": "Preview all deliveries",
     "auto_refresh": "Refresh this view every 2 seconds",
@@ -384,6 +384,19 @@
     "connection_error": "Could not refresh the catalog. No current live result is shown.",
     "capacity_error": "All shared workers are busy and the queue limit was reached. Healthy products can be affected too.",
     "catalog_error": "One product could not be confirmed, so this complete catalog response failed. Compare the availability and delivery views, then repeat the same fault after mitigation.",
-    "product_error": "Product information is temporarily unavailable."
+    "product_error": "Product information is temporarily unavailable.",
+    "page_title": "Northstar Supply — Live catalog",
+    "javascript_required": "Enable JavaScript to use the interactive product catalog.",
+    "stale": "Last known result",
+    "stale_notice": "Showing the last successful catalog. It is not a current confirmation; individual product checks remain available.",
+    "waiting": "Not checked yet",
+    "stock_only": "Delivery quote shown in delivery view",
+    "checking": "Checking this product…",
+    "individual_hint": "Run an individual check to compare with the shared catalog.",
+    "monitor_loading": "Connecting to worker monitoring…",
+    "monitor_label": "Shared capacity monitoring",
+    "controls_label": "Catalog view and refresh controls",
+    "updating": "Updating catalog…",
+    "explanation_title": "How does the failure spread?"
   }
 }

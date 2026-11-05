@@ -4,7 +4,7 @@ A small, runnable commerce system for hands-on Chaos Engineering. The overview c
 
 ## Edit the website text
 
-The running website reads its copy from `web/content/`:
+The running website reads its copy from `content/`:
 
 - `challenge-1.json` through `challenge-4.json`: one challenge per file, including its overview summary, brief, steps, completion criteria, answer labels/prompts, mitigation help, and example solution.
 - `shared.json`: all remaining website copy, grouped by workshop, Storefront, Network Faults, page templates, and API messages.
@@ -60,9 +60,13 @@ The Storefront offers product availability and an order **preview**, not a live 
 
 ## Run tests
 
+All workshop-owned pages use React: `src/storefront.jsx`, `src/workshop.jsx` (overview and all challenges), `src/fault-console.jsx`, and `src/tools.jsx`. Shared JavaScript helpers live in `src/shared/`; editable copy lives in `content/`; images and CSS live in `public/`. Run `pnpm install --frozen-lockfile --ignore-scripts` then `pnpm build` after changing source or public assets. The build generates the browser JavaScript, license notices, and minimal HTML entry shells into ignored `build/`. Do not commit generated files. Docker builds them automatically in a separate build stage, and the workshop ZIP includes only source and configuration. Grafana and Prometheus remain externally supplied applications.
+
+Product photos in `public/images/` were generated for this demo. Copy remains in `content/`; the React bundle imports shared copy at runtime so rebuilding the bundle is not required for wording edits. Rebuild/restart containers as described above. Product cards retain the previous catalog while refreshing and explicitly label it as last known data after a failure or view change. Individual checks remain independent of background catalog polling.
+
 ```powershell
-node --test tests/*.test.mjs
+pnpm test
 docker compose config --quiet
 ```
 
-The Node tests use only the standard library and temporary loopback servers. Docker is needed for the complete Toxiproxy/Prometheus/Grafana path.
+`pnpm test` builds the frontend first, then runs Node tests using the standard library and temporary loopback servers. For direct Node testing, run `node build.mjs` before `node --test tests/*.test.mjs`. Build output is also required before starting the services directly with Node. Docker is needed for the complete Toxiproxy/Prometheus/Grafana path.

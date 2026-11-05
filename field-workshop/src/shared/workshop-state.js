@@ -1,8 +1,8 @@
-import { copy as text } from './copy.mjs';
+import { copy as text } from './copy.js';
 export const STORAGE_KEY = 'northstar-field-workshop-v1';
 
-export { challenges } from './challenges.mjs';
-import { challenges } from './challenges.mjs';
+export { challenges } from './challenges.js';
+import { challenges } from './challenges.js';
 
 export function emptyProgress() {
   return { drafts: {}, submissions: {} };

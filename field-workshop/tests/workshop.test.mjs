@@ -4,7 +4,7 @@ import { createStorefrontServer } from '../services/storefront.mjs';
 import {
   buildRecord, challenges, currentChallengeIndex, emptyProgress, isUnlocked,
   normalizeProgress, saveDraft, submitChallenge, submittedCount
-} from '../web/workshop-state.mjs';
+} from '../src/shared/workshop-state.js';
 
 test('workshop overview, browser modules, and local tool guide are served', async () => {
   const server = createStorefrontServer();
@@ -16,10 +16,8 @@ test('workshop overview, browser modules, and local tool guide are served', asyn
     assert.match(overview.headers.get('content-type'), /text\/html/);
     const html = await overview.text();
     assert.match(html, /Reliability Workshop/);
-    assert.match(html, /home-page/);
-    assert.match(html, /challenge-nav/);
-    assert.match(html, /unlock-toast/);
-    assert.match(html, /Welcome &amp; setup/);
+    assert.match(html, /workshop-root/);
+    assert.match(html, /src="\/workshop-app.mjs"/);
     const app = await fetch(`${base}/workshop-app.mjs`);
     assert.equal(app.status, 200);
     const appText = await app.text();
@@ -29,10 +27,9 @@ test('workshop overview, browser modules, and local tool guide are served', asyn
     assert.equal(copy.workshop.quick_start, 'Quick start');
     assert.equal(copy.workshop.possible_solution, 'Possible solution');
     assert.match(appText, /just-unlocked/);
-    assert.match(appText, /showUnlockToast/);
     assert.match(appText, /http:\/\/localhost:3008/);
     assert.equal((await fetch(`${base}/workshop-state.mjs`)).status, 200);
-    for (const module of ['copy', 'challenges', 'storefront']) {
+    for (const module of ['copy', 'challenges', 'storefront', 'tools']) {
       const response = await fetch(`${base}/${module}.mjs`);
       assert.equal(response.status, 200);
       assert.match(response.headers.get('content-type'), /javascript/);
@@ -54,15 +51,19 @@ test('workshop overview, browser modules, and local tool guide are served', asyn
     assert.match(await guide.text(), /Toxiproxy/);
     const tools = await fetch(`${base}/tools`);
     assert.equal(tools.status, 200);
-    assert.match(await tools.text(), /Inventory latency/);
+    assert.match(await tools.text(), /tools-root/);
+    assert.match(await (await fetch(`${base}/tools.mjs`)).text(), /inventory_latency/);
     const storefront = await (await fetch(`${base}/storefront`)).text();
-    assert.match(storefront, /Workshop overview/);
-    assert.match(storefront, /class="lamp-art"/);
-    assert.match(storefront, /Live product check/);
+    assert.match(storefront, /storefront-root/);
     assert.match(storefront, /src="\/storefront.mjs"/);
     const storefrontApp = await (await fetch(`${base}/storefront.mjs`)).text();
-    assert.match(storefrontApp, /performance\.now\(\)/);
-    assert.match(storefrontApp, /fetch\(path/);
+    assert.match(storefrontApp, /\/api\/catalog/);
+    for (const name of ['lamp', 'chair', 'desk']) {
+      const image = await fetch(`${base}/images/${name}.png`);
+      assert.equal(image.status, 200);
+      assert.equal(image.headers.get('content-type'), 'image/png');
+      assert.deepEqual([...new Uint8Array(await image.arrayBuffer()).slice(0, 4)], [137, 80, 78, 71]);
+    }
   } finally {
     await new Promise(resolve => server.close(resolve));
   }

@@ -75,9 +75,8 @@ test('console serves controls and an Info tab with underlying requests', async (
   const response = await fetch(consoleBase);
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /Info &amp; commands/);
-  assert.match(html, /POST \/proxies\/inventory\/toxics/);
-  assert.match(html, /POST \/reset/);
+  assert.match(html, /fault-console-root/);
+  assert.match(html, /src="\/fault-console.mjs"/);
   assert.equal((await fetch(`${consoleBase}/fault-console.mjs`)).status, 200);
   assert.match((await (await fetch(`${consoleBase}/site.css`)).headers.get('content-type')), /text\/css/);
   const state = await (await fetch(`${consoleBase}/api/state`)).json();

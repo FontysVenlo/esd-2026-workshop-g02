@@ -251,4 +251,4 @@ The key conclusion to demonstrate is: **Did the customer's experience improve un
 - [Experiment record template](field-workshop/docs/experiment-record.md)
 - [Storefront implementation](field-workshop/services/storefront.mjs)
 - [Compose configuration](field-workshop/compose.yaml)
-- [Challenge fields and example reasoning](field-workshop/web/workshop-state.mjs)
+- [Challenge fields and example reasoning](field-workshop/content/)

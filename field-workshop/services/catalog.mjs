@@ -1,4 +1,4 @@
-import { copy as text } from '../web/copy.mjs';
+import { copy as text } from '../src/shared/copy.js';
 
 export function products() {
   return [

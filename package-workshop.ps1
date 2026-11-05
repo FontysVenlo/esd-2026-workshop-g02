@@ -21,7 +21,8 @@ foreach ($name in $launchers) {
   if ($content -contains 13) { throw "Mac launcher must use LF line endings: $name" }
 }
 New-Item -ItemType Directory -Path $output -Force | Out-Null
-Compress-Archive -Path (Join-Path $workshop '*') -DestinationPath $archive -Force
+$packageFiles = Get-ChildItem -LiteralPath $workshop -Force | Where-Object { $_.Name -notin @('node_modules', '.git', 'build') }
+Compress-Archive -LiteralPath $packageFiles.FullName -DestinationPath $archive -Force
 
 # ZIPs made on Windows normally omit Unix executable permissions. Mark the Mac
 # launchers as regular, executable files and set their ZIP creator OS to Unix.

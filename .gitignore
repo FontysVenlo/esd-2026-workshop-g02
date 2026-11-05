@@ -4,4 +4,6 @@
 
 .env
 dist/
+node_modules/
+field-workshop/build/
 

@@ -1,4 +1,4 @@
-import shared from './content/shared.json' with { type: 'json' };
+import shared from '../../content/shared.json' with { type: 'json' };
 
 export { shared };
 

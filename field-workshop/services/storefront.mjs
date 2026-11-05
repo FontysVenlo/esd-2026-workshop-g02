@@ -1,4 +1,4 @@
-import { copy as text } from '../web/copy.mjs';
+import { copy as text } from '../src/shared/copy.js';
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
@@ -13,7 +13,7 @@ import { createBreaker } from './breaker.mjs';
 const page = renderPage('index.html');
 const workshopPage = renderPage('workshop.html');
 const toolsPage = renderPage('tools.html');
-const siteCss = readFileSync(new URL('../web/site.css', import.meta.url));
+const siteCss = readFileSync(new URL('../build/site.css', import.meta.url));
 const guideFiles = new Map([
   ['/docs/assignments.md', readFileSync(new URL('../docs/assignments.md', import.meta.url))],
   ['/docs/tool-reference.md', readFileSync(new URL('../docs/tool-reference.md', import.meta.url))],

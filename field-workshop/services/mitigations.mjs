@@ -1,4 +1,4 @@
-import { copy as text } from '../web/copy.mjs';
+import { copy as text } from '../src/shared/copy.js';
 import http from 'node:http';
 
 export const defaultMitigations = Object.freeze({

@@ -1,11 +1,11 @@
-import { copy as text } from '../web/copy.mjs';
+import { copy as text } from '../src/shared/copy.js';
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { renderPage, serveContentAsset } from './web-content.mjs';
 
 const page = renderPage('fault-console.html');
-const siteCss = readFileSync(new URL('../web/site.css', import.meta.url));
+const siteCss = readFileSync(new URL('../build/site.css', import.meta.url));
 const proxyNames = ['inventory', 'shipping'];
 const toxicName = 'workshop-latency';
 

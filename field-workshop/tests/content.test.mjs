@@ -1,18 +1,18 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { copy, shared } from '../web/copy.mjs';
+import { copy, shared } from '../src/shared/copy.js';
 import { renderPage } from '../services/web-content.mjs';
 
 test('edited shared text appears in HTML safely and placeholders are substituted as text', () => {
-  const original = shared.workshopPage.northstar_supply;
+  const original = shared.workshopPage.northstar_supply_reliability_workshop;
   try {
-    shared.workshopPage.northstar_supply = 'Shop <one> & "two"';
+    shared.workshopPage.northstar_supply_reliability_workshop = 'Shop <one> & "two"';
     const page = renderPage('workshop.html');
     assert.match(page, /Shop &lt;one&gt; &amp; &quot;two&quot;/);
     assert.doesNotMatch(page, /Shop <one>/);
     assert.equal(copy('workshop', 'challenge', { number: '$&{number}' }), 'Challenge $&{number}');
   } finally {
-    shared.workshopPage.northstar_supply = original;
+    shared.workshopPage.northstar_supply_reliability_workshop = original;
   }
 });
 
