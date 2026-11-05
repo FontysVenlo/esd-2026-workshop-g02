@@ -3,99 +3,96 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Network Faults &amp; Fallbacks — Northstar Supply</title>
+  <title>{{faultConsolePage.network_faults_fallbacks_northstar_supply}}</title>
   <link rel="stylesheet" href="/site.css">
 </head>
 <body>
-  <header><div class="header-inner"><a class="brand" href="http://localhost:8088/">Northstar Supply / Network faults</a><nav class="links"><a href="http://localhost:8088/">Workshop overview</a><a href="http://localhost:3008/d/field-workshop/field-workshop" target="_blank" rel="noopener">Grafana</a></nav></div></header>
+  <header><div class="header-inner"><a class="brand" href="http://localhost:8088/">{{faultConsolePage.northstar_supply_network_faults}}</a><nav class="links"><a href="http://localhost:8088/">{{faultConsolePage.workshop_overview}}</a><a href="http://localhost:3008/d/field-workshop/field-workshop" target="_blank" rel="noopener">{{faultConsolePage.grafana}}</a></nav></div></header>
   <main>
-    <div class="intro"><div class="eyebrow">Operator tool</div><h1>Network faults &amp; fallbacks</h1><p>Create a dependency problem in the first tab, then change how the shop responds in the second. All controls work in the browser on Windows and Mac; no terminal is needed.</p></div>
-    <div class="tabs" role="tablist" aria-label="Network fault console views">
-      <button id="controls-tab" class="tab" role="tab" aria-selected="true" aria-controls="controls-panel" type="button">Fault injection</button>
-      <button id="mitigations-tab" class="tab" role="tab" aria-selected="false" aria-controls="mitigations-panel" tabindex="-1" type="button">Fallbacks &amp; timeouts</button>
-      <button id="info-tab" class="tab" role="tab" aria-selected="false" aria-controls="info-panel" tabindex="-1" type="button">Info &amp; commands</button>
+    <div class="intro"><div class="eyebrow">{{faultConsolePage.operator_tool}}</div><h1>{{faultConsolePage.network_faults_fallbacks}}</h1><p>{{faultConsolePage.create_a_dependency_problem_in_the_first_tab_then}}</p></div>
+    <div class="tabs" role="tablist" aria-label="{{faultConsolePage.network_fault_console_views}}">
+      <button id="controls-tab" class="tab" role="tab" aria-selected="true" aria-controls="controls-panel" type="button">{{faultConsolePage.fault_injection}}</button>
+      <button id="mitigations-tab" class="tab" role="tab" aria-selected="false" aria-controls="mitigations-panel" tabindex="-1" type="button">{{faultConsolePage.fallbacks_timeouts}}</button>
+      <button id="info-tab" class="tab" role="tab" aria-selected="false" aria-controls="info-panel" tabindex="-1" type="button">{{faultConsolePage.info_commands}}</button>
     </div>
     <section id="controls-panel" class="panel" role="tabpanel" aria-labelledby="controls-tab">
-      <h2>Current state</h2>
-      <button id="refresh" class="secondary" type="button">Refresh</button>
-      <div id="state" class="status-grid" aria-live="polite">Loading…</div>
-      <h2>Apply a fault</h2>
+      <h2>{{faultConsolePage.current_state}}</h2>
+      <button id="refresh" class="secondary" type="button">{{faultConsolePage.refresh}}</button>
+      <div id="state" class="status-grid" aria-live="polite">{{faultConsolePage.loading}}</div>
+      <h2>{{faultConsolePage.apply_a_fault}}</h2>
       <div class="controls">
-        <label>Dependency<select id="proxy"><option value="inventory">Inventory</option><option value="shipping">Shipping</option></select></label>
-        <label>Response delay (ms)<input id="latency" type="number" min="50" max="5000" step="1" value="1500"></label>
+        <label>{{faultConsolePage.dependency}}<select id="proxy"><option value="inventory">{{faultConsolePage.inventory}}</option><option value="shipping">{{faultConsolePage.shipping}}</option></select></label>
+        <label>{{faultConsolePage.response_delay_ms}}<input id="latency" type="number" min="50" max="5000" step="1" value="1500"></label>
       </div>
       <div class="actions">
-        <button class="action" type="button" data-action="set-latency">Apply delay</button>
-        <button class="action secondary" type="button" data-action="remove-latency">Remove delay</button>
-        <button class="action danger" type="button" data-action="disconnect">Disconnect</button>
-        <button class="action secondary" type="button" data-action="reconnect">Reconnect</button>
+        <button class="action" type="button" data-action="set-latency">{{faultConsolePage.apply_delay}}</button>
+        <button class="action secondary" type="button" data-action="remove-latency">{{faultConsolePage.remove_delay}}</button>
+        <button class="action danger" type="button" data-action="disconnect">{{faultConsolePage.disconnect}}</button>
+        <button class="action secondary" type="button" data-action="reconnect">{{faultConsolePage.reconnect}}</button>
       </div>
-      <button id="reset-faults" class="secondary" type="button">Clear all faults</button>
-      <p class="meta">Clears Toxiproxy faults only; notes, metrics, and mitigation settings remain.</p>
+      <button id="reset-faults" class="secondary" type="button">{{faultConsolePage.clear_all_faults}}</button>
+      <p class="meta">{{faultConsolePage.clears_toxiproxy_faults_only_notes_metrics_and_mitigation_settings}}</p>
       <p id="message" class="message" role="status"></p>
     </section>
     <section id="mitigations-panel" class="panel" role="tabpanel" aria-labelledby="mitigations-tab" hidden>
-      <h2>Change the shop's response</h2>
-      <p>A <strong>timeout</strong> is how long Storefront waits for a dependency. A <strong>fallback</strong> provides a useful, honest response when that dependency fails or takes too long. A shorter timeout without a fallback can still produce an error.</p>
-      <p>Changes apply to new customer requests immediately. You do not need to restart Docker. Keep or reapply the same fault to compare the customer experience before and after mitigation.</p>
-      <button id="refresh-mitigations" class="secondary" type="button">Refresh settings</button>
+      <h2>{{faultConsolePage.change_the_shop_s_response}}</h2>
+      <p>{{faultConsolePage.a}} <strong>{{faultConsolePage.timeout}}</strong> {{faultConsolePage.is_how_long_storefront_waits_for_a_dependency_a}} <strong>{{faultConsolePage.fallback}}</strong> {{faultConsolePage.provides_a_useful_honest_response_when_that_dependency_fails}}</p>
+      <p>{{faultConsolePage.changes_apply_to_new_customer_requests_immediately_you_do}}</p>
+      <button id="refresh-mitigations" class="secondary" type="button">{{faultConsolePage.refresh_settings}}</button>
       <div class="mitigation-controls">
         <form id="inventory-settings" class="status-card">
-          <h3>Inventory · stock checks</h3>
-          <p>With fallback enabled, an unavailable stock check returns <strong>Stock unconfirmed</strong>. It never guesses the stock quantity.</p>
-          <p id="inventory-current" class="meta" role="status">Reading current settings…</p>
-          <label for="inventory-timeout">Inventory timeout (ms)</label>
+          <h3>{{faultConsolePage.inventory_stock_checks}}</h3>
+          <p>{{faultConsolePage.with_fallback_enabled_an_unavailable_stock_check_returns}} <strong>{{faultConsolePage.stock_unconfirmed}}</strong>{{faultConsolePage.it_never_guesses_the_stock_quantity}}</p>
+          <p id="inventory-current" class="meta" role="status">{{faultConsolePage.reading_current_settings}}</p>
+          <label for="inventory-timeout">{{faultConsolePage.inventory_timeout_ms}}</label>
           <input id="inventory-timeout" type="number" min="50" max="5000" step="1" required disabled>
-          <label class="checkbox-label"><input id="inventory-fallback" type="checkbox" disabled> Enable Inventory fallback</label>
+          <label class="checkbox-label"><input id="inventory-fallback" type="checkbox" disabled> {{faultConsolePage.enable_inventory_fallback}}</label>
           <div class="actions">
-            <button class="primary" type="submit" disabled>Apply Inventory settings</button>
-            <button id="inventory-preset" class="secondary" type="button" disabled>Use Challenge 1 settings</button>
+            <button class="primary" type="submit" disabled>{{faultConsolePage.apply_inventory_settings}}</button>
+            <button id="inventory-preset" class="secondary" type="button" disabled>{{faultConsolePage.use_challenge_1_settings}}</button>
           </div>
-          <p class="meta">Challenge 1 uses a 400 ms timeout with fallback enabled.</p>
+          <p class="meta">{{faultConsolePage.challenge_1_uses_a_400_ms_timeout_with_fallback}}</p>
         </form>
         <form id="shipping-settings" class="status-card">
-          <h3>Shipping · delivery quotes</h3>
-          <p>With fallback enabled, the preview returns available stock and <strong>Shipping quote unavailable</strong>. It never invents a price or delivery date.</p>
-          <p id="shipping-current" class="meta" role="status">Reading current settings…</p>
-          <label for="shipping-timeout">Shipping timeout (ms)</label>
+          <h3>{{faultConsolePage.shipping_delivery_quotes}}</h3>
+          <p>{{faultConsolePage.with_fallback_enabled_the_preview_returns_available_stock_and}} <strong>{{faultConsolePage.shipping_quote_unavailable}}</strong>{{faultConsolePage.it_never_invents_a_price_or_delivery_date}}</p>
+          <p id="shipping-current" class="meta" role="status">{{faultConsolePage.reading_current_settings}}</p>
+          <label for="shipping-timeout">{{faultConsolePage.shipping_timeout_ms}}</label>
           <input id="shipping-timeout" type="number" min="50" max="5000" step="1" required disabled>
-          <label class="checkbox-label"><input id="shipping-fallback" type="checkbox" disabled> Enable Shipping fallback</label>
+          <label class="checkbox-label"><input id="shipping-fallback" type="checkbox" disabled> {{faultConsolePage.enable_shipping_fallback}}</label>
           <div class="actions">
-            <button class="primary" type="submit" disabled>Apply Shipping settings</button>
-            <button id="shipping-preset" class="secondary" type="button" disabled>Use Challenge 2 settings</button>
+            <button class="primary" type="submit" disabled>{{faultConsolePage.apply_shipping_settings}}</button>
+            <button id="shipping-preset" class="secondary" type="button" disabled>{{faultConsolePage.use_challenge_2_settings}}</button>
           </div>
-          <p class="meta">Challenge 2 enables fallback with the default 3000 ms timeout.</p>
+          <p class="meta">{{faultConsolePage.challenge_2_enables_fallback_with_the_default_3000_ms}}</p>
         </form>
       </div>
-      <button id="reset-mitigations" class="secondary" type="button" disabled>Restore default settings</button>
-      <p class="meta">Restores both timeouts to 3000 ms and turns both fallbacks off. Network faults and your answers remain. Settings last until Storefront restarts; restarting reloads its startup configuration.</p>
+      <button id="reset-mitigations" class="secondary" type="button" disabled>{{faultConsolePage.restore_default_settings}}</button>
+      <p class="meta">{{faultConsolePage.restores_both_timeouts_to_3000_ms_and_turns_both}}</p>
       <p id="mitigation-message" class="message" role="status"></p>
     </section>
     <section id="info-panel" class="panel" role="tabpanel" aria-labelledby="info-tab" hidden>
-      <h2>Underlying API commands</h2>
-      <p>These controls send HTTP requests to Toxiproxy. The Storefront uses the affected paths.</p>
+      <h2>{{faultConsolePage.underlying_api_commands}}</h2>
+      <p>{{faultConsolePage.these_controls_send_http_requests_to_toxiproxy_the_storefront}}</p>
       <ul>
-        <li><strong>Apply delay:</strong> <code>POST /proxies/{dependency}/toxics</code> with a downstream latency toxic. An existing console delay is updated at <code>POST /proxies/{dependency}/toxics/workshop-latency</code>.</li>
-        <li><strong>Remove delay:</strong> <code>DELETE /proxies/{dependency}/toxics/workshop-latency</code>.</li>
-        <li><strong>Disconnect / reconnect:</strong> <code>POST /proxies/{dependency}</code> with <code>{"enabled":false}</code> or <code>{"enabled":true}</code>.</li>
-        <li><strong>Clear all faults:</strong> <code>POST /reset</code>. Reconnects both paths and removes all toxics.</li>
-        <li><strong>Refresh:</strong> <code>GET /proxies</code>. Reads state without changing it.</li>
+        <li><strong>{{faultConsolePage.apply_delay_2}}</strong> <code>{{faultConsolePage.post_proxies_toxics}}</code> {{faultConsolePage.with_a_downstream_latency_toxic_an_existing_console_delay}} <code>{{faultConsolePage.post_proxies_toxics_workshop_latency}}</code>{{faultConsolePage.text}}</li>
+        <li><strong>{{faultConsolePage.remove_delay_2}}</strong> <code>{{faultConsolePage.delete_proxies_toxics_workshop_latency}}</code>{{faultConsolePage.text}}</li>
+        <li><strong>{{faultConsolePage.disconnect_reconnect}}</strong> <code>{{faultConsolePage.post_proxies}}</code> {{faultConsolePage.with}} <code>{{faultConsolePage.text_2}}</code> {{faultConsolePage.or}} <code>{{faultConsolePage.text_3}}</code>{{faultConsolePage.text}}</li>
+        <li><strong>{{faultConsolePage.clear_all_faults_2}}</strong> <code>{{faultConsolePage.post_reset}}</code>{{faultConsolePage.reconnects_both_paths_and_removes_all_toxics}}</li>
+        <li><strong>{{faultConsolePage.refresh_2}}</strong> <code>{{faultConsolePage.get_proxies}}</code>{{faultConsolePage.reads_state_without_changing_it}}</li>
       </ul>
-      <h3>Example: 1500 ms Inventory delay</h3>
-      <pre>POST /proxies/inventory/toxics
-Content-Type: application/json
-
-{"name":"workshop-latency","type":"latency","stream":"downstream","attributes":{"latency":1500,"jitter":0}}</pre>
-      <h3>Last command sent</h3>
-      <pre id="last-command">No command sent yet.</pre>
-      <h3>Optional command for your computer</h3>
-      <p>The browser controls above work the same on both platforms. This selector changes only the optional command example, not how faults or fallbacks work.</p>
-      <label for="command-platform">Command platform</label>
-      <select id="command-platform"><option value="windows">Windows · PowerShell</option><option value="mac">Mac · Terminal</option></select>
-      <pre id="platform-command">Apply a fault or mitigation to see the equivalent command here.</pre>
-      <h3>Fallback settings API</h3>
-      <p><code>GET /api/mitigations</code> reads current settings. <code>POST /api/mitigations</code> applies a dependency's timeout and fallback, or restores defaults. The console forwards these requests to Storefront's internal settings listener.</p>
-      <p class="meta">The raw API is at <code>http://localhost:8478</code>. <a href="http://localhost:8088/tools" target="_blank" rel="noopener">Windows and Mac commands</a></p>
+      <h3>{{faultConsolePage.example_1500_ms_inventory_delay}}</h3>
+      <pre>{{faultConsolePage.post_proxies_inventory_toxics_content_type_application_json}}</pre>
+      <h3>{{faultConsolePage.last_command_sent}}</h3>
+      <pre id="last-command">{{faultConsolePage.no_command_sent_yet}}</pre>
+      <h3>{{faultConsolePage.optional_command_for_your_computer}}</h3>
+      <p>{{faultConsolePage.the_browser_controls_above_work_the_same_on_both}}</p>
+      <label for="command-platform">{{faultConsolePage.command_platform}}</label>
+      <select id="command-platform"><option value="windows">{{faultConsolePage.windows_powershell}}</option><option value="mac">{{faultConsolePage.mac_terminal}}</option></select>
+      <pre id="platform-command">{{faultConsolePage.apply_a_fault_or_mitigation_to_see_the_equivalent}}</pre>
+      <h3>{{faultConsolePage.fallback_settings_api}}</h3>
+      <p><code>{{faultConsolePage.get_api_mitigations}}</code> {{faultConsolePage.reads_current_settings}} <code>{{faultConsolePage.post_api_mitigations}}</code> {{faultConsolePage.applies_a_dependency_s_timeout_and_fallback_or_restores}}</p>
+      <p class="meta">{{faultConsolePage.the_raw_api_is_at}} <code>{{faultConsolePage.http_localhost_8478}}</code>{{faultConsolePage.text}} <a href="http://localhost:8088/tools" target="_blank" rel="noopener">{{faultConsolePage.windows_and_mac_commands}}</a></p>
     </section>
   </main>
   <script type="module" src="/fault-console.mjs"></script>

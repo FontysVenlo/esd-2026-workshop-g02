@@ -23,12 +23,26 @@ test('workshop overview, browser modules, and local tool guide are served', asyn
     const app = await fetch(`${base}/workshop-app.mjs`);
     assert.equal(app.status, 200);
     const appText = await app.text();
-    assert.match(appText, /Quick start/);
-    assert.match(appText, /Possible solution/);
+    const copyResponse = await fetch(`${base}/content/shared.json`);
+    assert.match(copyResponse.headers.get('content-type'), /application\/json/);
+    const copy = await copyResponse.json();
+    assert.equal(copy.workshop.quick_start, 'Quick start');
+    assert.equal(copy.workshop.possible_solution, 'Possible solution');
     assert.match(appText, /just-unlocked/);
     assert.match(appText, /showUnlockToast/);
     assert.match(appText, /http:\/\/localhost:3008/);
     assert.equal((await fetch(`${base}/workshop-state.mjs`)).status, 200);
+    for (const module of ['copy', 'challenges', 'storefront']) {
+      const response = await fetch(`${base}/${module}.mjs`);
+      assert.equal(response.status, 200);
+      assert.match(response.headers.get('content-type'), /javascript/);
+    }
+    for (const challenge of challenges) {
+      const response = await fetch(`${base}/content/${challenge.id}.json`);
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), challenge);
+    }
+    assert.doesNotMatch(html, /\{\{\w+\./);
     const styles = await fetch(`${base}/site.css`);
     assert.match(styles.headers.get('content-type'), /text\/css/);
     const css = await styles.text();
@@ -45,8 +59,10 @@ test('workshop overview, browser modules, and local tool guide are served', asyn
     assert.match(storefront, /Workshop overview/);
     assert.match(storefront, /class="lamp-art"/);
     assert.match(storefront, /Live product check/);
-    assert.match(storefront, /performance\.now\(\)/);
-    assert.match(storefront, /fetch\(path/);
+    assert.match(storefront, /src="\/storefront.mjs"/);
+    const storefrontApp = await (await fetch(`${base}/storefront.mjs`)).text();
+    assert.match(storefrontApp, /performance\.now\(\)/);
+    assert.match(storefrontApp, /fetch\(path/);
   } finally {
     await new Promise(resolve => server.close(resolve));
   }

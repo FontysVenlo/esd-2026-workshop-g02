@@ -3,44 +3,44 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Commands — Northstar Supply</title>
+  <title>{{toolsPage.commands_northstar_supply}}</title>
   <link rel="stylesheet" href="/site.css">
 </head>
 <body>
-  <header><div class="header-inner"><a class="brand" href="/">Northstar Supply / Commands</a><nav class="links"><a href="/">Workshop overview</a><a href="http://localhost:8089" target="_blank" rel="noopener">Network faults</a></nav></div></header>
+  <header><div class="header-inner"><a class="brand" href="/">{{toolsPage.northstar_supply_commands}}</a><nav class="links"><a href="/">{{toolsPage.workshop_overview}}</a><a href="http://localhost:8089" target="_blank" rel="noopener">{{toolsPage.network_faults}}</a></nav></div></header>
   <main class="reference">
-    <div class="intro"><h1>Optional command reference</h1><p>The workshop can be completed entirely in the browser on Windows and Mac. Use <a href="http://localhost:8089" target="_blank" rel="noopener">Fault injection</a> to create the problem and <a href="http://localhost:8089/#mitigations" target="_blank" rel="noopener">Fallbacks &amp; timeouts</a> to change the shop's response.</p><p>You do not need to type any of the commands below. The console's <strong>Info &amp; commands</strong> tab also shows the last request with a Windows/Mac selector.</p></div>
+    <div class="intro"><h1>{{toolsPage.optional_command_reference}}</h1><p>{{toolsPage.the_workshop_can_be_completed_entirely_in_the_browser}} <a href="http://localhost:8089" target="_blank" rel="noopener">{{toolsPage.fault_injection}}</a> {{toolsPage.to_create_the_problem_and}} <a href="http://localhost:8089/#mitigations" target="_blank" rel="noopener">{{toolsPage.fallbacks_timeouts}}</a> {{toolsPage.to_change_the_shop_s_response}}</p><p>{{toolsPage.you_do_not_need_to_type_any_of_the}} <strong>{{toolsPage.info_commands}}</strong> {{toolsPage.tab_also_shows_the_last_request_with_a_windows}}</p></div>
     <section>
-      <h2>What changes when I enable a fallback?</h2>
-      <p>Inventory fallback returns <strong>Stock unconfirmed</strong> if stock cannot be checked. Shipping fallback keeps the preview useful with <strong>Shipping quote unavailable</strong>. A timeout limits the dependency wait. These controls change the real running Storefront immediately; they do not remove the injected fault or restart the container.</p>
-      <p>Restore defaults in <strong>Fallbacks &amp; timeouts</strong>, then clear the fault in <strong>Fault injection</strong>. Your answers remain saved. Runtime settings last until Storefront restarts and reloads its startup configuration.</p>
+      <h2>{{toolsPage.what_changes_when_i_enable_a_fallback}}</h2>
+      <p>{{toolsPage.inventory_fallback_returns}} <strong>{{toolsPage.stock_unconfirmed}}</strong> {{toolsPage.if_stock_cannot_be_checked_shipping_fallback_keeps_the}} <strong>{{toolsPage.shipping_quote_unavailable}}</strong>{{toolsPage.a_timeout_limits_the_dependency_wait_these_controls_change}}</p>
+      <p>{{toolsPage.restore_defaults_in}} <strong>{{toolsPage.fallbacks_timeouts}}</strong>{{toolsPage.then_clear_the_fault_in}} <strong>{{toolsPage.fault_injection}}</strong>{{toolsPage.your_answers_remain_saved_runtime_settings_last_until_storefront}}</p>
     </section>
     <section>
-      <h2>Windows · PowerShell</h2>
-      <h3>Inventory timeout and fallback</h3>
-      <pre>Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":true}'</pre>
-      <h3>Shipping fallback</h3>
-      <pre>Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{"action":"configure","dependency":"shipping","timeoutMs":3000,"fallback":true}'</pre>
-      <h3>Restore default settings</h3>
-      <pre>Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{"action":"reset"}'</pre>
-      <h3>Inventory latency</h3>
-      <pre>Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/action' -ContentType 'application/json' -Body '{"action":"set-latency","proxy":"inventory","latencyMs":1500}'</pre>
+      <h2>{{toolsPage.windows_powershell}}</h2>
+      <h3>{{toolsPage.inventory_timeout_and_fallback}}</h3>
+      <pre>{{toolsPage.invoke_restmethod_method_post_uri_http_localhost_8089_api}}</pre>
+      <h3>{{toolsPage.shipping_fallback}}</h3>
+      <pre>{{toolsPage.invoke_restmethod_method_post_uri_http_localhost_8089_api_2}}</pre>
+      <h3>{{toolsPage.restore_default_settings}}</h3>
+      <pre>{{toolsPage.invoke_restmethod_method_post_uri_http_localhost_8089_api_3}}</pre>
+      <h3>{{toolsPage.inventory_latency}}</h3>
+      <pre>{{toolsPage.invoke_restmethod_method_post_uri_http_localhost_8089_api_4}}</pre>
     </section>
     <section>
-      <h2>Mac · Terminal</h2>
-      <h3>Inventory timeout and fallback</h3>
-      <pre>curl -f -sS -X POST 'http://localhost:8089/api/mitigations' -H 'Content-Type: application/json' --data '{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":true}'</pre>
-      <h3>Shipping fallback</h3>
-      <pre>curl -f -sS -X POST 'http://localhost:8089/api/mitigations' -H 'Content-Type: application/json' --data '{"action":"configure","dependency":"shipping","timeoutMs":3000,"fallback":true}'</pre>
-      <h3>Restore default settings</h3>
-      <pre>curl -f -sS -X POST 'http://localhost:8089/api/mitigations' -H 'Content-Type: application/json' --data '{"action":"reset"}'</pre>
-      <h3>Inventory latency</h3>
-      <pre>curl -f -sS -X POST 'http://localhost:8089/api/action' -H 'Content-Type: application/json' --data '{"action":"set-latency","proxy":"inventory","latencyMs":1500}'</pre>
+      <h2>{{toolsPage.mac_terminal}}</h2>
+      <h3>{{toolsPage.inventory_timeout_and_fallback}}</h3>
+      <pre>{{toolsPage.curl_f_ss_x_post_http_localhost_8089_api}}</pre>
+      <h3>{{toolsPage.shipping_fallback}}</h3>
+      <pre>{{toolsPage.curl_f_ss_x_post_http_localhost_8089_api_2}}</pre>
+      <h3>{{toolsPage.restore_default_settings}}</h3>
+      <pre>{{toolsPage.curl_f_ss_x_post_http_localhost_8089_api_3}}</pre>
+      <h3>{{toolsPage.inventory_latency}}</h3>
+      <pre>{{toolsPage.curl_f_ss_x_post_http_localhost_8089_api_4}}</pre>
     </section>
     <section>
-      <h2>What happens underneath?</h2>
-      <p>Fault requests change the real <strong>Toxiproxy</strong> paths. Mitigation requests change the Storefront's live timeout and fallback policies through an internal Docker listener. No Docker socket or host shell is exposed to the console.</p>
-      <p><a href="/docs/tool-reference.md">Full technical reference</a> · <a href="http://localhost:3008/d/field-workshop/field-workshop" target="_blank" rel="noopener">Grafana</a></p>
+      <h2>{{toolsPage.what_happens_underneath}}</h2>
+      <p>{{toolsPage.fault_requests_change_the_real}} <strong>{{toolsPage.toxiproxy}}</strong> {{toolsPage.paths_mitigation_requests_change_the_storefront_s_live_timeout}}</p>
+      <p><a href="/docs/tool-reference.md">{{toolsPage.full_technical_reference}}</a> {{toolsPage.text}} <a href="http://localhost:3008/d/field-workshop/field-workshop" target="_blank" rel="noopener">{{toolsPage.grafana}}</a></p>
     </section>
   </main>
 </body>

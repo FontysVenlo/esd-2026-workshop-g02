@@ -3,25 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Northstar Supply — Reliability Workshop</title>
+  <title>{{workshopPage.northstar_supply_reliability_workshop}}</title>
   <link rel="stylesheet" href="/site.css">
 </head>
 <body class="workshop-body">
   <header><div class="header-inner workshop-header">
-    <a class="brand" href="#home">Northstar Supply <span>/ Workshop</span></a>
-    <span class="header-note">Reliability workshop</span>
+    <a class="brand" href="#home">{{workshopPage.northstar_supply}} <span>{{workshopPage.workshop}}</span></a>
+    <span class="header-note">{{workshopPage.reliability_workshop}}</span>
   </div></header>
   <main class="workshop-shell">
-    <aside class="workshop-sidebar" aria-label="Workshop navigation">
-      <a id="home-link" class="home-link" href="#home">Home <span>Welcome &amp; setup</span></a>
-      <div class="sidebar-heading">Challenges</div>
-      <nav id="challenge-nav" class="challenge-nav" aria-label="Challenges"></nav>
+    <aside class="workshop-sidebar" aria-label="{{workshopPage.workshop_navigation}}">
+      <a id="home-link" class="home-link" href="#home">{{workshopPage.home}} <span>{{workshopPage.welcome_setup}}</span></a>
+      <div class="sidebar-heading">{{workshopPage.challenges}}</div>
+      <nav id="challenge-nav" class="challenge-nav" aria-label="{{workshopPage.challenges}}"></nav>
       <div class="sidebar-progress">
-        <strong id="progress-label">0 of 4 submitted</strong>
+        <strong id="progress-label">{{workshopPage.0_of_4_submitted}}</strong>
         <div class="progress-track" aria-hidden="true"><span id="progress-fill"></span></div>
         <div class="sidebar-actions">
-          <button id="export-record" type="button" class="text-button">Download notes</button>
-          <button id="reset-progress" type="button" class="text-button">Clear notes</button>
+          <button id="export-record" type="button" class="text-button">{{workshopPage.download_notes}}</button>
+          <button id="reset-progress" type="button" class="text-button">{{workshopPage.clear_notes}}</button>
         </div>
         <span id="storage-warning" class="meta" role="status"></span>
       </div>
@@ -33,9 +33,9 @@
     </div>
   </main>
   <div id="unlock-toast" class="unlock-toast" hidden>
-    <span class="unlock-toast-symbol" aria-hidden="true">🔓</span>
-    <span class="unlock-toast-copy"><strong id="unlock-toast-title">Challenge unlocked</strong><span>Ready in your sidebar</span></span>
-    <a id="unlock-toast-link" href="#challenge-2">Open →</a>
+    <span class="unlock-toast-symbol" aria-hidden="true">{{workshopPage.text}}</span>
+    <span class="unlock-toast-copy"><strong id="unlock-toast-title">{{workshopPage.challenge_unlocked}}</strong><span>{{workshopPage.ready_in_your_sidebar}}</span></span>
+    <a id="unlock-toast-link" href="#challenge-2">{{workshopPage.open}}</a>
   </div>
   <script type="module" src="/workshop-app.mjs"></script>
 </body>

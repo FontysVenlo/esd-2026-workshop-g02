@@ -1,3 +1,4 @@
+import { copy as text } from './copy.mjs';
 const controlsTab = document.querySelector('#controls-tab');
 const infoTab = document.querySelector('#info-tab');
 const mitigationsTab = document.querySelector('#mitigations-tab');
@@ -40,7 +41,7 @@ function renderPlatformCommand() {
   const url = `http://localhost:8089${lastRequest.path}`;
   const json = JSON.stringify(lastRequest.body);
   document.querySelector('#platform-command').textContent = commandPlatform.value === 'windows'
-    ? `Invoke-RestMethod -Method Post -Uri '${url}' -ContentType 'application/json' -Body '${json}'`
+    ? text('faultConsole', 'invoke_restmethod_method_post_uri_contenttype_application_json_body', { url: url, body: json })
     : `curl -f -sS -X POST '${url}' \\\n  -H 'Content-Type: application/json' \\\n  --data '${json}'`;
 }
 commandPlatform.addEventListener('change', renderPlatformCommand);
@@ -53,15 +54,15 @@ function element(tag, value) {
 
 function renderState(state) {
   stateNode.replaceChildren();
-  for (const [name, title] of [['inventory', 'Inventory'], ['shipping', 'Shipping']]) {
+  for (const [name, title] of [['inventory', text('faultConsole', 'inventory')], ['shipping', text('faultConsole', 'shipping')]]) {
     const proxy = state[name];
     const card = element('article');
     card.className = 'status-card';
     card.append(element('h3', title));
-    const status = element('span', proxy.enabled ? 'Connected' : 'Disconnected');
+    const status = element('span', proxy.enabled ? text('faultConsole', 'connected') : text('faultConsole', 'disconnected'));
     status.className = `badge${proxy.enabled ? '' : ' off'}`;
     card.append(status);
-    if (!proxy.toxics.length) card.append(element('p', 'No active faults'));
+    if (!proxy.toxics.length) card.append(element('p', text('faultConsole', 'no_active_faults')));
     else {
       const list = element('ul');
       list.className = 'faults';
@@ -77,7 +78,7 @@ function renderState(state) {
 
 async function readResponse(response) {
   const body = await response.json();
-  if (!response.ok) throw new Error(body.error ?? `Request failed: ${response.status}`);
+  if (!response.ok) throw new Error(body.error ?? text('faultConsole', 'request_failed', { status: response.status }));
   return body;
 }
 
@@ -86,9 +87,9 @@ async function refresh() {
     const state = await readResponse(await fetch('/api/state', { cache: 'no-store' }));
     renderState(state);
     message.className = 'message';
-    message.textContent = 'Showing current Toxiproxy state.';
+    message.textContent = text('faultConsole', 'showing_current_toxiproxy_state');
   } catch (error) {
-    stateNode.textContent = 'Current state is unavailable.';
+    stateNode.textContent = text('faultConsole', 'current_state_is_unavailable');
     message.className = 'message error';
     message.textContent = error.message;
   }
@@ -99,13 +100,13 @@ async function perform(action) {
   const latencyMs = Number(document.querySelector('#latency').value);
   if (action === 'set-latency' && (!Number.isInteger(latencyMs) || latencyMs < 50 || latencyMs > 5000)) {
     message.className = 'message error';
-    message.textContent = 'Choose a whole-number delay from 50 to 5000 ms.';
+    message.textContent = text('faultConsole', 'choose_a_whole_number_delay_from_50_to_5000');
     return;
   }
-  if (action === 'reset' && !window.confirm('Restore both proxy paths and remove every active Toxiproxy fault in this local workshop?')) return;
+  if (action === 'reset' && !window.confirm(text('faultConsole', 'restore_both_proxy_paths_and_remove_every_active_toxiproxy'))) return;
   actionButtons.forEach(button => { button.disabled = true; });
   message.className = 'message';
-  message.textContent = 'Sending change to Toxiproxy…';
+  message.textContent = text('faultConsole', 'sending_change_to_toxiproxy');
   try {
     const result = await readResponse(await fetch('/api/action', {
       method: 'POST',
@@ -117,13 +118,13 @@ async function perform(action) {
     renderPlatformCommand();
     const { method, path, body } = result.command;
     commandNode.textContent = `${method} ${path}${body ? `\nContent-Type: application/json\n\n${JSON.stringify(body, null, 2)}` : ''}`;
-    message.textContent = `Change applied. ${method} ${path}. Open “Info & commands” to inspect it.`;
+    message.textContent = text('faultConsole', 'change_applied_open_info_commands_to_inspect_it', { method: method, path: path });
   } catch (error) {
     message.className = 'message error';
     message.textContent = error.message;
     await refresh();
     message.className = 'message error';
-    message.textContent = `${error.message} Refresh the state before trying again.`;
+    message.textContent = text('faultConsole', 'refresh_the_state_before_trying_again', { error: error.message });
   } finally {
     actionButtons.forEach(button => { button.disabled = false; });
   }
@@ -134,7 +135,7 @@ function renderMitigations(settings) {
     const policy = settings[name];
     document.querySelector(`#${name}-timeout`).value = policy.timeoutMs;
     document.querySelector(`#${name}-fallback`).checked = policy.fallback;
-    document.querySelector(`#${name}-current`).textContent = `Active: ${policy.timeoutMs} ms timeout · fallback ${policy.fallback ? 'on' : 'off'}`;
+    document.querySelector(`#${name}-current`).textContent = text('faultConsole', 'active_ms_timeout_fallback', { timeout: policy.timeoutMs, fallback: policy.fallback ? text('faultConsole', 'on') : text('faultConsole', 'off') });
   }
 }
 
@@ -142,16 +143,16 @@ async function refreshMitigations() {
   mitigationBusy = true;
   mitigationInputs.forEach(input => { input.disabled = true; });
   mitigationMessage.className = 'message';
-  mitigationMessage.textContent = 'Reading active Storefront settings…';
+  mitigationMessage.textContent = text('faultConsole', 'reading_active_storefront_settings');
   try {
     renderMitigations(await readResponse(await fetch('/api/mitigations', { cache: 'no-store' })));
     mitigationInputs.forEach(input => { input.disabled = false; });
-    mitigationMessage.textContent = 'Showing active settings. Edit and apply a dependency, or use its challenge preset.';
+    mitigationMessage.textContent = text('faultConsole', 'showing_active_settings_edit_and_apply_a_dependency_or');
   } catch (error) {
-    for (const name of ['inventory', 'shipping']) document.querySelector(`#${name}-current`).textContent = 'Active settings unavailable.';
+    for (const name of ['inventory', 'shipping']) document.querySelector(`#${name}-current`).textContent = text('faultConsole', 'active_settings_unavailable');
     document.querySelector('#refresh-mitigations').disabled = false;
     mitigationMessage.className = 'message error';
-    mitigationMessage.textContent = `${error.message} Refresh settings to try again.`;
+    mitigationMessage.textContent = text('faultConsole', 'refresh_settings_to_try_again', { error: error.message });
   } finally { mitigationBusy = false; }
 }
 
@@ -159,13 +160,13 @@ async function applyMitigation(input) {
   if (mitigationBusy) return;
   if (input.action === 'configure' && (!Number.isInteger(input.timeoutMs) || input.timeoutMs < 50 || input.timeoutMs > 5000)) {
     mitigationMessage.className = 'message error';
-    mitigationMessage.textContent = 'Choose a whole-number timeout from 50 to 5000 ms.';
+    mitigationMessage.textContent = text('faultConsole', 'choose_a_whole_number_timeout_from_50_to_5000');
     return;
   }
   mitigationBusy = true;
   mitigationInputs.forEach(control => { control.disabled = true; });
   mitigationMessage.className = 'message';
-  mitigationMessage.textContent = 'Applying settings to Storefront…';
+  mitigationMessage.textContent = text('faultConsole', 'applying_settings_to_storefront');
   try {
     const settings = await readResponse(await fetch('/api/mitigations', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input)
@@ -173,15 +174,15 @@ async function applyMitigation(input) {
     renderMitigations(settings);
     mitigationInputs.forEach(control => { control.disabled = false; });
     lastRequest = { path: '/api/mitigations', body: input };
-    commandNode.textContent = `POST /api/mitigations\nContent-Type: application/json\n\n${JSON.stringify(input, null, 2)}`;
+    commandNode.textContent = text('faultConsole', 'post_api_mitigations_content_type_application_json', { body: JSON.stringify(input, null, 2) });
     renderPlatformCommand();
     mitigationMessage.textContent = input.action === 'reset'
-      ? 'Defaults restored: both timeouts are 3000 ms and both fallbacks are off. Network faults remain unchanged.'
-      : `${input.dependency === 'inventory' ? 'Inventory' : 'Shipping'} settings applied. Repeat the same customer action in Storefront; no restart is needed.`;
+      ? text('faultConsole', 'defaults_restored_both_timeouts_are_3000_ms_and_both')
+      : text('faultConsole', 'settings_applied', { dependency: input.dependency === 'inventory' ? text('faultConsole', 'inventory') : text('faultConsole', 'shipping') });
   } catch (error) {
     document.querySelector('#refresh-mitigations').disabled = false;
     mitigationMessage.className = 'message error';
-    mitigationMessage.textContent = `${error.message} Refresh settings to check the active state before trying again.`;
+    mitigationMessage.textContent = text('faultConsole', 'refresh_settings_to_check_the_active_state_before_trying', { error: error.message });
   } finally { mitigationBusy = false; }
 }
 

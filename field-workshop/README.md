@@ -2,6 +2,17 @@
 
 A small, runnable commerce system for hands-on Chaos Engineering. The overview contains four assignments and saves participant notes. The customer page remains the application to investigate.
 
+## Edit the website text
+
+The running website reads its copy from `web/content/`:
+
+- `challenge-1.json` through `challenge-4.json`: one challenge per file, including its overview summary, brief, steps, completion criteria, answer labels/prompts, mitigation help, and example solution.
+- `shared.json`: all remaining website copy, grouped by workshop, Storefront, Network Faults, page templates, and API messages.
+
+Edit JSON values while keeping keys and placeholders such as `{number}` intact. Challenge `id`, `number`, field `key`, and `mitigationGuide` are identifiers used by the application; keep them unchanged when editing wording. Text is rendered as plain text, so HTML tags in JSON are displayed literally. JSON supports `\n` for line breaks but does not support comments or trailing commas.
+
+After editing, rebuild the images and restart the stack using the start launcher, then refresh the browser. Docker copies these files into the image; editing the host JSON alone does not change an already running container. Participant notes keep their existing storage format. Markdown handouts in `docs/` and the Grafana dashboard remain separate documents; synchronize their wording when changing an assignment.
+
 ## What runs
 
 `Browser → Storefront → Toxiproxy → Inventory / Shipping`
