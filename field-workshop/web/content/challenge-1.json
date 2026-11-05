@@ -1,0 +1,85 @@
+{
+  "id": "challenge-1",
+  "number": 1,
+  "title": "Slow stock information",
+  "level": "Guided entry",
+  "scenario": "You maintain an online shop that sells a desk lamp. A customer clicks “Check availability” before deciding to buy, but the stock check keeps them waiting. The lamp description and price are already visible; the shop is waiting for a separate Inventory service to confirm stock.",
+  "why": "A slow dependency can make a working shop feel unresponsive. You need to decide how long the customer should wait and what the shop can honestly show when it cannot confirm stock.",
+  "reproduce": "Make Inventory replies 1500 ms (1.5 seconds) slower in Network Faults. Then click “Check availability” in Storefront. You are reproducing a slow stock check, not a complete outage.",
+  "ready": "The stack starts healthy. Before this experiment, use “Clear all faults” in Network Faults and “Restore default settings” in the Fallbacks & timeouts tab if you changed mitigation settings earlier. Confirm that “Check availability” shows live stock. Opening this challenge does not apply a fault.",
+  "assignment": "Can the shop respond sooner during a slow stock check without pretending the lamp is in stock?",
+  "mitigationGuide": "inventory",
+  "tasks": [
+    {
+      "title": "Try the healthy customer journey",
+      "instruction": "Open Storefront and click “Check availability” a few times. Record the displayed milliseconds and stock result. In Grafana, find /api/product under “Customer-facing p95 latency”. Write what you expect a 1.5-second Inventory delay to do and when you would stop the test."
+    },
+    {
+      "title": "Reproduce the customer complaint",
+      "instruction": "Open Network Faults, choose Inventory, set “Response delay (ms)” to 1500, and click “Apply delay”. Return to Storefront and click “Check availability” again. Look for the longer wait; with default settings, the request should normally still succeed."
+    },
+    {
+      "title": "Find evidence of the cause",
+      "instruction": "Record the new request times and compare them with your healthy measurements. In Grafana, compare /api/product in “Customer-facing p95 latency” with inventory in “Dependency p95 latency”. Use a fresh 60–90-second window per phase so old data does not dominate the comparison."
+    },
+    {
+      "title": "Change how the shop handles the delay",
+      "instruction": "Remove the Inventory delay first. In Network Faults, open “Fallbacks & timeouts” and click “Use Challenge 1 settings”. This enables Inventory fallback with a 400 ms timeout immediately. The timeout limits the wait; the fallback lets the shop return “Stock unconfirmed”. No source-code edit is required."
+    },
+    {
+      "title": "Repeat, compare, and clean up",
+      "instruction": "Apply the same 1500 ms Inventory delay again. Repeat “Check availability” and record the response time, displayed stock message, and “Fallback activity” in Grafana. Explain the speed-versus-certainty trade-off. Clear faults, click “Restore default settings” in Fallbacks & timeouts, check live stock returns, then submit your notes below."
+    }
+  ],
+  "done": [
+    "You recorded the same customer action in three states: healthy, delayed, and delayed with mitigation.",
+    "You explained whether the response became faster and why “Stock unconfirmed” is different from confirmed availability.",
+    "You removed the fault, restored the defaults, and submitted your own measurements."
+  ],
+  "solution": [
+    "Healthy: product requests succeed with low local latency. Record your own baseline; exact numbers vary.",
+    "With +1500 ms Inventory latency and the default 3000 ms timeout, product latency should rise by roughly 1500 ms. Inventory call latency rises too; requests normally still succeed.",
+    "Example mitigation: in Fallbacks & timeouts, apply a 400 ms Inventory timeout with Inventory fallback enabled. Under the same fault, the page should return sooner with stock marked unconfirmed. Fallback counts rise.",
+    "Trade-off: a fast HTTP 200 is not confirmed stock. Clear the fault, click “Restore default settings”, and check that normal stock returns."
+  ],
+  "fields": [
+    {
+      "key": "steadyState",
+      "label": "Healthy baseline and metric",
+      "prompt": "Which route and metric did you choose? Include your measured baseline."
+    },
+    {
+      "key": "hypothesis",
+      "label": "Hypothesis and abort condition",
+      "prompt": "What did you expect from +1500 ms Inventory latency, and when would you stop?"
+    },
+    {
+      "key": "faultEvidence",
+      "label": "Fault evidence",
+      "prompt": "Record the same route under fault: latency, success rate, Inventory signal, and time window."
+    },
+    {
+      "key": "mitigation",
+      "label": "Mitigation and reason",
+      "prompt": "What timeout/fallback did you use, and why is it safe for a product page?"
+    },
+    {
+      "key": "validation",
+      "label": "Same-fault validation",
+      "prompt": "What happened when you applied the identical fault after mitigation?"
+    },
+    {
+      "key": "conclusion",
+      "label": "Conclusion and cleanup",
+      "prompt": "Did resilience improve? What information is now uncertain? Confirm that the fault was removed."
+    }
+  ],
+  "overview": {
+    "title": "1 · Slow stock check",
+    "description": "Add a 1.5-second Inventory delay. Can the shop respond sooner while saying stock is unconfirmed?"
+  },
+  "mitigationHelp": {
+    "description": "The fallback is already implemented. Enable it with these settings: wait at most 400 ms for Inventory, then return “Stock unconfirmed” if it cannot answer. The delay itself remains a separate setting in Network Faults.",
+    "instruction": "In Network Faults, open “Fallbacks & timeouts” and click “Use Challenge 1 settings”. Or set Inventory timeout to 400, check “Enable Inventory fallback”, and click “Apply Inventory settings”."
+  }
+}

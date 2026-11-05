@@ -1,0 +1,80 @@
+{
+  "id": "challenge-3",
+  "number": 3,
+  "title": "Investigate an unknown incident",
+  "level": "Advanced",
+  "scenario": "You are the engineer on call. A support ticket says: “Something is wrong with the lamp shop: checking stock or previewing delivery is slow or fails.” A facilitator or teammate introduces one hidden dependency fault. You must find the likely cause from the customer symptoms and monitoring.",
+  "why": "During a real incident, the customer reports a symptom, not the broken dependency. This challenge practices using evidence to choose a fix instead of changing settings at random.",
+  "reproduce": "Ask a facilitator or teammate to seed exactly one incident using the facilitator notes. They keep the chosen fault secret. You do not inject your own known fault in this challenge.",
+  "ready": "This challenge needs another person to prepare the incident. Before they seed it, clear old faults, restore default settings, and record healthy behavior. If working alone, arrange a partner or facilitator before starting; an unchanged, healthy stack has no mystery incident to diagnose. Do not clear faults after the incident has been seeded.",
+  "assignment": "Which customer action is affected, which dependency is responsible, and what evidence supports your diagnosis?",
+  "tasks": [
+    {
+      "title": "Prepare the incident with a partner",
+      "instruction": "Start from the clean baseline described above. Ask the facilitator or teammate to use the “Seed Assignment 3” instructions in docs/facilitator.md without showing you their choice. Once they confirm the incident is active, begin your investigation."
+    },
+    {
+      "title": "Reproduce the reported symptom",
+      "instruction": "Try “Check availability” and “Order preview”. Record which one is slow or failing, the displayed time/status, and when you observed it. Leave the fault controls and their current-state display unopened for now."
+    },
+    {
+      "title": "Write a diagnosis from monitoring",
+      "instruction": "In Grafana, compare customer latency and route/status outcomes with “Dependency p95 latency” and “Dependency outcomes”. Write the likely dependency, whether the symptom suggests delay or unavailability, and an alternative explanation before inspecting Network Faults."
+    },
+    {
+      "title": "Confirm and mitigate",
+      "instruction": "After recording your hypothesis, inspect Network Faults with the facilitator. Choose a timeout/fallback change supported by your evidence and apply it in Fallbacks & timeouts. Keep the same incident active, or have the facilitator reapply it exactly, so the comparison remains fair."
+    },
+    {
+      "title": "Validate and ask for the reveal",
+      "instruction": "Repeat the same customer actions and compare fresh observation windows before and after mitigation. Ask the facilitator to reveal the fault and compare it with your diagnosis. Clear the incident, restore defaults, verify recovery, and submit the timeline and evidence."
+    }
+  ],
+  "done": [
+    "You recorded a diagnosis with supporting signals before looking at the fault state.",
+    "You compared the same incident before and after a justified mitigation and checked your diagnosis against the reveal.",
+    "You and the facilitator restored the clean system and you submitted your findings."
+  ],
+  "solution": [
+    "If Inventory was slowed: product and preview latency rise together, and Inventory call latency rises. A short Inventory timeout with an unconfirmed-stock fallback can bound the wait.",
+    "If Shipping was disconnected: product stays healthy while order preview fails; Shipping failures rise. A Shipping fallback can preserve an informational preview without a quote.",
+    "Your diagnosis should identify the affected route, dependency, time window, and evidence before the facilitator reveals the fault. Compare the same route under the same incident after mitigation.",
+    "Ask the facilitator which scenario was seeded. Remove that fault and restore default mitigation settings."
+  ],
+  "fields": [
+    {
+      "key": "symptom",
+      "label": "Customer symptom and time window",
+      "prompt": "Which customer route is slow or failing? When did you observe it?"
+    },
+    {
+      "key": "signals",
+      "label": "Grafana evidence",
+      "prompt": "Which dependency and signals changed? Include panel names and your observations. A Prometheus query is optional."
+    },
+    {
+      "key": "diagnosis",
+      "label": "Hypothesis and uncertainty",
+      "prompt": "What is the likely fault? What else could explain the evidence?"
+    },
+    {
+      "key": "mitigation",
+      "label": "Mitigation and reason",
+      "prompt": "What did you change, and why does it address this symptom?"
+    },
+    {
+      "key": "validation",
+      "label": "Validation under the same incident",
+      "prompt": "Compare the same route and signals before and after the change."
+    },
+    {
+      "key": "conclusion",
+      "label": "Conclusion and cleanup",
+      "prompt": "What was confirmed? What trade-off remains? Confirm the facilitator removed the incident."
+    }
+  ],
+  "overview": {
+    "title": "3 · Unknown incident",
+    "description": "A partner introduces a fault. Can you identify it from customer symptoms and charts?"
+  }
+}

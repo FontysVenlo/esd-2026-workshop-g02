@@ -1,0 +1,84 @@
+{
+  "id": "challenge-2",
+  "number": 2,
+  "title": "Shipping is unavailable",
+  "level": "Intermediate",
+  "scenario": "A customer can check that the desk lamp is in stock, but clicks “Order preview” to see delivery cost and time. The external shipping provider is unavailable. The shop currently treats that missing quote as a failure of the whole preview.",
+  "why": "A shipping outage should have a limited effect on the customer journey. You need to decide whether an informational preview is still useful when it can show stock but cannot promise a delivery price or date.",
+  "reproduce": "Choose Shipping in Network Faults and click “Disconnect”. In Storefront, try both “Check availability” and “Order preview”. Compare which customer action still works and which fails.",
+  "ready": "Clear all faults and click “Restore default settings” in Fallbacks & timeouts. Verify that both Storefront buttons work before disconnecting Shipping. This is an order preview only; no purchase is made.",
+  "assignment": "Can a shipping outage be limited to missing delivery information instead of a failed preview?",
+  "mitigationGuide": "shipping",
+  "tasks": [
+    {
+      "title": "Check both healthy actions",
+      "instruction": "Click “Check availability” and “Order preview” in Storefront. Record the stock result, shipping quote, and timings. These actions call /api/product and /api/order-preview respectively. Predict which action needs Shipping and set an abort condition."
+    },
+    {
+      "title": "Reproduce the provider outage",
+      "instruction": "In Network Faults, choose Shipping and click “Disconnect”. Return to Storefront and try both buttons. Record which action succeeds, which fails, and any error status shown."
+    },
+    {
+      "title": "Measure the affected part of the shop",
+      "instruction": "Use “Customer request rate” in Grafana to compare route/status outcomes and “Dependency outcomes” to inspect shipping failures. Observe comparable 60–90-second windows. Describe the blast radius: the customer functions affected by this one dependency outage."
+    },
+    {
+      "title": "Keep the preview useful",
+      "instruction": "Reconnect Shipping first. In Network Faults, open “Fallbacks & timeouts” and click “Use Challenge 2 settings” to enable Shipping fallback immediately. This permits a preview without a shipping quote; it must not invent a price or delivery date."
+    },
+    {
+      "title": "Repeat the outage and check the trade-off",
+      "instruction": "Disconnect Shipping again and repeat both customer actions. Record whether the preview is now useful, which information is missing, and the “Fallback activity” signal. Reconnect Shipping, restore defaults, verify both actions, and submit your notes."
+    }
+  ],
+  "done": [
+    "You compared both customer actions before the outage, during the outage, and during the same outage with mitigation.",
+    "You identified the affected customer function and explained why an unavailable quote must not become a made-up delivery promise.",
+    "You restored Shipping and the default settings and submitted your evidence."
+  ],
+  "solution": [
+    "With Shipping disconnected, /api/product should still work. /api/order-preview fails by default because it needs a quote.",
+    "Example mitigation: enable Shipping fallback in the Fallbacks & timeouts tab. Repeat the same outage. The preview should return, but the shipping price and delivery time must be unavailable—not guessed.",
+    "The blast radius shrinks to missing quote information. Reconnect Shipping, click “Restore default settings”, and verify both routes."
+  ],
+  "fields": [
+    {
+      "key": "steadyState",
+      "label": "Healthy baseline",
+      "prompt": "Record product and order-preview behavior before the outage."
+    },
+    {
+      "key": "hypothesis",
+      "label": "Hypothesis, blast radius, and abort condition",
+      "prompt": "Which customer functions do you expect to fail? When would you stop?"
+    },
+    {
+      "key": "faultEvidence",
+      "label": "Outage evidence",
+      "prompt": "Compare both routes and the Shipping dependency. Include statuses and a time window."
+    },
+    {
+      "key": "mitigation",
+      "label": "Mitigation and reason",
+      "prompt": "Should an unavailable quote block an informational preview? Explain your choice."
+    },
+    {
+      "key": "validation",
+      "label": "Same-outage validation",
+      "prompt": "Record the route outcomes and fallback signal under the identical outage."
+    },
+    {
+      "key": "conclusion",
+      "label": "Blast-radius conclusion and cleanup",
+      "prompt": "Did the blast radius shrink? What information remains unavailable? Confirm restoration."
+    }
+  ],
+  "overview": {
+    "title": "2 · Missing delivery quote",
+    "description": "Disconnect Shipping. Can stock checking and a useful order preview survive the outage?"
+  },
+  "mitigationHelp": {
+    "description": "The fallback is already implemented. Enable it to keep the preview useful if Shipping cannot answer: show the available stock and say “Shipping quote unavailable”, without inventing a price or delivery date.",
+    "instruction": "In Network Faults, open “Fallbacks & timeouts” and click “Use Challenge 2 settings”. Or leave Shipping timeout at 3000, check “Enable Shipping fallback”, and click “Apply Shipping settings”."
+  }
+}
