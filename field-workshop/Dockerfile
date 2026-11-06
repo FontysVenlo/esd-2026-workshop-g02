@@ -5,6 +5,7 @@ RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY build.mjs ./
 COPY src/ ./src/
+COPY content/ ./content/
 COPY public/ ./public/
 RUN node build.mjs
 

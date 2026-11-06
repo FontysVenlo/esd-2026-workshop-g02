@@ -1,5 +1,3 @@
-import { pageCopy, storefront } from '../src/shared/copy.js';
-const text = pageCopy(storefront);
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
@@ -87,7 +85,7 @@ export function createStorefrontServer(config = {}) {
       if (!policy.fallback) throw error;
       metrics.fallback('inventory');
       // A fallback must not claim the item is in stock when the source of truth is unavailable.
-      return { available: null, quantity: null, source: 'unconfirmed', warning: text('api', 'inventory_warning') };
+      return { available: null, quantity: null, source: 'unconfirmed', warning: "Availability cannot be confirmed." };
     }
   }
 
@@ -98,7 +96,7 @@ export function createStorefrontServer(config = {}) {
     } catch (error) {
       if (!policy.fallback) throw error;
       metrics.fallback('shipping');
-      return { method: null, priceEur: null, etaDays: null, source: 'unavailable', warning: text('api', 'shipping_warning') };
+      return { method: null, priceEur: null, etaDays: null, source: 'unavailable', warning: "Shipping quote is temporarily unavailable." };
     }
   }
 
@@ -130,7 +128,7 @@ export function createStorefrontServer(config = {}) {
   return http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const route = url.pathname;
-    if (req.method !== 'GET') return send(405, { error: text('api', 'method_not_allowed') });
+    if (req.method !== 'GET') return send(405, { error: "Method not allowed" });
     if (route === '/health') return send(200, { status: 'ok' });
     if (route === '/metrics') {
       res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4' });
@@ -178,7 +176,7 @@ export function createStorefrontServer(config = {}) {
       res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
       return res.end(guideFiles.get(route));
     }
-    if (!['/api/product', '/api/order-preview', '/api/catalog'].includes(route)) return send(404, { error: text('api', 'not_found') });
+    if (!['/api/product', '/api/order-preview', '/api/catalog'].includes(route)) return send(404, { error: "Not found" });
 
     const started = performance.now();
     // Keep one consistent policy for the entire customer request, even if the
@@ -196,12 +194,12 @@ export function createStorefrontServer(config = {}) {
         return sendApi(200, { products: results.map(result => result.value), system: capacity.snapshot(), circuits: breaker.snapshot() });
       }
       const product = products().find(product => product.sku === (url.searchParams.get('sku') ?? 'LAMP-01'));
-      if (!product) return sendApi(404, { error: text('api', 'not_found') });
+      if (!product) return sendApi(404, { error: "Not found" });
       const result = await productResult(product, route === '/api/order-preview', policy);
-      return sendApi(200, { ...result, note: text('api', 'preview_note') });
+      return sendApi(200, { ...result, note: "Preview only. No order is placed." });
     } catch (error) {
       return sendApi(error.outcome === 'timeout' ? 504 : 503, {
-        error: text('catalog', error.outcome === 'capacity' ? 'capacity_error' : route === '/api/catalog' ? 'catalog_error' : 'product_error'),
+        error: (error.outcome === 'capacity' ? "The shop is busy. Please try again shortly." : route === '/api/catalog' ? "The catalog could not be refreshed. Please try again or check a product individually." : "Product information is temporarily unavailable."),
         failedDependency: error.message.split(' ')[0]
       });
     }

@@ -44,13 +44,13 @@
   "fields": [
     {
       "key": "steadyState",
-      "label": "Healthy baseline",
-      "prompt": "Record healthy availability and delivery. Include all products and catalog time/status; record queue size and new rejections from Grafana over the same window."
+      "label": "Healthy baseline and metric",
+      "prompt": "Record your baseline. Include all the data you identify as relevant from Grafana into your notes. Watch healthy availability and delivery carefully."
     },
     {
       "key": "hypothesis",
       "label": "Hypothesis, blast radius, and abort condition",
-      "prompt": "Which functions will fail? When would you stop?"
+      "prompt": "What could be the impact of an unavailable shipping service? Which functions will fail?"
     },
     {
       "key": "faultEvidence",

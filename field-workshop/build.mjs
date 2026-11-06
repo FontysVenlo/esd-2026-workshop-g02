@@ -22,12 +22,10 @@ await Promise.all(pages.map(page => build({
   legalComments: 'linked'
 })));
 
-// Keep JSON external so wording edits remain a runtime source of truth.
 await Promise.all(['copy','challenges','workshop-state'].map(name => build({
   absWorkingDir: root, entryPoints: [`src/shared/${name}.js`], outfile:`build/${name}.mjs`,
   bundle: true, format:'esm', target:'es2022', supported:{'import-attributes':true}, plugins:[{
     name:'shared-browser-imports', setup(builder) {
-      builder.onResolve({filter:/\.json$/}, args => ({path:`/content/${path.basename(args.path)}`,external:true}));
       builder.onResolve({filter:/^\.\/(copy|challenges)\.js$/}, args => ({path:`/${path.basename(args.path,'.js')}.mjs`,external:true}));
     }
   }]

@@ -4,23 +4,17 @@ A small, runnable commerce system for hands-on Chaos Engineering. The overview c
 
 ## Edit the website text
 
-Each page has its own file in `content/`. Open the file for the page you want to change:
+Edit the file for the page you want to change:
 
-| Page | JSON file |
+| Page | File |
 | --- | --- |
-| Home | `home.json` |
-| Challenge 1–4 | `challenge-1.json` through `challenge-4.json` |
-| Storefront | `storefront.json` |
-| Network Faults (all tabs) | `network-faults.json` |
-| Optional command reference | `tools.json` |
+| Challenge 1–4 (tasks, questions and solutions) | `content/challenge-1.json` through `content/challenge-4.json` |
+| Workshop Home (including the general guide) | `content/home.json` |
+| Storefront | `src/storefront.jsx` |
+| Network Faults | `src/fault-console.jsx` |
+| Optional commands | `src/tools.jsx` |
 
-Challenge files contain the full brief, setup, five tasks, completion checks, input labels/prompts and the solution revealed after submission. `tasks` is shown directly on that challenge page under “Your tasks”. Home contains only a general expandable five-step guide and its own challenge summaries.
-
-All wording is written out in the page file; there are no shared JSON files or text-fragment references. In workshop pages, `text` contains headings, buttons and messages; `navigation` contains the sidebar labels shown on that page. Repeated wording is deliberately copied into each page so editing one file changes only that page. Home summaries and sidebar titles can be edited separately from challenge headings.
-
-Keep object keys, challenge `id`/`number` and answer field `key` unchanged. Placeholders such as `{number}` and `{label}` insert runtime values; they do not load text from another file. `validation` and `api` sections hold messages shown for errors. Solutions, status messages and some controls appear only in the relevant state. Text is plain text; JSON supports `\n` but no comments or trailing commas. See [content/README.md](content/README.md) for field details.
-
-After editing, rebuild the images and restart the stack using the start launcher, then refresh the browser. Docker copies these files into the image; editing the host JSON alone does not change an already running container. Participant notes keep their existing storage format. Markdown handouts in `docs/` and the Grafana dashboard remain separate documents; synchronize their wording when changing an assignment.
+Server responses are written in the corresponding service under `services/`. Home and challenge JSON files supply the active text. The other three JSON files are reference copies of the corresponding pages. After editing the active source, rebuild and restart the workshop with the start launcher. Keep challenge IDs and field keys stable so saved answers still match their questions.
 
 ## What runs
 
@@ -71,9 +65,9 @@ The Storefront offers product availability and an order **preview**, not a live 
 
 ## Run tests
 
-All workshop-owned pages use React: `src/storefront.jsx`, `src/workshop.jsx` (overview and all challenges), `src/fault-console.jsx`, and `src/tools.jsx`. Shared JavaScript helpers live in `src/shared/`; editable copy lives in `content/`; images and CSS live in `public/`. Run `pnpm install --frozen-lockfile --ignore-scripts` then `pnpm build` after changing source or public assets. The build generates the browser JavaScript, license notices, and minimal HTML entry shells into ignored `build/`. Do not commit generated files. Docker builds them automatically in a separate build stage, and the workshop ZIP includes only source and configuration. Grafana and Prometheus remain externally supplied applications.
+All workshop-owned pages use React: `src/storefront.jsx`, `src/workshop.jsx` (overview and all challenges), `src/fault-console.jsx`, and `src/tools.jsx`. Shared JavaScript helpers live in `src/shared/`; page text lives in the source files listed above; images and CSS live in `public/`. Run `pnpm install --frozen-lockfile --ignore-scripts` then `pnpm build` after changing source or public assets. The build generates the browser JavaScript, license notices, and minimal HTML entry shells into ignored `build/`. Do not commit generated files. Docker builds them automatically in a separate build stage, and the workshop ZIP includes only source and configuration. Grafana and Prometheus remain externally supplied applications.
 
-Product photos in `public/images/` were generated for this demo. Copy remains in `content/`; the React bundle imports page copy at runtime so rebuilding the bundle is not required for wording edits. Rebuild/restart containers as described above. Product cards retain the previous catalog while refreshing and explicitly label it as last known data after a failure or view change. Individual checks remain independent of background catalog polling.
+Product photos in `public/images/` were generated for this demo. Rebuild/restart containers as described above. Product cards retain the previous catalog while refreshing and explicitly label it as last known data after a failure or view change. Individual checks remain independent of background catalog polling.
 
 ```powershell
 pnpm test

@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { pageCopy, storefront } from '/copy.mjs';
-const text = pageCopy(storefront);
+import { format } from '/copy.mjs';
 
 const products = [
-  { sku: 'LAMP-01', name: text('api', 'product_name'), image: '/images/lamp.png', price: 29.9 },
-  { sku: 'CHAIR-02', name: text('catalog', 'chair'), image: '/images/chair.png', price: 89.9 },
-  { sku: 'DESK-03', name: text('catalog', 'desk'), image: '/images/desk.png', price: 149.9 }
+  { sku: 'LAMP-01', name: "Desk Lamp", image: '/images/lamp.png', price: 29.9 },
+  { sku: 'CHAIR-02', name: "Task Chair", image: '/images/chair.png', price: 89.9 },
+  { sku: 'DESK-03', name: "Writing Desk", image: '/images/desk.png', price: 149.9 }
 ];
 
 // A single request per polling loop. Background updates never clear the current
@@ -65,33 +64,33 @@ function ProductCard({ product, result, stale }) {
     } finally { setBusy(false); }
   }
   const stock = value => value?.inventory.source === 'live'
-    ? text('storefront', 'in_stock', { quantity: value.inventory.quantity }) : text('storefront', 'stock_unconfirmed');
+    ? format("{quantity} in stock", { quantity: value.inventory.quantity }) : "Stock unconfirmed";
   const shipping = value => value.shipping.source === 'live'
-    ? text('storefront', 'shipping_about_days', { price: value.shipping.priceEur.toFixed(2), days: value.shipping.etaDays })
-    : text('storefront', 'shipping_quote_unavailable');
+    ? format(" · Shipping €{price} · About {days} days", { price: value.shipping.priceEur.toFixed(2), days: value.shipping.etaDays })
+    : " · Shipping quote unavailable";
   return <article className={`react-product ${stale ? 'stale' : result?.degraded ? 'degraded' : ''}`}>
     <div className="product-photo"><img src={product.image} alt={product.name} width="1254" height="1254" decoding="async" /></div>
     <div className="react-product-content">
       <div className="product-heading"><h2>{product.name}</h2><span>€{product.price.toFixed(2)}</span></div>
       <p className="meta">{product.sku}</p>
       <div className={`product-state ${stale ? 'state-stale' : result?.degraded ? 'state-limited' : 'state-live'}`}>
-        {text('catalog', stale ? 'stale' : !result ? 'waiting' : result.degraded ? 'limited' : 'live')}
+        {(stale ? "Last known result" : !result ? "Not checked yet" : result.degraded ? "Limited information" : "Live information")}
       </div>
       <div className="product-readings">
-        <p>{result ? stock(result) : text('catalog', 'waiting')}</p>
-        <p>{result?.shipping ? shipping(result) : text('catalog', 'stock_only')}</p>
+        <p>{result ? stock(result) : "Not checked yet"}</p>
+        <p>{result?.shipping ? shipping(result) : "Delivery quote shown in delivery view"}</p>
       </div>
       <div className="product-buttons">
         <button className="primary" disabled={busy || (result && unconfirmed) || check?.data?.inventory.source === 'unconfirmed'} onClick={() => inspect(false)}>
-          {text('catalog', result && unconfirmed ? 'disabled' : 'available')}
+          {(result && unconfirmed ? "Availability temporarily disabled" : "Check this product")}
         </button>
-        <button className="secondary" disabled={busy} onClick={() => inspect(true)}>{text('storefrontPage', 'order_preview')}</button>
+        <button className="secondary" disabled={busy} onClick={() => inspect(true)}>{"Order preview"}</button>
       </div>
       <div className="individual-result" role="status" aria-live="polite">
-        {busy ? text('catalog', 'checking') : check?.error ? check.error : check?.data ? <>
-          {text('catalog', 'individual_result', { stock: stock(check.data), milliseconds: check.milliseconds })}
+        {busy ? "Checking this product…" : check?.error ? check.error : check?.data ? <>
+          {format("{stock} · {milliseconds} ms", { stock: stock(check.data), milliseconds: check.milliseconds })}
           {check.data.shipping && <span>{shipping(check.data)}</span>}
-        </> : text('catalog', 'individual_hint')}
+        </> : "Run an individual check to compare with the shared catalog."}
       </div>
     </div>
   </article>;
@@ -105,30 +104,30 @@ function Storefront() {
   function selectView(value) { if (value === preview) refresh(); else setPreview(value); }
   return <>
     <header><div className="header-inner storefront-header">
-      <a className="brand" href="/storefront">{text('storefrontPage', 'northstar_supply')}<span className="brand-dot">.</span></a>
-      <a href="/">{text('storefrontPage', 'workshop_overview')}</a>
+      <a className="brand" href="/storefront">{"Northstar Supply"}<span className="brand-dot">.</span></a>
+      <a href="/">{"← Workshop overview"}</a>
     </div></header>
     <main className="react-storefront">
-      <div className="catalog-intro"><div className="eyebrow">{text('catalog', 'eyebrow')}</div>
-        <h1>{text('catalog', 'title')}</h1><p>{text('catalog', 'description')}</p></div>
-      <section className="catalog-controls" aria-label={text('catalog', 'controls_label')}>
+      <div className="catalog-intro"><div className="eyebrow">{"LIVE CATALOG"}</div>
+        <h1>{"Three products. One shared shop."}</h1><p>{"Browse three home-office essentials. Check current availability or preview delivery for the whole catalog or an individual product."}</p></div>
+      <section className="catalog-controls" aria-label={"Catalog view and refresh controls"}>
         <div className="view-buttons">
-          <button className={preview ? 'secondary' : 'primary'} aria-pressed={!preview} onClick={() => selectView(false)}>{text('catalog', 'refresh_stock')}</button>
-          <button className={preview ? 'primary' : 'secondary'} aria-pressed={preview} onClick={() => selectView(true)}>{text('catalog', 'refresh_preview')}</button>
+          <button className={preview ? 'secondary' : 'primary'} aria-pressed={!preview} onClick={() => selectView(false)}>{"Refresh all availability"}</button>
+          <button className={preview ? 'primary' : 'secondary'} aria-pressed={preview} onClick={() => selectView(true)}>{"Preview all deliveries"}</button>
         </div>
-        <label className="auto-refresh"><input type="checkbox" checked={auto} onChange={event => setAuto(event.target.checked)} />{text('catalog', 'auto_refresh')}</label>
+        <label className="auto-refresh"><input type="checkbox" checked={auto} onChange={event => setAuto(event.target.checked)} />{"Refresh this view every 2 seconds"}</label>
       </section>
       <div className={`catalog-feedback ${state.error ? 'has-error' : ''}`} role="status" aria-live="polite">
-        <strong>{state.pending ? text('catalog', 'updating') : state.error
-          ? text('catalog', 'failed', { status: state.error.status ?? '—', milliseconds: state.milliseconds })
-          : text('catalog', preview ? 'preview_ready' : 'stock_ready', { milliseconds: state.milliseconds })}</strong>
-        {state.error && <p>{state.error.message || text('catalog', 'connection_error')}</p>}
-        {stale && state.data && <span>{text('catalog', 'stale_notice')}</span>}
+        <strong>{state.pending ? "Updating catalog…" : state.error
+          ? format("Whole catalog unavailable · HTTP {status} · {milliseconds} ms", { status: state.error.status ?? '—', milliseconds: state.milliseconds })
+          : format(preview ? "Delivery catalog ready · {milliseconds} ms" : "Availability catalog ready · {milliseconds} ms", { milliseconds: state.milliseconds })}</strong>
+        {state.error && <p>{state.error.message || "Could not refresh the catalog. No current live result is shown."}</p>}
+        {stale && state.data && <span>{"Showing the last successful catalog. It is not a current confirmation; individual product checks remain available."}</span>}
       </div>
       <div className="react-products">{products.map(product => <ProductCard key={product.sku} product={product}
         result={state.data?.products.find(result => result.product.sku === product.sku)} stale={stale} />)}</div>
-      <details className="catalog-explainer"><summary>{text('catalog', 'explanation_title')}</summary><p>{text('catalog', 'explanation')}</p></details>
-      <p className="meta preview-note">{text('storefrontPage', 'order_preview_only_no_purchase_is_made')}</p>
+      <details className="catalog-explainer"><summary>{"About availability and delivery"}</summary><p>{"Stock and delivery are checked live. If stock cannot be confirmed, availability checking is temporarily disabled. An unavailable delivery quote is not a delivery promise. After a refresh fails, cards show the last known result until live information returns."}</p></details>
+      <p className="meta preview-note">{"Order preview only. No purchase is made."}</p>
     </main>
   </>;
 }

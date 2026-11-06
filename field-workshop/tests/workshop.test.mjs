@@ -21,12 +21,6 @@ test('workshop overview, browser modules, and local tool guide are served', asyn
     const app = await fetch(`${base}/workshop-app.mjs`);
     assert.equal(app.status, 200);
     const appText = await app.text();
-    for (const page of ['home', 'storefront', 'network-faults', 'tools']) {
-      const response = await fetch(`${base}/content/${page}.json`);
-      assert.equal(response.status, 200);
-      assert.match(response.headers.get('content-type'), /application\/json/);
-      assert.ok((await response.json()).pageTitle);
-    }
     assert.match(appText, /just-unlocked/);
     assert.match(appText, /http:\/\/localhost:3008/);
     assert.equal((await fetch(`${base}/workshop-state.mjs`)).status, 200);
@@ -34,12 +28,6 @@ test('workshop overview, browser modules, and local tool guide are served', asyn
       const response = await fetch(`${base}/${module}.mjs`);
       assert.equal(response.status, 200);
       assert.match(response.headers.get('content-type'), /javascript/);
-    }
-    for (const challenge of challenges) {
-      const response = await fetch(`${base}/content/${challenge.id}.json`);
-      assert.equal(response.status, 200);
-      assert.deepEqual(await response.json(), challenge);
-      assert.doesNotMatch(JSON.stringify(challenge), /\{\{/);
     }
     assert.doesNotMatch(html, /\{\{\w+\./);
     const styles = await fetch(`${base}/site.css`);
@@ -54,7 +42,7 @@ test('workshop overview, browser modules, and local tool guide are served', asyn
     const tools = await fetch(`${base}/tools`);
     assert.equal(tools.status, 200);
     assert.match(await tools.text(), /tools-root/);
-    assert.match(await (await fetch(`${base}/tools.mjs`)).text(), /inventory_latency/);
+    assert.match(await (await fetch(`${base}/tools.mjs`)).text(), /Inventory latency/);
     const storefront = await (await fetch(`${base}/storefront`)).text();
     assert.match(storefront, /storefront-root/);
     assert.match(storefront, /src="\/storefront.mjs"/);
