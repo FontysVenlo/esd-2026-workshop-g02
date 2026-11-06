@@ -113,3 +113,33 @@ test('the public customer server does not expose the settings listener', async (
   assert.equal((await fetch(`${storefront}/settings`)).status, 404);
   assert.equal((await fetch(`${storefront}/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"action":"reset"}' })).status, 405);
 });
+
+test('opening a new challenge clears network faults and restores default mitigations', async () => {
+  const toxiproxyCalls = [];
+  let toxiproxyStatus = 204;
+  const toxiproxyApi = await listen(http.createServer((req, res) => { toxiproxyCalls.push(`${req.method} ${req.url}`); res.writeHead(toxiproxyStatus); res.end(); }));
+  const mitigations = createMitigations();
+  mitigations.apply({ action: 'configure', dependency: 'inventory', timeoutMs: 400, fallback: true });
+  const storefront = await listen(createStorefrontServer({ inventoryUrl: toxiproxyApi, shippingUrl: toxiproxyApi, toxiproxyApi, mitigations }));
+  const reset = (headers = {}) => fetch(`${storefront}/api/workshop/reset`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: '{}'
+  });
+
+  assert.equal((await reset({ Origin: 'http://attacker.example' })).status, 403);
+  assert.equal((await fetch(`${storefront}/api/workshop/reset`, { method: 'POST', body: '{}' })).status, 415);
+  assert.deepEqual(toxiproxyCalls, []);
+  assert.equal(mitigations.snapshot().inventory.timeoutMs, 400);
+
+  toxiproxyStatus = 500;
+  const failed = await reset();
+  assert.equal(failed.status, 502);
+  assert.match((await failed.json()).error, /Network faults could not be cleared/);
+  assert.equal(mitigations.snapshot().inventory.fallback, true, 'settings stay put when faults could not be cleared');
+
+  toxiproxyStatus = 204;
+  const response = await reset();
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).mitigations, defaultMitigations);
+  assert.deepEqual(mitigations.snapshot(), defaultMitigations);
+  assert.deepEqual(toxiproxyCalls, ['POST /reset', 'POST /reset']);
+});

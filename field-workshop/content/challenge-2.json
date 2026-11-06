@@ -105,7 +105,7 @@
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",
     "open_fallbacks_timeouts": "Open Fallbacks & timeouts ↗",
     "all_answers_reset_challenge_1_is_available": "All answers reset. Challenge 1 is available.",
-    "reset_all_answers_this_clears_every_draft_and_submitted": "Reset all answers? This clears every draft and submitted answer in this browser and locks Challenges 2–4 again. Download your notes first if needed. This does not reset Docker, network faults, or mitigations.",
+    "reset_all_answers_this_clears_every_draft_and_submitted": "Reset all answers? This clears every draft and submitted answer in this browser and locks Challenges 2–4 again. Download your notes first if needed. Network faults and fallbacks & timeouts stay as they are for now; they are cleared and restored to defaults when you next open Challenge 2.",
     "all_four_challenges_submitted": "All four challenges submitted.",
     "challenge_unlocked": "Challenge {number} unlocked.",
     "northstar_supply": "Northstar Supply",
@@ -119,7 +119,14 @@
     "challenge_unlocked_2": "Challenge {number} unlocked",
     "browser_storage_is_unavailable_download_your_notes_before_leaving": "Browser storage is unavailable. Download your notes before leaving.",
     "notes_are_saved_in_this_browser": "Notes are saved in this browser.",
-    "review_experiment_guide": "Review the general experiment guide on Home →"
+    "review_experiment_guide": "Review the general experiment guide on Home →",
+    "preparing_a_fresh_start": "Clearing network faults and restoring default timeouts and fallbacks…",
+    "fresh_start": "Fresh start",
+    "all_network_faults_were_cleared_and_timeouts_and_fallbacks": "Network faults cleared, timeouts & fallbacks restored to defaults.",
+    "fresh_start_failed": "Fresh start failed",
+    "the_environment_could_not_be_reset": "{error}. Try again, or in Network Faults click Clear all faults and Restore defaults before you begin.",
+    "try_again": "Try again",
+    "fresh_start_announcement": "Fresh start: network faults cleared and default timeouts and fallbacks restored."
   },
   "navigation": {
     "workshop_navigation": "Workshop navigation",

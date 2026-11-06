@@ -31,7 +31,8 @@ export function createStorefrontServer(config = {}) {
     inventoryTimeoutMs: Number(config.inventoryTimeoutMs ?? process.env.INVENTORY_TIMEOUT_MS ?? 3000),
     shippingTimeoutMs: Number(config.shippingTimeoutMs ?? process.env.SHIPPING_TIMEOUT_MS ?? 3000),
     inventoryFallback: config.inventoryFallback ?? process.env.INVENTORY_FALLBACK === 'true',
-    shippingFallback: config.shippingFallback ?? process.env.SHIPPING_FALLBACK === 'true'
+    shippingFallback: config.shippingFallback ?? process.env.SHIPPING_FALLBACK === 'true',
+    toxiproxyApi: config.toxiproxyApi ?? process.env.TOXIPROXY_API ?? 'http://localhost:8474'
   };
   for (const timeout of [settings.inventoryTimeoutMs, settings.shippingTimeoutMs]) {
     if (!Number.isFinite(timeout) || timeout < 1) throw new Error('Dependency timeouts must be positive milliseconds');
@@ -131,6 +132,7 @@ export function createStorefrontServer(config = {}) {
   return http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const route = url.pathname;
+    if (req.method === 'POST' && route === '/api/workshop/reset') return resetEnvironment();
     if (req.method !== 'GET') return send(405, { error: "Method not allowed" });
     if (route === '/health') return send(200, { status: 'ok' });
     if (route === '/metrics') {
@@ -206,6 +208,24 @@ export function createStorefrontServer(config = {}) {
         error: (error.outcome === 'capacity' ? "The shop is busy. Please try again shortly." : route === '/api/catalog' ? "The catalog could not be refreshed. Please try again or check a product individually." : "Product information is temporarily unavailable."),
         failedDependency: error.message.split(' ')[0]
       });
+    }
+
+    // Called by the workshop page when a newly unlocked challenge is opened, so
+    // each challenge starts with no network faults and default mitigations.
+    async function resetEnvironment() {
+      if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`) return send(403, { error: "Cross-origin changes are not allowed" });
+      if (!req.headers['content-type']?.startsWith('application/json')) return send(415, { error: "JSON is required" });
+      try {
+        const response = await fetch(new URL('/reset', settings.toxiproxyApi), { method: 'POST', signal: AbortSignal.timeout(3000) });
+        if (!response.ok) throw new Error(`Toxiproxy returned ${response.status}`);
+      } catch (error) {
+        return send(502, { error: `Network faults could not be cleared: ${error.message}` });
+      }
+      const restored = mitigations.apply({ action: 'reset' });
+      breaker.reset();
+      previousPolicy = JSON.stringify(restored);
+      console.log('Workshop fresh start: network faults cleared, default timeouts and fallbacks restored');
+      return send(200, { faults: 'cleared', mitigations: restored });
     }
 
     function sendApi(status, body) {

@@ -34,6 +34,25 @@ function Console() {
   }
   useEffect(()=>{const change=()=>setTab(hashTab());window.addEventListener('hashchange',change);refresh();return()=>window.removeEventListener('hashchange',change);},[]);
   useEffect(()=>{if(tab==='mitigations')refreshMitigations();},[tab]);
+  // Other tabs change this state too (the workshop resets it when a new
+  // challenge opens), so re-read it whenever this tab is visible.
+  const view=useRef({});
+  view.current={active,draft};
+  useEffect(()=>{
+    async function sync() {
+      if(document.hidden)return;
+      if(!faultLock.current) {try {setFaults(await request('/api/state'));} catch {}}
+      if(mitigationLock.current)return;
+      try {
+        const settings=await request('/api/mitigations'),{active:previous,draft:edits}=view.current;
+        setActive(settings);
+        if(!previous||JSON.stringify(edits)===JSON.stringify(previous))setDraft(settings);
+      } catch {}
+    }
+    const timer=setInterval(sync,3000);
+    document.addEventListener('visibilitychange',sync);window.addEventListener('focus',sync);
+    return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',sync);window.removeEventListener('focus',sync);};
+  },[]);
   async function refresh() {
     if(faultLock.current)return;
     faultLock.current=true;setBusy(true);

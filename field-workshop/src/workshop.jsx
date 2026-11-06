@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { format, home } from '/copy.mjs';
-import { STORAGE_KEY, challenges, emptyProgress, normalizeProgress, submittedCount, currentChallengeIndex, isUnlocked, saveDraft, submitChallenge, buildRecord } from '/workshop-state.mjs';
+import { STORAGE_KEY, challenges, emptyProgress, normalizeProgress, submittedCount, currentChallengeIndex, isUnlocked, needsFreshStart, markStarted, saveDraft, submitChallenge, buildRecord } from '/workshop-state.mjs';
 
 const WorkshopCopy = createContext(home);
 function workshopCopy(page) {
@@ -60,6 +60,19 @@ function Home({ progress, reset }) {
       <div className="home-tools">{tools.map(([title,href,copy]) => <Link className="tool-card" key={href} href={href}><strong>{w(title)}</strong><span>{w(copy)}</span></Link>)}</div></section><Help />
   </section>;
 }
+function FreshStartToast({ status, retry }) {
+  const { w } = useWorkshopCopy();
+  if (!status) return null;
+  return <div id="fresh-start" className={`unlock-toast is-visible fresh-start-toast${status.state === 'error' ? ' is-error' : ''}`} role="status">
+    <span className="unlock-toast-symbol" aria-hidden="true">{status.state === 'error' ? '!' : status.state === 'done' ? '✓' : '…'}</span>
+    <span className="unlock-toast-copy">
+      {status.state === 'pending' && <><strong>{w('fresh_start')}</strong><span>{w('preparing_a_fresh_start')}</span></>}
+      {status.state === 'done' && <><strong>{w('fresh_start')}</strong><span>{w('all_network_faults_were_cleared_and_timeouts_and_fallbacks')}</span></>}
+      {status.state === 'error' && <><strong>{w('fresh_start_failed')}</strong><span>{w('the_environment_could_not_be_reset', {error: status.error})}</span></>}
+    </span>
+    {status.state === 'error' && <button type="button" onClick={retry}>{w('try_again')}</button>}
+  </div>;
+}
 function Challenge({ challenge: c, progress, update, submit }) {
   const { w, page } = useWorkshopCopy();
   const [error, setError] = useState('');
@@ -105,18 +118,35 @@ function Workshop() {
   const [announcement,setAnnouncement] = useState('');
   const downloadRef = useRef(null);
   const [download,setDownload] = useState('');
+  const [freshStart,setFreshStart] = useState(null);
+  const [freshStartAttempt,setFreshStartAttempt] = useState(0);
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY,JSON.stringify(progress)); setStorage(w('notes_are_saved_in_this_browser')); }
     catch { setStorage(w('browser_storage_is_unavailable_download_your_notes_before_leaving')); }
   },[progress,hash]);
   useEffect(() => { const change = () => {setHash(location.hash.slice(1)); setUnlocked(-1); window.scrollTo(0,0);}; window.addEventListener('hashchange',change); return () => window.removeEventListener('hashchange',change); },[]);
   useEffect(() => { if(unlocked < 0) return; const timer=setTimeout(() => setUnlocked(-1),5000); return () => clearTimeout(timer); },[unlocked]);
+  useEffect(() => { if(freshStart?.state !== 'done') return; const timer=setTimeout(() => setFreshStart(null),6000); return () => clearTimeout(timer); },[freshStart]);
   useEffect(() => { if(!download) return; downloadRef.current.click(); return () => URL.revokeObjectURL(download); },[download]);
   const index = challenges.findIndex(c => c.id === hash);
   const current = index >= 0 && isUnlocked(progress,index) ? challenges[index] : null;
   const page = current ?? home;
   const { w, p } = workshopCopy(page);
   useEffect(() => { document.title = page.pageTitle; }, [page]);
+  useEffect(() => {
+    setFreshStart(null);
+    if(!current || !needsFreshStart(progress,index)) return;
+    // Record a successful reset even if the participant has already moved on,
+    // so returning to this challenge never wipes an experiment in progress.
+    let visible=true;
+    const id=current.id;
+    setFreshStart({state:'pending'});
+    fetch('/api/workshop/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}',cache:'no-store',signal:AbortSignal.timeout(8000)})
+      .then(async response => { const data=await response.json(); if(!response.ok) throw new Error(data.error ?? response.status); })
+      .then(() => { setProgress(previous=>markStarted(previous,id)); if(visible) {setFreshStart({state:'done'});setAnnouncement(w('fresh_start_announcement'));} })
+      .catch(error => { if(visible) setFreshStart({state:'error',error:error.message}); });
+    return () => { visible=false; };
+  },[current?.id,freshStartAttempt]);
   useEffect(() => { if(hash && hash !== 'home' && !current) { history.replaceState(null,'',`${location.pathname}${location.search}#home`);setHash('home'); } },[hash,current]);
   function reset() { if(!window.confirm(w('reset_all_answers_this_clears_every_draft_and_submitted')))return; setProgress(emptyProgress());setUnlocked(-1);setAnnouncement(w('all_answers_reset_challenge_1_is_available'));location.hash='home'; }
   function submit(id,answers) {
@@ -146,6 +176,7 @@ function Workshop() {
         {current?<Challenge key={current.id} challenge={current} progress={progress} update={(id,answers)=>setProgress(previous=>saveDraft(previous,id,answers))} submit={submit}/>:<Home progress={progress} reset={reset}/>}</div></main>
     {unlocked>=0 && <div id="unlock-toast" className="unlock-toast is-visible"><span className="unlock-toast-symbol" aria-hidden="true">{p('text')}</span>
       <span className="unlock-toast-copy"><strong>{w('challenge_unlocked_2',{number:unlocked+1})}</strong><span>{p('ready_in_your_sidebar')}</span></span><a href={`#${challenges[unlocked].id}`}>{p('open')}</a></div>}
+    {unlocked<0 && <FreshStartToast status={freshStart} retry={()=>setFreshStartAttempt(n=>n+1)} />}
     <a ref={downloadRef} href={download||undefined} download="northstar-experiment-record.json" hidden />
   </WorkshopCopy.Provider>;
 }

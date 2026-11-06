@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createStorefrontServer } from '../services/storefront.mjs';
 import {
-  buildRecord, challenges, currentChallengeIndex, emptyProgress, isUnlocked,
-  normalizeProgress, saveDraft, submitChallenge, submittedCount
+  buildRecord, challenges, currentChallengeIndex, emptyProgress, isUnlocked, markStarted,
+  needsFreshStart, normalizeProgress, saveDraft, submitChallenge, submittedCount
 } from '../src/shared/workshop-state.js';
 
 test('workshop overview, browser modules, and local tool guide are served', async () => {
@@ -114,4 +114,20 @@ test('the downloadable record includes submitted evidence and current drafts', (
   assert.equal('reviewedAt' in record.challenges[0], false);
   assert.equal(record.challenges[1].submittedAt, null);
   assert.equal(record.challenges[1].draftAnswers.steadyState, 'working notes');
+});
+
+test('each later challenge gets one fresh start, even when it already has notes', () => {
+  const answers = index => Object.fromEntries(challenges[index].fields.map(field => [field.key, 'noted']));
+  let progress = emptyProgress();
+  assert.equal(needsFreshStart(progress, 0), false, 'Challenge 1 is never reset automatically');
+  assert.equal(needsFreshStart(progress, 1), false, 'locked challenges are not reset');
+  progress = submitChallenge(progress, challenges[0].id, answers(0));
+  assert.equal(needsFreshStart(progress, 1), true);
+  progress = markStarted(progress, challenges[1].id);
+  assert.equal(needsFreshStart(progress, 1), false, 'returning to a started challenge keeps its faults');
+  progress = submitChallenge(progress, challenges[1].id, answers(1));
+  assert.equal(needsFreshStart(progress, 2), true);
+  assert.equal(needsFreshStart(saveDraft(progress, challenges[2].id, { note: 'earlier run' }), 2), true);
+  assert.deepEqual(normalizeProgress(JSON.parse(JSON.stringify(progress))).started, progress.started);
+  assert.deepEqual(normalizeProgress({ drafts: {}, submissions: {} }).started, {});
 });

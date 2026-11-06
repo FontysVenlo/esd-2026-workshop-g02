@@ -5,19 +5,30 @@ export { challenges } from './challenges.js';
 import { challenges } from './challenges.js';
 
 export function emptyProgress() {
-  return { drafts: {}, submissions: {} };
+  return { drafts: {}, submissions: {}, started: {} };
 }
 
 export function normalizeProgress(value) {
   if (!value || typeof value !== 'object') return emptyProgress();
   return {
     drafts: value.drafts && typeof value.drafts === 'object' ? value.drafts : {},
-    submissions: value.submissions && typeof value.submissions === 'object' ? value.submissions : {}
+    submissions: value.submissions && typeof value.submissions === 'object' ? value.submissions : {},
+    started: value.started && typeof value.started === 'object' ? value.started : {}
   };
 }
 
 export function isUnlocked(progress, index) {
   return index === 0 || Boolean(progress.submissions[challenges[index - 1]?.id]?.submittedAt);
+}
+
+// Challenges after the first start from a clean environment the first time they
+// are opened. Later visits keep whatever faults the participant set up.
+export function needsFreshStart(progress, index) {
+  return index > 0 && isUnlocked(progress, index) && !progress.started[challenges[index].id];
+}
+
+export function markStarted(progress, id, startedAt = new Date().toISOString()) {
+  return { ...progress, started: { ...progress.started, [id]: startedAt } };
 }
 
 export function currentChallengeIndex(progress) {

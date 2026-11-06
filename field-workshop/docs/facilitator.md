@@ -21,6 +21,8 @@ Numbers depend on the host and browser. Ask teams to compare same-route, same-fa
 
 First restore clean proxy/configuration state: click **Clear all faults** in Fault injection and **Restore default settings** in Fallbacks & timeouts. Choose exactly one scenario. Tell participants only that there is a controlled incident. Participants can enable mitigations in the second tab without a terminal or container restart.
 
+Seed only after the participant has opened Challenge 3 and recorded a baseline. The first time Challenges 2, 3 and 4 are opened in a browser, the workshop page clears all faults and restores default settings, which would remove an incident seeded earlier.
+
 On Windows or Mac, the facilitator can seed scenario A in [Network Faults](http://localhost:8089) by choosing **Lighting inventory**, entering **1500 ms**, and clicking **Apply delay**. For scenario B, choose **Shipping** and click **Disconnect**. Keep the load profile running and use **Clear all faults** afterward. The PowerShell commands below are an alternative for scenario A if you want the toxic named `incident` rather than `workshop-latency`.
 
 **A — slow Inventory.** Using PowerShell, set `$proxyApi='http://localhost:8478'`, then:
