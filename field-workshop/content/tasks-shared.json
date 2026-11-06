@@ -1,0 +1,8 @@
+{
+  "ready": "Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total.",
+  "cleanup": "Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.",
+  "measurementGuidance": "Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window.",
+  "mitigationGuidance": "Distinguish the roles of timeout, circuit breaker and fallback.",
+  "mitigationLabel": "Mitigation and reason",
+  "conclusionLabel": "Conclusion and cleanup"
+}

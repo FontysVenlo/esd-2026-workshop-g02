@@ -8,7 +8,7 @@ const assets = new Map([
   ...['storefront', 'workshop-app', 'fault-console', 'tools'].map(name => [`/${name}.mjs.LEGAL.txt`, 'text/plain; charset=utf-8']),
   ...['copy.mjs', 'challenges.mjs', 'storefront.mjs', 'workshop-app.mjs', 'workshop-state.mjs', 'fault-console.mjs', 'tools.mjs']
     .map(name => [`/${name}`, 'text/javascript; charset=utf-8']),
-  ...['shared', 'challenge-1', 'challenge-2', 'challenge-3', 'challenge-4']
+  ...['shared', 'tasks-shared', 'challenge-1', 'challenge-2', 'challenge-3', 'challenge-4']
     .map(name => [`/content/${name}.json`, 'application/json; charset=utf-8'])
 ].map(([route, type]) => [route, { type, body: readFileSync(route.startsWith('/content/')
   ? new URL(route.slice('/content/'.length), contentRoot)

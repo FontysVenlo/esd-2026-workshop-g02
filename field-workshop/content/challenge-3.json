@@ -6,7 +6,7 @@
   "scenario": "Support reports that a three-product catalog is slow or unavailable, although only one lamp dependency branch has been faulted. A facilitator seeds either slow lamp Inventory or disconnected lamp Shipping. Diagnose whether shared workers or aggregate error propagation explains the wider customer impact.",
   "why": "The visible failures can be healthy products downstream of a shared bottleneck or an all-or-nothing response. Fixing the wrong dependency or enabling fallback without an appropriate timeout can leave the real problem active.",
   "reproduce": "Ask a partner or facilitator to seed exactly one incident from docs/facilitator.md. They keep the chosen dependency and fault secret. Do not inspect Network Faults before writing your hypothesis.",
-  "ready": "Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total. Record the healthy baseline before your partner seeds the incident; do not clear it afterward. This challenge requires another person.",
+  "ready": "{{ready}} Record the healthy baseline before your partner seeds the incident; do not clear it afterward. This challenge requires another person.",
   "assignment": "Which lamp dependency is faulty, how does its impact spread to healthy products, and which mitigation contains that mechanism?",
   "tasks": [
     {
@@ -27,7 +27,7 @@
     },
     {
       "title": "Validate the healthy products and reveal",
-      "instruction": "Retest the same catalog views and fresh windows. Compare healthy product usefulness, queue pressure, catalog time/status and the affected product’s uncertainty. Ask for the reveal and compare it with your hypothesis. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements."
+      "instruction": "Retest the same catalog views and fresh windows. Compare healthy product usefulness, queue pressure, catalog time/status and the affected product’s uncertainty. Ask for the reveal and compare it with your hypothesis. {{cleanup}}"
     }
   ],
   "done": [
@@ -59,17 +59,17 @@
     },
     {
       "key": "mitigation",
-      "label": "Mitigation and reason",
-      "prompt": "What did you change, and why does it address this symptom? Distinguish the roles of timeout, circuit breaker and fallback."
+      "label": "{{mitigationLabel}}",
+      "prompt": "What did you change, and why does it address this symptom? {{mitigationGuidance}}"
     },
     {
       "key": "validation",
       "label": "Validation under the same incident",
-      "prompt": "Compare the same route and signals before and after the change. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
+      "prompt": "Compare the same route and signals before and after the change. {{measurementGuidance}}"
     },
     {
       "key": "conclusion",
-      "label": "Conclusion and cleanup",
+      "label": "{{conclusionLabel}}",
       "prompt": "What was confirmed? What trade-off remains? Confirm the facilitator removed the incident."
     }
   ],

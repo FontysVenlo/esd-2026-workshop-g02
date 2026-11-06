@@ -6,7 +6,7 @@
   "scenario": "The delivery catalog contains three products, but its response requires every quote to succeed. Disconnecting only the lamp’s Shipping path rejects the complete catalog, hiding the healthy chair and desk too. Availability does not require Shipping and should still work.",
   "why": "This is error propagation through a coupled catalog response. A fast disconnect need not exhaust workers. An explicit unavailable lamp quote can preserve healthy products and stock information without inventing a delivery promise.",
   "reproduce": "Choose Shipping and click Disconnect in Network Faults. Compare “Refresh all availability” with “Preview all deliveries”. The complete delivery catalog should fail even though chair and desk have healthy Shipping paths.",
-  "ready": "Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total.",
+  "ready": "{{ready}}",
   "assignment": "Can one unavailable lamp quote be contained to that quote instead of taking down the complete delivery catalog?",
   "mitigationGuide": "shipping",
   "tasks": [
@@ -28,7 +28,7 @@
     },
     {
       "title": "Repeat and measure the smaller impact",
-      "instruction": "Disconnect Shipping again. Preview all deliveries: the catalog should return all three products, chair/desk with live quotes, and the lamp with an unavailable quote. Compare statuses, useful information and fallback activity. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements."
+      "instruction": "Disconnect Shipping again. Preview all deliveries: the catalog should return all three products, chair/desk with live quotes, and the lamp with an unavailable quote. Compare statuses, useful information and fallback activity. {{cleanup}}"
     }
   ],
   "done": [
@@ -46,7 +46,7 @@
     {
       "key": "steadyState",
       "label": "Healthy baseline",
-      "prompt": "Record product and order-preview behavior before the outage. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
+      "prompt": "Record product and order-preview behavior before the outage. {{measurementGuidance}}"
     },
     {
       "key": "hypothesis",
@@ -56,17 +56,17 @@
     {
       "key": "faultEvidence",
       "label": "Outage evidence",
-      "prompt": "Compare both routes and the Shipping dependency. Include statuses and a time window. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
+      "prompt": "Compare both routes and the Shipping dependency. Include statuses and a time window. {{measurementGuidance}}"
     },
     {
       "key": "mitigation",
-      "label": "Mitigation and reason",
-      "prompt": "Should an unavailable quote block an informational preview? Explain your choice. Distinguish the roles of timeout, circuit breaker and fallback."
+      "label": "{{mitigationLabel}}",
+      "prompt": "Should an unavailable quote block an informational preview? Explain your choice. {{mitigationGuidance}}"
     },
     {
       "key": "validation",
       "label": "Same-outage validation",
-      "prompt": "Record the route outcomes and fallback signal under the identical outage. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
+      "prompt": "Record the route outcomes and fallback signal under the identical outage. {{measurementGuidance}}"
     },
     {
       "key": "conclusion",

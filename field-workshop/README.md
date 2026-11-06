@@ -7,6 +7,7 @@ A small, runnable commerce system for hands-on Chaos Engineering. The overview c
 The running website reads its copy from `content/`:
 
 - `challenge-1.json` through `challenge-4.json`: one challenge per file, including its overview summary, brief, steps, completion criteria, answer labels/prompts, mitigation help, and example solution.
+- `tasks-shared.json`: repeated assignment text, including setup, cleanup, measurement guidance, mitigation guidance, and shared input labels. Challenge files insert these values with references such as `{{measurementGuidance}}`. Edit the shared value to update every challenge that uses it; keep reference names intact. References can be a complete value or part of a longer sentence and must point directly to plain text in this file.
 - `shared.json`: all remaining website copy, grouped by workshop, Storefront, Network Faults, page templates, and API messages.
 
 Edit JSON values while keeping keys and placeholders such as `{number}` intact. Challenge `id`, `number`, field `key`, and `mitigationGuide` are identifiers used by the application; keep them unchanged when editing wording. Text is rendered as plain text, so HTML tags in JSON are displayed literally. JSON supports `\n` for line breaks but does not support comments or trailing commas.

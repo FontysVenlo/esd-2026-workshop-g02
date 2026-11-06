@@ -6,7 +6,7 @@
   "scenario": "Desk Lamp, Task Chair and Writing Desk share two Storefront workers. Only the lamp’s Inventory network branch becomes slow. Repeated lamp requests hold the workers; healthy chair and desk requests now queue or are rejected. The complete catalog also waits for the lamp result.",
   "why": "The mitigation now protects other products. A 400 ms timeout releases a worker, the 5-second circuit breaker stops repeated waiting on the lamp, and the fallback lets the catalog show chair and desk while lamp stock is unconfirmed. These are three different mechanisms; fallback alone does not free capacity.",
   "reproduce": "Choose Inventory in Network Faults and apply a 1500 ms response delay. It affects only Desk Lamp’s branch. Use “Refresh all availability” in Storefront and watch the fixed background traffic fill the two shared workers.",
-  "ready": "Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total.",
+  "ready": "{{ready}}",
   "assignment": "Can you keep the healthy chair and desk available while temporarily disabling an unconfirmed lamp availability check?",
   "mitigationGuide": "inventory",
   "tasks": [
@@ -28,7 +28,7 @@
     },
     {
       "title": "Repeat the same fault and verify recovery",
-      "instruction": "Reapply the identical +1500 ms Inventory delay. Refresh several times, including within and after a 5-second cooldown. Compare chair/desk live results, queue pressure, rejection-rate changes, catalog latency, and lamp stock uncertainty. The lamp availability action should be disabled while stock is unconfirmed. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements."
+      "instruction": "Reapply the identical +1500 ms Inventory delay. Refresh several times, including within and after a 5-second cooldown. Compare chair/desk live results, queue pressure, rejection-rate changes, catalog latency, and lamp stock uncertainty. The lamp availability action should be disabled while stock is unconfirmed. {{cleanup}}"
     }
   ],
   "done": [
@@ -46,7 +46,7 @@
     {
       "key": "steadyState",
       "label": "Healthy baseline and metric",
-      "prompt": "Which route and metric did you choose? Include your measured baseline. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
+      "prompt": "Which route and metric did you choose? Include your measured baseline. {{measurementGuidance}}"
     },
     {
       "key": "hypothesis",
@@ -56,21 +56,21 @@
     {
       "key": "faultEvidence",
       "label": "Fault evidence",
-      "prompt": "Record the same route under fault: latency, success rate, Inventory signal, and time window. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
+      "prompt": "Record the same route under fault: latency, success rate, Inventory signal, and time window. {{measurementGuidance}}"
     },
     {
       "key": "mitigation",
-      "label": "Mitigation and reason",
-      "prompt": "What timeout/fallback did you use, and why is it safe for a product page? Distinguish the roles of timeout, circuit breaker and fallback."
+      "label": "{{mitigationLabel}}",
+      "prompt": "What timeout/fallback did you use, and why is it safe for a product page? {{mitigationGuidance}}"
     },
     {
       "key": "validation",
       "label": "Same-fault validation",
-      "prompt": "What happened when you applied the identical fault after mitigation? Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
+      "prompt": "What happened when you applied the identical fault after mitigation? {{measurementGuidance}}"
     },
     {
       "key": "conclusion",
-      "label": "Conclusion and cleanup",
+      "label": "{{conclusionLabel}}",
       "prompt": "Did resilience improve? What information is now uncertain? Confirm that the fault was removed."
     }
   ],

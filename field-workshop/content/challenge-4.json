@@ -6,7 +6,7 @@
   "scenario": "Your team wants evidence that one faulty lamp dependency cannot unnecessarily hide the chair and desk. Design one repeatable local experiment that demonstrates impact beyond the lamp, then test whether your mitigation contains it.",
   "why": "A fallback is justified by useful behavior preserved under a specific fault, not by an enabled checkbox. Your recommendation needs before-and-after evidence for the catalog or healthy products and an explicit statement of lost certainty.",
   "reproduce": "Choose Inventory or Shipping on the lamp branch and one fault: a measured delay or disconnection. Choose availability or delivery catalog. A +1500 ms delay can pressure shared workers; disconnection demonstrates aggregate error propagation.",
-  "ready": "Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total. Use only the two exposed lamp fault controls; the other product paths are the healthy comparison group.",
+  "ready": "{{ready}} Use only the two exposed lamp fault controls; the other product paths are the healthy comparison group.",
   "assignment": "Can you reproduce a wider customer impact and then contain it to the affected product’s missing information?",
   "tasks": [
     {
@@ -27,7 +27,7 @@
     },
     {
       "title": "Repeat exactly and recommend",
-      "instruction": "Reapply the identical fault at the same magnitude and traffic. Show whether chair/desk remain useful, whether catalog status/time improves, and what lamp information remains unavailable. Include probe behavior and exact rollback instructions. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements."
+      "instruction": "Reapply the identical fault at the same magnitude and traffic. Show whether chair/desk remain useful, whether catalog status/time improves, and what lamp information remains unavailable. Include probe behavior and exact rollback instructions. {{cleanup}}"
     }
   ],
   "done": [
@@ -50,22 +50,22 @@
     {
       "key": "steadyState",
       "label": "Steady state and hypothesis",
-      "prompt": "What did you measure before the fault, and what do you predict? Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
+      "prompt": "What did you measure before the fault, and what do you predict? {{measurementGuidance}}"
     },
     {
       "key": "faultEvidence",
       "label": "Fault result",
-      "prompt": "Record your actual fault commands, time window, customer effect, and dependency signals. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
+      "prompt": "Record your actual fault commands, time window, customer effect, and dependency signals. {{measurementGuidance}}"
     },
     {
       "key": "mitigation",
-      "label": "Mitigation and reason",
-      "prompt": "Which timeout/fallback settings did you change, and why? Distinguish the roles of timeout, circuit breaker and fallback."
+      "label": "{{mitigationLabel}}",
+      "prompt": "Which timeout/fallback settings did you change, and why? {{mitigationGuidance}}"
     },
     {
       "key": "validation",
       "label": "Identical-fault validation",
-      "prompt": "Reapply the same fault and compare route latency, success, and fallback behavior. Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window."
+      "prompt": "Reapply the same fault and compare route latency, success, and fallback behavior. {{measurementGuidance}}"
     },
     {
       "key": "conclusion",
