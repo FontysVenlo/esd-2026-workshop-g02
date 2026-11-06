@@ -6,7 +6,7 @@ These are real tool/API operations. The [Network Faults console](http://localhos
 
 The Storefront now has three products, two shared workers and a complete-catalog response. `/api/catalog` checks all stock; `/api/catalog?preview=true` also requests quotes. `/api/product?sku=CHAIR-02` and `?sku=DESK-03` check the healthy comparison products individually. `/api/system` reports real worker occupancy, queued requests, cumulative rejections and product/dependency circuits without consuming a worker.
 
-Fault controls target only the lamp branches (`inventory` and `shipping`). Chair and desk use `inventory-healthy` and `shipping-healthy`, separate Toxiproxy branches to the same backend services. Do not fault the healthy comparison branches. The standard load profile sends five requests per second and is needed to demonstrate sustained shared-capacity pressure.
+Fault controls target only the lamp branches (`inventory` and `shipping`). The inventory proxy points to Lighting inventory. Independent seating-inventory and desks-inventory proxies point to the other two stock services. All three products use shared Shipping. Do not fault the healthy comparison branches. The standard load profile sends five requests per second and is needed to demonstrate sustained shared-capacity pressure.
 
 A fallback is the response the shop uses when a dependency cannot answer. The workshop already implements it; you do not need to write code. Inventory fallback returns **Stock unconfirmed**. Shipping fallback keeps the preview available while reporting **Shipping quote unavailable**. Neither invents stock or delivery information.
 
@@ -36,7 +36,7 @@ $proxyApi = 'http://localhost:8478'
 Invoke-RestMethod "$proxyApi/proxies" -UserAgent 'field-workshop/1.0'
 ```
 
-Add 1500 ms to Inventory responses. Toxiproxy changes the **actual Storefront → Inventory network call**.
+Add 1500 ms to Lighting inventory responses. Toxiproxy changes the **actual Storefront → Inventory network call**.
 
 ```powershell
 $fault = @{ name='inventory-lag'; type='latency'; stream='downstream'; attributes=@{latency=1500; jitter=0} } | ConvertTo-Json -Depth 4

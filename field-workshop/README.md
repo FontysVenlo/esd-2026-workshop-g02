@@ -22,7 +22,7 @@ Storefront shows customer results; internal worker, queue, rejection and circuit
 
 `Browser → Storefront → Toxiproxy → Inventory / Shipping`
 
-The Storefront cannot contact either dependency directly. Toxiproxy is initialized with four fixed local branches to the same two services: the faultable lamp Inventory/Shipping paths and healthy Inventory/Shipping paths shared by chair and desk. All products share two Storefront workers, with a bounded queue (12 waiting operations, 1000 ms queue deadline). The complete catalog requires every product result unless fallback is enabled. Prometheus scrapes real application metrics every five seconds; Grafana is provisioned with a local dashboard. No CDN or cloud account is used.
+The Storefront cannot contact either dependency directly. Toxiproxy routes stock checks to three separate inventory services: Lighting (lamp), Seating (chair), and Desks (desk). Shipping is shared, with separate lamp and healthy-product proxy paths. All products share two Storefront workers, with a bounded queue (12 waiting operations, 1000 ms queue deadline). The complete catalog requires every product result unless fallback is enabled. Prometheus scrapes real application metrics every five seconds; Grafana is provisioned with a local dashboard. No CDN or cloud account is used.
 
 | Tool | Local address | What you use it for |
 | --- | --- | --- |

@@ -4,21 +4,23 @@ Start Docker Desktop and run the start launcher. Open [the workshop](http://loca
 
 | Challenge | Fault to check | Question to answer |
 | --- | --- | --- |
-| 1 | You add **1500 ms delay to Inventory** | Can a slow lamp stock check make healthy products wait? |
+| 1 | You add **1500 ms delay to Lighting inventory** | Can a slow lamp stock check make healthy products wait? |
 | 2 | You **disconnect Shipping** | Can one missing lamp quote hide all deliveries? |
 | 3 | A partner secretly applies **one of the first two faults** | Which fault fits the symptoms? |
 | 4 | You choose one fault. This walkthrough uses **1500 ms delay to Shipping** | Can you keep chair and desk deliveries useful while lamp Shipping is slow? |
 
 **What to write down.** For each run, record the time, what happened to the lamp, chair and desk, and the catalog status and response time shown in Storefront. In Grafana, check **Shared workers and queue** and **Rejected since restart**. Record how much the rejection counter changed during the run. Use the same customer action, traffic and 60–90-second observation window for each comparison.
 
+The lamp uses Lighting inventory, the chair uses Seating inventory, and the desk uses Desks inventory. A Storefront worker holds one product check until its dependency calls finish. Two slow lamp checks can fill both slots and make a chair wait before Seating inventory even receives its request.
+
 **Start each challenge clean.** In Network Faults, click **Clear all faults**. Open **Fallbacks & timeouts** and click **Restore default settings**. Check that all three products have live stock and delivery quotes. Write down what you expect and when you would stop the experiment early.
 
 ## 1. Make the lamp stock check slow
 
 1. In Storefront, click **Refresh all availability**. Record this healthy baseline.
-2. In Network Faults, choose **Inventory**, enter **1500** ms and click **Apply delay**. Refresh availability again. Watch the two shared workers in Grafana. Lamp calls can occupy both, so the healthy chair and desk may wait or their requests may be rejected.
+2. In Network Faults, choose **Lighting inventory**, enter **1500** ms and click **Apply delay**. Refresh availability again. Watch the two shared workers in Grafana. Lamp calls can occupy both, so the healthy chair and desk may wait or their requests may be rejected.
 3. Click **Remove delay** for Inventory. In **Fallbacks & timeouts**, click **Use Challenge 1 settings**. This sets a 400 ms Inventory timeout and enables fallback and the circuit breaker.
-4. Apply the **same 1500 ms Inventory delay**. Refresh availability again. Look for live chair and desk stock, unconfirmed lamp stock, and a change in queue or rejections. Record what actually happened.
+4. Apply the **same 1500 ms Lighting inventory delay**. Refresh availability again. Look for live chair and desk stock, unconfirmed lamp stock, and a change in queue or rejections. Record what actually happened.
 5. **Finish:** clear all faults, restore default settings and allow the five-second cooldown to finish. Verify live stock and deliveries, fill in the challenge notes, and click **Submit notes**.
 
 ## 2. Make one missing quote break the delivery catalog
@@ -36,7 +38,7 @@ Start Docker Desktop and run the start launcher. Open [the workshop](http://loca
 
    | What you see | Fault to suspect | Evidence to check |
    | --- | --- | --- |
-   | Both views slow down and healthy products can wait or fail | **Inventory delay of 1500 ms** | Inventory latency rises. Check worker occupancy, queue and rejections. |
+   | Both views slow down and healthy products can wait or fail | **Lighting inventory delay of 1500 ms** | Inventory latency rises. Check worker occupancy, queue and rejections. |
    | Availability works but the delivery catalog fails | **Shipping disconnected** | Shipping failures rise. The queue can stay low. |
 
 3. In your notes, name the suspected dependency, the Storefront symptom, a Grafana signal and another possible explanation. Then inspect Network Faults with your partner.

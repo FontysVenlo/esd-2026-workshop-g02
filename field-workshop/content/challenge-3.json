@@ -36,7 +36,7 @@
     "You compared the diagnosis with the reveal and restored all three products."
   ],
   "solution": [
-    "Slow Inventory can delay both catalog views and occupy workers, causing healthy chair/desk requests to wait or fail.",
+    "Slow Lighting inventory can delay both catalog views and occupy workers, causing healthy chair/desk requests to wait or fail.",
     "Disconnected lamp Shipping fails delivery aggregation while availability works. Fast failure need not fill the queue.",
     "A timeout bounds waiting; the breaker pauses repeated failures; fallback preserves partial results. Choose from the evidence.",
     "Retest the same fault and traffic. State what improved and what remains missing, then restore all products."

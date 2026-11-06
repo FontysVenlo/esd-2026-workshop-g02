@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { afterEach, test } from 'node:test';
 import { createStorefrontServer } from '../services/storefront.mjs';
+import { createInventoryServer } from '../services/inventory.mjs';
 import { initializeProxies } from '../services/proxy-init.mjs';
 
 const servers = [];
@@ -42,7 +43,7 @@ test('real proxy-path delay increases customer latency and is recorded', async (
   assert.equal(proxyCalls, 1);
   const metrics = await (await fetch(`${base}/metrics`)).text();
   assert.match(metrics, /workshop_http_requests_total\{service="storefront",route="\/api\/product",status="200"\} 1/);
-  assert.match(metrics, /workshop_dependency_calls_total\{service="storefront",dependency="inventory",outcome="success"\} 1/);
+  assert.match(metrics, /workshop_dependency_calls_total\{service="storefront",dependency="lighting-inventory",outcome="success"\} 1/);
 });
 
 test('inventory timeout fails closed or returns explicitly unconfirmed stock with fallback', async () => {
@@ -67,7 +68,7 @@ test('inventory timeout fails closed or returns explicitly unconfirmed stock wit
   assert.equal(body.degraded, true);
   assert.equal(body.inventory.available, null);
   assert.equal(body.inventory.source, 'unconfirmed');
-  assert.match(await (await fetch(`${base}/metrics`)).text(), /workshop_fallbacks_total\{service="storefront",dependency="inventory"\} 1/);
+  assert.match(await (await fetch(`${base}/metrics`)).text(), /workshop_fallbacks_total\{service="storefront",dependency="lighting-inventory"\} 1/);
 });
 
 test('shipping failure affects order preview but can be isolated from inventory', async () => {
@@ -105,10 +106,31 @@ test('proxy initialization creates only fixed local service routes and is idempo
   created.inventory.listen = '[::]:8666';
   created.shipping.listen = '[::]:8667';
   await initializeProxies(api, async () => {});
-  assert.deepEqual(Object.keys(created).sort(), ['inventory', 'inventory-healthy', 'shipping', 'shipping-healthy']);
-  assert.equal(created['inventory-healthy'].upstream, 'inventory:8080');
+  assert.deepEqual(Object.keys(created).sort(), ['desks-inventory', 'inventory', 'seating-inventory', 'shipping', 'shipping-healthy']);
+  assert.equal(created['seating-inventory'].upstream, 'seating-inventory:8080');
   assert.equal(created['shipping-healthy'].upstream, 'shipping:8080');
-  assert.equal(created.inventory.upstream, 'inventory:8080');
+  assert.equal(created.inventory.upstream, 'lighting-inventory:8080');
   assert.equal(created.shipping.upstream, 'shipping:8080');
   assert.equal(created.inventory.listen, '[::]:8666');
+});
+
+test('each product reaches its own category service and each service rejects other categories', async () => {
+  const options = {};
+  for (const [category, sku, otherSku] of [
+    ['lighting', 'LAMP-01', 'CHAIR-02'], ['seating', 'CHAIR-02', 'DESK-03'], ['desks', 'DESK-03', 'LAMP-01']
+  ]) {
+    const server = createInventoryServer(category);
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    servers.push(server);
+    const base = 'http://127.0.0.1:' + server.address().port;
+    options[category + 'InventoryUrl'] = base;
+    assert.equal((await fetch(base + '/stock?sku=' + otherSku)).status, 404);
+    assert.equal((await (await fetch(base + '/stock?sku=' + sku)).json()).sku, sku);
+  }
+  const storefront = createStorefrontServer(options);
+  await new Promise(resolve => storefront.listen(0, '127.0.0.1', resolve));
+  servers.push(storefront);
+  const result = await fetch('http://127.0.0.1:' + storefront.address().port + '/api/catalog');
+  assert.equal(result.status, 200);
+  assert.deepEqual((await result.json()).products.map(p => p.inventory.quantity), [12, 8, 5]);
 });

@@ -43,7 +43,7 @@
     "quick_start": "Quick start",
     "get_started": "GET STARTED",
     "the_shop_normally_starts_healthy_in_challenges_1_2": "Start healthy. Add faults yourself in Challenges 1, 2 and 4; ask a partner to seed a hidden fault in Challenge 3. Opening or submitting a challenge does not change the shop.",
-    "you_are_the_engineer_responsible_for_a_lamp_shop": "Desk Lamp, Task Chair and Writing Desk share Inventory, Shipping and two Storefront workers. Only the lamp’s network paths can be faulted.",
+    "you_are_the_engineer_responsible_for_a_lamp_shop": "The lamp uses Lighting inventory, the chair uses Seating inventory, and the desk uses Desks inventory. All three share Shipping and two Storefront workers.",
     "make_a_working_shop_fail_then_improve_its_response": "Contain one product’s fault before it disrupts the catalog",
     "your_role": "YOUR ROLE",
     "reset_all_answers": "Reset all answers",

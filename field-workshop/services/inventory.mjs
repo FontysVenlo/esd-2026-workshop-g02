@@ -2,10 +2,11 @@ import http from 'node:http';
 import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
 import { Metrics } from './metrics.mjs';
-import { products } from './catalog.mjs';
+import { products, inventoryCategory } from './catalog.mjs';
 
-export function createInventoryServer() {
-  const metrics = new Metrics('inventory');
+export function createInventoryServer(category = process.env.INVENTORY_CATEGORY ?? 'lighting') {
+  if (!Object.values(inventoryCategory).includes(category)) throw new Error('Unknown inventory category: ' + category);
+  const metrics = new Metrics(category + '-inventory');
   return http.createServer((req, res) => {
     const started = performance.now();
     const url = new URL(req.url, 'http://localhost');
@@ -17,7 +18,7 @@ export function createInventoryServer() {
     }
     if (path === '/stock') {
       const product = products().find(product => product.sku === (url.searchParams.get('sku') ?? 'LAMP-01'));
-      return product ? respond(200, { sku: product.sku, quantity: product.quantity, warehouse: 'west' }) : respond(404, { error: 'not found' });
+      return product && inventoryCategory[product.sku] === category ? respond(200, { sku: product.sku, quantity: product.quantity, warehouse: 'west' }) : respond(404, { error: 'not found' });
     }
     return respond(404, { error: 'not found' });
 

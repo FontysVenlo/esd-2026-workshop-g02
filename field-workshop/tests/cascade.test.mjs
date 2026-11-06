@@ -61,9 +61,9 @@ test('two slow lamp calls cause a healthy product to queue and reject; mitigatio
   const system = await (await fetch(`${base}/api/system`)).json();
   assert.equal(system.circuits[0].key, 'LAMP-01:inventory');
   const pausedMetrics = await (await fetch(`${base}/metrics`)).text();
-  assert.match(pausedMetrics, /workshop_circuit_state\{sku="LAMP-01",dependency="inventory"\} 1/);
-  assert.match(pausedMetrics, /workshop_circuit_state\{sku="CHAIR-02",dependency="inventory"\} 0/);
-  const retry = pausedMetrics.match(/workshop_circuit_retry_seconds\{sku="LAMP-01",dependency="inventory"\} ([\d.]+)/);
+  assert.match(pausedMetrics, /workshop_circuit_state\{sku="LAMP-01",dependency="lighting-inventory"\} 1/);
+  assert.match(pausedMetrics, /workshop_circuit_state\{sku="CHAIR-02",dependency="seating-inventory"\} 0/);
+  const retry = pausedMetrics.match(/workshop_circuit_retry_seconds\{sku="LAMP-01",dependency="lighting-inventory"\} ([\d.]+)/);
   assert.ok(Number(retry?.[1]) > 0 && Number(retry[1]) <= 5);
   // An open lamp circuit must not reject healthy product work or call the lamp.
   const callsBefore = pending.length;

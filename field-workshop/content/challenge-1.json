@@ -3,9 +3,9 @@
   "number": 1,
   "title": "One slow product blocks the shop",
   "level": "Guided entry",
-  "scenario": "One slow lamp Inventory call can occupy the shop’s two shared workers. Healthy chair and desk requests then queue or fail, and the whole catalog waits.",
+  "scenario": "Lighting inventory is slow. When two lamp stock checks occupy both Storefront workers, chair and desk requests can queue before reaching their own healthy inventory services. The catalog also waits for the lamp.",
   "why": "A short timeout frees workers. A fallback keeps healthy products visible while lamp stock is marked as unconfirmed.",
-  "reproduce": "In Network Faults, add 1500 ms to Inventory. Use “Refresh all availability” and watch shared workers in Grafana.",
+  "reproduce": "In Network Faults, add 1500 ms to Lighting inventory. Use “Refresh all availability” and watch shared workers in Grafana.",
   "ready": "Clear all faults and restore default settings. Start the stack with the launcher. Keep background traffic unchanged; compare fresh 60–90-second windows and changes in rejected requests. Use Storefront for customer results and Grafana for workers, queue, rejections and dependency circuits.",
   "assignment": "Assignment: Can you keep chair and desk available while lamp stock is unconfirmed?",
   "tasks": [
@@ -15,7 +15,7 @@
     },
     {
       "title": "Create a lamp slowdown",
-      "instruction": "Add 1500 ms to Inventory. Record lamp delay, chair/desk waits or failures, catalog status and new rejections in a fresh window."
+      "instruction": "Add 1500 ms to Lighting inventory. Record lamp delay, chair/desk waits or failures, catalog status and new rejections in a fresh window."
     },
     {
       "title": "Trace the fault and identify the impact",
@@ -50,12 +50,12 @@
     {
       "key": "hypothesis",
       "label": "Hypothesis and fault injection",
-      "prompt": "What will +1500 ms Inventory delay affect? What could be the blast radius? Write your hypothesis and introduce the fault"
+      "prompt": "What will +1500 ms Lighting inventory delay affect? What could be the blast radius? Write your hypothesis and introduce the fault"
     },
     {
       "key": "faultEvidence",
       "label": "Fault evidence",
-      "prompt": "Record Inventory latency and customer impact. Include all the data from Grafana that changed compared to the baseline."
+      "prompt": "Record Lighting inventory latency and customer impact. Include all the data from Grafana that changed compared to the baseline."
     },
     {
       "key": "mitigation",
@@ -74,7 +74,7 @@
     }
   ],
   "mitigationHelp": {
-    "description": "The preset uses a 400 ms timeout, fallback and a 5-second breaker for lamp Inventory.",
+    "description": "The preset gives each inventory call 400 ms once it starts. Failed Lighting calls free a worker, return unconfirmed lamp stock and trigger a five-second breaker. Queue waiting has its own limit.",
     "instruction": "Click “Use Challenge 1 settings”, then repeat the same fault."
   },
   "pageTitle": "Challenge 1 · One slow product blocks the shop",

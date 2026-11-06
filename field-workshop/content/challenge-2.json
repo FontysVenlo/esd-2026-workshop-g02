@@ -55,7 +55,7 @@
     {
       "key": "faultEvidence",
       "label": "Outage evidence",
-      "prompt": "Compare both views and Shipping errors. Include all products and catalog time/status; record queue size and new rejections from Grafana over the same window."
+      "prompt": "Introduce the fault by deactivating the shipping service. Investigate availability and deliveries on the Storefront. Include all products and catalog time/status; record queue size and new rejections from Grafana over the same window."
     },
     {
       "key": "mitigation",

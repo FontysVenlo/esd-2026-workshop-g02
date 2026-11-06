@@ -1,9 +1,10 @@
 import { pathToFileURL } from 'node:url';
 
 const proxies = [
-  { name: 'inventory', listen: '0.0.0.0:8666', upstream: 'inventory:8080' },
+  { name: 'inventory', listen: '0.0.0.0:8666', upstream: 'lighting-inventory:8080' },
   { name: 'shipping', listen: '0.0.0.0:8667', upstream: 'shipping:8080' },
-  { name: 'inventory-healthy', listen: '0.0.0.0:8668', upstream: 'inventory:8080' },
+  { name: 'seating-inventory', listen: '0.0.0.0:8668', upstream: 'seating-inventory:8080' },
+  { name: 'desks-inventory', listen: '0.0.0.0:8670', upstream: 'desks-inventory:8080' },
   { name: 'shipping-healthy', listen: '0.0.0.0:8669', upstream: 'shipping:8080' }
 ];
 

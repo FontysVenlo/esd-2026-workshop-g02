@@ -47,7 +47,7 @@ test('browser settings change actual stock responses without restarting or chang
   const fallback = await fetch(`${storefront}/api/product`);
   assert.equal(fallback.status, 200);
   assert.deepEqual((await fallback.json()).inventory, { available: null, quantity: null, source: 'unconfirmed', warning: 'Availability cannot be confirmed.' });
-  assert.match(await (await fetch(`${storefront}/metrics`)).text(), /workshop_fallbacks_total\{service="storefront",dependency="inventory"\} 1/);
+  assert.match(await (await fetch(`${storefront}/metrics`)).text(), /workshop_fallbacks_total\{service="storefront",dependency="lighting-inventory"\} 1/);
   assert.equal(faultCalls(), 0, 'a mitigation must not remove or replace the injected fault');
   assert.equal((await apply({ action: 'reset' })).status, 200);
   assert.equal((await (await fetch(`${storefront}/api/product`)).json()).inventory.source, 'live');

@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { Metrics } from './metrics.mjs';
 import { createMitigations, createMitigationServer } from './mitigations.mjs';
 import { renderPage, serveContentAsset } from './web-content.mjs';
-import { products } from './catalog.mjs';
+import { products, inventoryCategory } from './catalog.mjs';
 import { createCapacity } from './capacity.mjs';
 import { createBreaker } from './breaker.mjs';
 
@@ -21,9 +21,12 @@ const guideFiles = new Map([
 
 export function createStorefrontServer(config = {}) {
   const settings = {
-    inventoryUrl: config.inventoryUrl ?? process.env.INVENTORY_URL ?? 'http://localhost:8666',
+    inventoryUrls: {
+      lighting: config.lightingInventoryUrl ?? process.env.LIGHTING_INVENTORY_URL ?? config.inventoryUrl ?? 'http://localhost:8666',
+      seating: config.seatingInventoryUrl ?? process.env.SEATING_INVENTORY_URL ?? config.healthyInventoryUrl ?? config.inventoryUrl ?? 'http://localhost:8668',
+      desks: config.desksInventoryUrl ?? process.env.DESKS_INVENTORY_URL ?? config.healthyInventoryUrl ?? config.inventoryUrl ?? 'http://localhost:8670'
+    },
     shippingUrl: config.shippingUrl ?? process.env.SHIPPING_URL ?? 'http://localhost:8667',
-    healthyInventoryUrl: config.healthyInventoryUrl ?? process.env.HEALTHY_INVENTORY_URL ?? config.inventoryUrl ?? 'http://localhost:8668',
     healthyShippingUrl: config.healthyShippingUrl ?? process.env.HEALTHY_SHIPPING_URL ?? config.shippingUrl ?? 'http://localhost:8669',
     inventoryTimeoutMs: Number(config.inventoryTimeoutMs ?? process.env.INVENTORY_TIMEOUT_MS ?? 3000),
     shippingTimeoutMs: Number(config.shippingTimeoutMs ?? process.env.SHIPPING_TIMEOUT_MS ?? 3000),
@@ -64,11 +67,11 @@ export function createStorefrontServer(config = {}) {
     if (!breaker.enter(key, policy.fallback)) {
       throw Object.assign(new Error(`${name} circuit_open`), { outcome: 'circuit_open' });
     }
-    const baseUrl = sku === 'LAMP-01'
-      ? name === 'inventory' ? settings.inventoryUrl : settings.shippingUrl
-      : name === 'inventory' ? settings.healthyInventoryUrl : settings.healthyShippingUrl;
+    const baseUrl = name === 'inventory' ? settings.inventoryUrls[inventoryCategory[sku]]
+      : sku === 'LAMP-01' ? settings.shippingUrl : settings.healthyShippingUrl;
+    const service = name === 'inventory' ? inventoryCategory[sku] + '-inventory' : name;
     try {
-      const result = await dependency(name, baseUrl, `${name === 'inventory' ? '/stock' : '/quote'}?sku=${sku}`, policy.timeoutMs);
+      const result = await dependency(service, baseUrl, `${name === 'inventory' ? '/stock' : '/quote'}?sku=${sku}`, policy.timeoutMs);
       breaker.success(key);
       return result;
     } catch (error) {
@@ -83,7 +86,7 @@ export function createStorefrontServer(config = {}) {
       return { available: data.quantity > 0, quantity: data.quantity, source: 'live' };
     } catch (error) {
       if (!policy.fallback) throw error;
-      metrics.fallback('inventory');
+      metrics.fallback(inventoryCategory[sku] + '-inventory');
       // A fallback must not claim the item is in stock when the source of truth is unavailable.
       return { available: null, quantity: null, source: 'unconfirmed', warning: "Availability cannot be confirmed." };
     }
@@ -136,7 +139,8 @@ export function createStorefrontServer(config = {}) {
       const circuits = new Map(breaker.snapshot().map(circuit => [circuit.key, circuit]));
       const circuitMetrics = products().flatMap(product => ['inventory', 'shipping'].flatMap(dependency => {
         const circuit = circuits.get(`${product.sku}:${dependency}`);
-        const labels = `sku="${product.sku}",dependency="${dependency}"`;
+        const service = dependency === 'inventory' ? inventoryCategory[product.sku] + '-inventory' : dependency;
+        const labels = `sku="${product.sku}",dependency="${service}"`;
         return [
           `workshop_circuit_state{${labels}} ${circuit ? circuit.probing ? 2 : 1 : 0}`,
           `workshop_circuit_retry_seconds{${labels}} ${(circuit?.retryInMs ?? 0) / 1000}`

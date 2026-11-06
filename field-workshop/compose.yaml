@@ -9,10 +9,29 @@ x-app-healthcheck: &app-healthcheck
   start_period: 10s
 
 services:
-  inventory:
+  lighting-inventory:
     build: .
     command: ["node", "services/inventory.mjs"]
     environment:
+      INVENTORY_CATEGORY: lighting
+      PORT: 8080
+    expose: ["8080"]
+    healthcheck: *app-healthcheck
+
+  seating-inventory:
+    build: .
+    command: ["node", "services/inventory.mjs"]
+    environment:
+      INVENTORY_CATEGORY: seating
+      PORT: 8080
+    expose: ["8080"]
+    healthcheck: *app-healthcheck
+
+  desks-inventory:
+    build: .
+    command: ["node", "services/inventory.mjs"]
+    environment:
+      INVENTORY_CATEGORY: desks
       PORT: 8080
     expose: ["8080"]
     healthcheck: *app-healthcheck
@@ -29,7 +48,7 @@ services:
     image: ghcr.io/shopify/toxiproxy:2.12.0
     ports:
       - "127.0.0.1:8478:8474"
-    expose: ["8666", "8667", "8668", "8669"]
+    expose: ["8666", "8667", "8668", "8669", "8670"]
 
   proxy-init:
     build: .
@@ -44,9 +63,10 @@ services:
     command: ["node", "services/storefront.mjs"]
     environment:
       PORT: 8080
-      INVENTORY_URL: http://toxiproxy:8666
+      LIGHTING_INVENTORY_URL: http://toxiproxy:8666
       SHIPPING_URL: http://toxiproxy:8667
-      HEALTHY_INVENTORY_URL: http://toxiproxy:8668
+      DESKS_INVENTORY_URL: http://toxiproxy:8670
+      SEATING_INVENTORY_URL: http://toxiproxy:8668
       HEALTHY_SHIPPING_URL: http://toxiproxy:8669
       INVENTORY_TIMEOUT_MS: ${INVENTORY_TIMEOUT_MS:-3000}
       SHIPPING_TIMEOUT_MS: ${SHIPPING_TIMEOUT_MS:-3000}
@@ -55,6 +75,12 @@ services:
       MITIGATION_PORT: 8081
     expose: ["8081"]
     depends_on:
+      lighting-inventory:
+        condition: service_healthy
+      seating-inventory:
+        condition: service_healthy
+      desks-inventory:
+        condition: service_healthy
       proxy-init:
         condition: service_completed_successfully
     ports:

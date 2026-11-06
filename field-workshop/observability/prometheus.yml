@@ -5,9 +5,15 @@ scrape_configs:
   - job_name: storefront
     static_configs:
       - targets: ["storefront:8080"]
-  - job_name: inventory
+  - job_name: lighting-inventory
     static_configs:
-      - targets: ["inventory:8080"]
+      - targets: ["lighting-inventory:8080"]
+  - job_name: seating-inventory
+    static_configs:
+      - targets: ["seating-inventory:8080"]
+  - job_name: desks-inventory
+    static_configs:
+      - targets: ["desks-inventory:8080"]
   - job_name: shipping
     static_configs:
       - targets: ["shipping:8080"]

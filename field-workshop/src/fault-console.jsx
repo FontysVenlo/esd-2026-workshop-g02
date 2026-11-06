@@ -11,7 +11,7 @@ async function request(path, body) {
 function FaultState({state}) {
   if (!state) return <p>{"Current state is unavailable."}</p>;
   return <div id="state" className="status-grid">{['inventory','shipping'].map(name => <article className="status-card" key={name}>
-    <h3>{(name === "inventory" ? "Inventory" : "Shipping")}</h3><span className={`badge${state[name].enabled?'':' off'}`}>{(state[name].enabled?"Connected":"Disconnected")}</span>
+    <h3>{(name === "inventory" ? "Lighting inventory" : "Shipping (Desk Lamp)")}</h3><span className={`badge${state[name].enabled?'':' off'}`}>{(state[name].enabled?"Connected":"Disconnected")}</span>
     {!state[name].toxics.length?<p>{"No active faults"}</p>:<ul className="faults">{state[name].toxics.map(toxic => <li key={toxic.name}>{toxic.name}: {toxic.type}{toxic.type==='latency'?` (${toxic.attributes?.latency ?? '?'} ms)`:''} · {toxic.stream}</li>)}</ul>}
   </article>)}</div>;
 }
@@ -80,7 +80,7 @@ function Console() {
   return <>
   <header><div className="header-inner"><a className="brand" href="http://localhost:8088/">{"Northstar Supply / Network faults"}</a><nav className="links"><a href="http://localhost:8088/">{"Workshop overview"}</a><a href="http://localhost:3008/d/field-workshop/field-workshop" target="_blank" rel="noopener">{"Grafana"}</a></nav></div></header>
   <main>
-    <div className="intro"><div className="eyebrow">{"Operator tool"}</div><h1>{"Network faults & fallbacks"}</h1><p>{"Fault only the lamp’s Inventory or Shipping path. Compare customer results in Storefront and worker, queue and circuit metrics in Grafana before and after mitigation."}</p></div>
+    <div className="intro"><div className="eyebrow">{"Operator tool"}</div><h1>{"Network faults & fallbacks"}</h1><p>{"Lighting, Seating and Desks have separate inventory services. Fault Lighting inventory or the lamp’s path to shared Shipping. Compare customer results in Storefront and worker, queue and circuit metrics in Grafana before and after mitigation."}</p></div>
     <div className="tabs" role="tablist" aria-label={"Network fault console views"}>
       <button id="controls-tab" ref={node => { tabs.current['controls'] = node; }} className="tab" role="tab" aria-selected={tab === 'controls'} aria-controls="controls-panel" tabIndex={tab === 'controls' ? 0 : -1} type="button" onClick={() => selectTab('controls')} onKeyDown={event => moveTab(event, 'controls')}>{"Fault injection"}</button>
       <button id="mitigations-tab" ref={node => { tabs.current['mitigations'] = node; }} className="tab" role="tab" aria-selected={tab === 'mitigations'} aria-controls="mitigations-panel" tabIndex={tab === 'mitigations' ? 0 : -1} type="button" onClick={() => selectTab('mitigations')} onKeyDown={event => moveTab(event, 'mitigations')}>{"Fallbacks & timeouts"}</button>
@@ -92,7 +92,7 @@ function Console() {
       <FaultState state={faults} />
       <h2>{"Apply a fault"}</h2>
       <div className="controls">
-        <label>{"Dependency"}<select id="proxy" value={proxy} onChange={event => setProxy(event.target.value)}><option value="inventory">{"Inventory"}</option><option value="shipping">{"Shipping"}</option></select></label>
+        <label>{"Dependency"}<select id="proxy" value={proxy} onChange={event => setProxy(event.target.value)}><option value="inventory">{"Lighting inventory"}</option><option value="shipping">{"Shipping (Desk Lamp)"}</option></select></label>
         <label>{"Response delay (ms)"}<input id="latency" type="number" min="50" max="5000" step="1" value={latency} onChange={event => setLatency(event.target.value)} /></label>
       </div>
       <div className="actions">
@@ -112,7 +112,7 @@ function Console() {
       <button disabled={mitigationBusy} onClick={refreshMitigations} id="refresh-mitigations" className="secondary" type="button">{"Refresh settings"}</button>
       <div className="mitigation-controls">
         <form onSubmit={event => { event.preventDefault(); applyMitigation({action:'configure', dependency:'inventory', timeoutMs:Number(draft.inventory.timeoutMs), fallback:draft.inventory.fallback}); }} id="inventory-settings" className="status-card">
-          <h3>{"Inventory · stock checks"}</h3>
+          <h3>{"Inventory · all three categories"}</h3>
           <p>{"With fallback enabled, an unavailable stock check returns"} <strong>{"Stock unconfirmed"}</strong>{". It never guesses the stock quantity."}</p>
           <p id="inventory-current" className="meta" role="status">{active ? format("Active: {timeout} ms timeout · fallback + breaker {fallback}",{timeout:active.inventory.timeoutMs,fallback:(active.inventory.fallback?"on":"off")}) : "Active settings unavailable."}</p>
           <label htmlFor="inventory-timeout">{"Inventory timeout (ms)"}</label>
@@ -152,7 +152,7 @@ function Console() {
         <li><strong>{"Clear all faults:"}</strong> <code>{"POST /reset"}</code>{". Reconnects both paths and removes all toxics."}</li>
         <li><strong>{"Refresh:"}</strong> <code>{"GET /proxies"}</code>{". Reads state without changing it."}</li>
       </ul>
-      <h3>{"Example: 1500 ms Inventory delay"}</h3>
+      <h3>{"Example: 1500 ms Lighting inventory delay"}</h3>
       <pre>{"POST /proxies/inventory/toxics\nContent-Type: application/json\n\n{\"name\":\"workshop-latency\",\"type\":\"latency\",\"stream\":\"downstream\",\"attributes\":{\"latency\":1500,\"jitter\":0}}"}</pre>
       <h3>{"Last command sent"}</h3>
       <pre id="last-command">{command || "No command sent yet."}</pre>
