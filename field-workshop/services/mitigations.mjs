@@ -1,4 +1,5 @@
-import { copy as text } from '../src/shared/copy.js';
+import { pageCopy, networkFaults } from '../src/shared/copy.js';
+const text = pageCopy(networkFaults);
 import http from 'node:http';
 
 export const defaultMitigations = Object.freeze({

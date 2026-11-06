@@ -4,82 +4,146 @@
   "title": "One slow product blocks the shop",
   "level": "Guided entry",
   "scenario": "One slow lamp Inventory call can occupy the shop’s two shared workers. Healthy chair and desk requests then queue or fail, and the whole catalog waits.",
-  "why": "A short timeout frees workers. A fallback keeps healthy products visible with lamp stock marked as unconfirmed.",
+  "why": "A short timeout frees workers. A fallback keeps healthy products visible while lamp stock is marked as unconfirmed.",
   "reproduce": "In Network Faults, add 1500 ms to Inventory. Use “Refresh all availability” and watch shared workers in Grafana.",
-  "ready": "{{ready}}",
+  "ready": "Clear all faults and restore default settings. Start the stack with the launcher. Keep background traffic unchanged; compare fresh 60–90-second windows and changes in rejected requests. Use Storefront for customer results and Grafana for workers, queue, rejections and dependency circuits.",
   "assignment": "Assignment: Can you keep chair and desk available while lamp stock is unconfirmed?",
-  "mitigationGuide": "inventory",
   "tasks": [
     {
       "title": "Measure the healthy catalog",
-      "instruction": "Refresh all availability. Record stock, catalog time, workers, queue and rejected count. Check “Product p95 latency” and “Shared workers and queue”. Predict the impact and set an abort condition."
+      "instruction": "Refresh all availability. Record workers, queue and rejected count. Check “Product p95 latency” and “Shared workers and queue”. Predict the impact and set an abort condition."
     },
     {
-      "title": "Create a lamp-only slowdown",
-      "instruction": "Add 1500 ms to Inventory. Keep traffic fixed. Record lamp delay, chair/desk waits or failures, catalog status and new rejections in a fresh window."
+      "title": "Create a lamp slowdown",
+      "instruction": "Add 1500 ms to Inventory. Record lamp delay, chair/desk waits or failures, catalog status and new rejections in a fresh window."
     },
     {
-      "title": "Trace the propagation",
-      "instruction": "Compare dependency/product p95 latency, workers, queue and rejection rate. Explain how lamp waiting affects healthy products and the catalog."
+      "title": "Trace the fault and identify the impact",
+      "instruction": "Compare dependency/product p95 latency, workers, queue and rejection rate. Explain how lamp waiting affects healthy products."
     },
     {
       "title": "Apply containment",
-      "instruction": "Remove the fault. In Fallbacks & timeouts, apply Challenge 1 settings: 400 ms Inventory timeout plus fallback and breaker. Predict each effect."
+      "instruction": "Remove the fault. In Fallbacks & timeouts, apply Challenge 1 settings: 400 ms Inventory timeout plus fallback and breaker. Predict the effect."
     },
     {
       "title": "Repeat the same fault and verify recovery",
-      "instruction": "Repeat the same delay. Compare chair/desk results, queue, new rejections and catalog time, including a 5-second recovery probe. Lamp availability should be disabled while stock is unconfirmed. {{cleanup}}"
+      "instruction": "Repeat the same delay. Compare chair/desk results, queue, new rejections and catalog time. Lamp availability should be disabled while stock is unconfirmed."
     }
   ],
   "done": [
     "You measured healthy, delayed and mitigated phases under unchanged traffic.",
-    "You observed and explained impact on chair/desk or the complete catalog, then verified that impact shrank while lamp stock remained unconfirmed.",
-    "You distinguished timeout, circuit breaker and fallback; compared equal windows; and verified cleanup."
+    "You observed and explained the impact on chair & desk, then verified that impact shrank while lamp stock remained unconfirmed.",
+    "You documented and explained the impact and mitigation for the whole product catalog."
   ],
   "solution": [
-    "Healthy: all products and the catalog return live data quickly. Use your measured timings.",
-    "Slow lamp calls occupy shared workers. Healthy products can queue or fail; the catalog waits for every result.",
-    "The 400 ms timeout releases workers sooner. The breaker pauses failed lamp calls for 5 seconds; fallback returns unconfirmed stock while chair and desk stay live.",
-    "Recovery probes may briefly increase latency. HTTP 200 does not confirm lamp stock. Remove faults, restore defaults and verify recovery."
+    "Healthy: All products and the catalog return live data quickly. Use your measured timings.",
+    "Slow lamp calls occupy shared workers. Healthy products can queue or fail.",
+    "The 400 ms timeout releases workers sooner. The breaker pauses failed lamp calls for 5 seconds. The fallback returns unconfirmed stock while chair and desk stay live.",
+    "Recovery may briefly increase latency. Remove faults, restore defaults and verify recovery."
   ],
   "fields": [
     {
       "key": "steadyState",
       "label": "Healthy baseline and metric",
-      "prompt": "Record your route and baseline. {{measurementGuidance}}"
+      "prompt": "Record your baseline. Include all the data you identify as relevant from Grafana into your notes."
     },
     {
       "key": "hypothesis",
-      "label": "Hypothesis and abort condition",
-      "prompt": "What will +1500 ms Inventory delay affect? When would you stop?"
+      "label": "Hypothesis and fault injection",
+      "prompt": "What will +1500 ms Inventory delay affect? What could be the blast radius? Write your hypothesis and introduce the fault"
     },
     {
       "key": "faultEvidence",
       "label": "Fault evidence",
-      "prompt": "Record Inventory latency and customer impact. {{measurementGuidance}}"
+      "prompt": "Record Inventory latency and customer impact. Include all the data from Grafana that changed compared to the baseline."
     },
     {
       "key": "mitigation",
-      "label": "{{mitigationLabel}}",
-      "prompt": "Which settings did you use, and why? {{mitigationGuidance}}"
+      "label": "Mitigation and reason",
+      "prompt": "For this challenge, apply the predefined fallback in the fault console. Explain what it does. Why should it help?"
     },
     {
       "key": "validation",
       "label": "Same-fault validation",
-      "prompt": "Compare the identical fault after mitigation. {{measurementGuidance}}"
+      "prompt": "Compare the identical fault after mitigation was introduced. Measure the impact with Grafana and explain what happens."
     },
     {
       "key": "conclusion",
-      "label": "{{conclusionLabel}}",
-      "prompt": "What improved? What remains uncertain? Confirm cleanup."
+      "label": "Conclusion and cleanup",
+      "prompt": "What fault did you introduce? What mitigation did you use? What improved?"
     }
   ],
-  "overview": {
-    "title": "1 · A slow lamp blocks healthy products",
-    "description": "Watch shared workers fill, then protect chair and desk with bounded waiting and honest partial results."
-  },
   "mitigationHelp": {
     "description": "The preset uses a 400 ms timeout, fallback and a 5-second breaker for lamp Inventory.",
     "instruction": "Click “Use Challenge 1 settings”, then repeat the same fault."
+  },
+  "pageTitle": "Challenge 1 · One slow product blocks the shop",
+  "text": {
+    "all_four_challenges_are_submitted_download_your_notes_from": "All four challenges are submitted. Download your notes from the sidebar.",
+    "open_challenge": "Open Challenge {number} →",
+    "compare_the_reasoning_with_your_notes_exact_timings_vary": "Compare the reasoning with your notes. Exact timings vary; this is not graded.",
+    "possible_solution": "Possible solution",
+    "after_submission": "AFTER SUBMISSION",
+    "submitting_completes_the_workshop": "Submitting completes the workshop.",
+    "submitting_unlocks_challenge": "Submitting unlocks Challenge {number}.",
+    "your_solution_is_shown_alongside_your_notes": "Your solution is shown alongside your notes.",
+    "submit_notes": "Submit notes",
+    "update_submission": "Update submission",
+    "fill_these_fields_as_you_run_the_experiment_above": "Record your observations. Submit to reveal an example solution and unlock the next challenge.",
+    "experiment_notes": "Experiment notes",
+    "your_work": "YOUR WORK",
+    "fallbacks_timeouts": "Fallbacks & timeouts",
+    "grafana": "Grafana",
+    "network_faults": "Network Faults",
+    "storefront": "Storefront",
+    "you_are_finished_when": "You are finished when…",
+    "your_five_steps": "Your tasks",
+    "before_you_start": "Before you start",
+    "the_issue_to_reproduce": "The issue to reproduce",
+    "why_this_matters": "Why this matters",
+    "the_customer_problem": "The customer problem",
+    "challenge_of": "CHALLENGE {number} OF {total} · {level}",
+    "open_fallbacks_timeouts": "Open Fallbacks & timeouts ↗",
+    "all_answers_reset_challenge_1_is_available": "All answers reset. Challenge 1 is available.",
+    "reset_all_answers_this_clears_every_draft_and_submitted": "Reset all answers? This clears every draft and submitted answer in this browser and locks Challenges 2–4 again. Download your notes first if needed. This does not reset Docker, network faults, or mitigations.",
+    "all_four_challenges_submitted": "All four challenges submitted.",
+    "challenge_unlocked": "Challenge {number} unlocked.",
+    "northstar_supply": "Northstar Supply",
+    "viewing": "Viewing · {state}",
+    "locked": "Locked",
+    "available": "Available",
+    "just_unlocked": "Just unlocked",
+    "submitted": "Submitted",
+    "challenge": "Challenge {number}",
+    "of_submitted": "{count} of {total} submitted",
+    "challenge_unlocked_2": "Challenge {number} unlocked",
+    "browser_storage_is_unavailable_download_your_notes_before_leaving": "Browser storage is unavailable. Download your notes before leaving.",
+    "notes_are_saved_in_this_browser": "Notes are saved in this browser.",
+    "review_experiment_guide": "Review the general experiment guide on Home →"
+  },
+  "navigation": {
+    "workshop_navigation": "Workshop navigation",
+    "challenges": "Challenges",
+    "northstar_supply": "Northstar Supply",
+    "workshop": "/ Workshop",
+    "reliability_workshop": "Reliability workshop",
+    "home": "Home",
+    "welcome_setup": "Welcome & setup",
+    "download_notes": "Download notes",
+    "clear_notes": "Clear notes",
+    "text": "🔓",
+    "challenge_unlocked": "Challenge unlocked",
+    "ready_in_your_sidebar": "Ready in your sidebar",
+    "open": "Open →",
+    "challengeTitles": {
+      "challenge-1": "One slow product blocks the shop",
+      "challenge-2": "One missing quote breaks the catalog",
+      "challenge-3": "Investigate a spreading incident",
+      "challenge-4": "Your containment GameDay"
+    }
+  },
+  "validation": {
+    "locked": "This challenge is locked.",
+    "required": "Please fill in: {label}"
   }
 }

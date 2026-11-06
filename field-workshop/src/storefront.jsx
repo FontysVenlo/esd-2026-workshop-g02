@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { copy as text } from '/copy.mjs';
+import { pageCopy, storefront } from '/copy.mjs';
+const text = pageCopy(storefront);
 
 const products = [
   { sku: 'LAMP-01', name: text('api', 'product_name'), image: '/images/lamp.png', price: 29.9 },

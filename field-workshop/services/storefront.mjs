@@ -1,4 +1,5 @@
-import { copy as text } from '../src/shared/copy.js';
+import { pageCopy, storefront } from '../src/shared/copy.js';
+const text = pageCopy(storefront);
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';

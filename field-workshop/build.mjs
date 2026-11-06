@@ -9,10 +9,10 @@ mkdirSync(output, { recursive: true });
 cpSync(path.join(root, 'public'), output, { recursive: true });
 
 const pages = [
-  { source:'storefront', bundle:'storefront', filename:'index', root:'storefront', body:'storefront-body', title:'catalog.page_title' },
-  { source:'workshop', bundle:'workshop-app', filename:'workshop', root:'workshop', body:'workshop-body', title:'workshopPage.northstar_supply_reliability_workshop' },
-  { source:'fault-console', bundle:'fault-console', filename:'fault-console', root:'fault-console', body:'', title:'faultConsolePage.network_faults_fallbacks_northstar_supply' },
-  { source:'tools', bundle:'tools', filename:'tools', root:'tools', body:'', title:'toolsPage.commands_northstar_supply' }
+  { source:'storefront', bundle:'storefront', filename:'index', root:'storefront', body:'storefront-body' },
+  { source:'workshop', bundle:'workshop-app', filename:'workshop', root:'workshop', body:'workshop-body' },
+  { source:'fault-console', bundle:'fault-console', filename:'fault-console', root:'fault-console', body:'' },
+  { source:'tools', bundle:'tools', filename:'tools', root:'tools', body:'' }
 ];
 
 await Promise.all(pages.map(page => build({
@@ -41,13 +41,13 @@ for (const page of pages) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{${page.title}}}</title>
+  <title>{{pageTitle}}</title>
   <link rel="stylesheet" href="/site.css">
   <link rel="modulepreload" href="/${page.bundle}.mjs">
 </head>
 <body${page.body ? ` class="${page.body}"` : ''}>
   <div id="${page.root}-root"></div>
-  <noscript>{{catalog.javascript_required}}</noscript>
+  <noscript>{{javascriptRequired}}</noscript>
   <script type="module" src="/${page.bundle}.mjs"></script>
 </body>
 </html>

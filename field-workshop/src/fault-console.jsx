@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { copy as text } from '/copy.mjs';
+import { pageCopy, networkFaults } from '/copy.mjs';
+const text = pageCopy(networkFaults);
 
 async function request(path, body) {
   const response = await fetch(path, { cache:'no-store', method:body ? 'POST' : 'GET', headers:body ? {'Content-Type':'application/json'} : undefined, body:body ? JSON.stringify(body) : undefined, signal:AbortSignal.timeout(5000) });

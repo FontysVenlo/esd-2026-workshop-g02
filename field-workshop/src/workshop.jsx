@@ -1,16 +1,20 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { copy as text } from '/copy.mjs';
+import { format, home } from '/copy.mjs';
 import { STORAGE_KEY, challenges, emptyProgress, normalizeProgress, submittedCount, currentChallengeIndex, isUnlocked, saveDraft, submitChallenge, buildRecord } from '/workshop-state.mjs';
 
-const w = (key, values) => text('workshop', key, values);
-const p = key => text('workshopPage', key);
+const WorkshopCopy = createContext(home);
+function workshopCopy(page) {
+  return { page, w: (key, values) => format(page.text[key], values), p: key => format(page.navigation[key]) };
+}
+function useWorkshopCopy() { return workshopCopy(useContext(WorkshopCopy)); }
 const toolLinks = [
   ['storefront', '/storefront'], ['network_faults', 'http://localhost:8089'],
   ['grafana', 'http://localhost:3008/d/field-workshop/field-workshop'], ['fallbacks_timeouts', 'http://localhost:8089/#mitigations']
 ];
 function Link({ href, children, ...props }) { return <a href={href} target="_blank" rel="noopener" {...props}>{children}</a>; }
 function Help() {
+  const { w, page } = useWorkshopCopy();
   const glossary = [
     ['baseline', 'your_measurements_with_normal_service_before_you_inject_a'], ['fault', 'the_problem_you_introduce_in_network_faults_a_slower'],
     ['timeout', 'how_long_storefront_will_wait_for_a_dependency_a'], ['fallback', 'the_useful_response_storefront_returns_when_a_dependency_cannot'],
@@ -24,18 +28,14 @@ function Help() {
   </details>;
 }
 function ExperimentGuide() {
-  return <details className="experiment-help experiment-guide"><summary>{w('your_five_steps')}</summary>
-    <p>{w('for_each_experiment_compare_three_runs_of_the_same')}</p>
-    {challenges.map(c => <details key={c.id} className="command-help"><summary>{c.overview.title}</summary>
-      <aside className="challenge-ready"><strong>{w('before_you_start')}</strong><p>{c.ready}</p></aside>
-      <ol className="challenge-steps">{c.tasks.map((task,i) => <li key={i}><h3>{task.title}</h3><p>{task.instruction}</p>
-        {i === 3 && c.mitigationHelp && <div className="mitigation-guide"><p>{c.mitigationHelp.description}</p><p>{c.mitigationHelp.instruction}</p>
-          <Link className="secondary next-link" href="http://localhost:8089/#mitigations">{w('open_fallbacks_timeouts')}</Link></div>}</li>)}</ol>
-      <section className="challenge-done"><h3>{w('you_are_finished_when')}</h3><ul>{c.done.map((line,i) => <li key={i}>{line}</li>)}</ul></section>
-    </details>)}
+  const { page } = useWorkshopCopy();
+  return <details className="experiment-help experiment-guide"><summary>{page.guide.title}</summary>
+    <p>{page.guide.description}</p>
+    <ol className="challenge-steps">{page.guide.steps.map((step,i) => <li key={i}><h3>{step.title}</h3><p>{step.instruction}</p></li>)}</ol>
   </details>;
 }
 function Home({ progress, reset }) {
+  const { w, page } = useWorkshopCopy();
   const next = currentChallengeIndex(progress);
   const tools = [
     ['storefront_test_as_a_customer', '/storefront', 'click_check_availability_and_order_preview_read_the_result'],
@@ -52,7 +52,7 @@ function Home({ progress, reset }) {
     <ExperimentGuide />
     <section className="home-section"><div className="eyebrow">{w('your_role')}</div><h2>{w('make_a_working_shop_fail_then_improve_its_response')}</h2>
       {['you_are_the_engineer_responsible_for_a_lamp_shop', 'the_shop_normally_starts_healthy_in_challenges_1_2'].map(key => <p key={key}>{w(key)}</p>)}
-      <ul className="workshop-journey">{challenges.map(c => <li key={c.id}><strong>{c.overview.title}</strong><span>{c.overview.description}</span></li>)}</ul></section>
+      <ul className="workshop-journey">{page.challengeSummaries.map(c => <li key={c.id}><strong>{c.title}</strong><span>{c.description}</span></li>)}</ul></section>
     <section className="home-section"><div className="eyebrow">{w('get_started')}</div><h2>{w('quick_start')}</h2>
       <ol className="quick-start">{[['start_the_stack','extract_the_zip_start_docker_desktop_then_double_click'],['read_the_customer_problem','open_challenge_1_in_the_sidebar_its_brief_explains'],['run_it_then_record_it','use_storefront_network_faults_and_grafana_fill_the_notes']].map(([title,copy]) => <li key={title}><strong>{w(title)}</strong><span>{w(copy)}</span></li>)}</ol>
       <p className="meta">{w('windows_start_bat_stop_bat_mac_start_command_stop')}</p></section>
@@ -61,6 +61,7 @@ function Home({ progress, reset }) {
   </section>;
 }
 function Challenge({ challenge: c, progress, update, submit }) {
+  const { w, page } = useWorkshopCopy();
   const [error, setError] = useState('');
   const solutionRef = useRef(null);
   const submission = progress.submissions[c.id];
@@ -71,7 +72,13 @@ function Challenge({ challenge: c, progress, update, submit }) {
       <h1>{c.title}</h1><h2>{w('the_customer_problem')}</h2><p className="challenge-scenario">{c.scenario}</p>
       <div className="challenge-brief">{[['why_this_matters',c.why],['the_issue_to_reproduce',c.reproduce]].map(([key,copy]) => <section key={key}><h3>{w(key)}</h3><p>{copy}</p></section>)}</div>
       <p className="challenge-assignment">{c.assignment}</p>
-      <a className="text-button" href="#home">{w('review_steps_on_home')}</a>
+      <a className="text-button" href="#home">{w('review_experiment_guide')}</a>
+      <aside className="challenge-ready"><strong>{w('before_you_start')}</strong><p>{c.ready}</p></aside>
+      <h2>{w('your_five_steps')}</h2>
+      <ol className="challenge-steps">{c.tasks.map((task,i) => <li key={i}><h3>{task.title}</h3><p>{task.instruction}</p>
+        {i === 3 && c.mitigationHelp && <div className="mitigation-guide"><p>{c.mitigationHelp.description}</p><p>{c.mitigationHelp.instruction}</p>
+          <Link className="secondary next-link" href="http://localhost:8089/#mitigations">{w('open_fallbacks_timeouts')}</Link></div>}</li>)}</ol>
+      <section className="challenge-done"><h2>{w('you_are_finished_when')}</h2><ul>{c.done.map((line,i) => <li key={i}>{line}</li>)}</ul></section>
       <div className="tool-links">{toolLinks.map(([label,href]) => <Link key={href} href={href}>{w(label)} ↗</Link>)}</div></section>
     <div className={`challenge-columns${submission ? ' has-solution' : ''}`}><section className="notes-panel"><div className="eyebrow">{w('your_work')}</div><h2>{w('experiment_notes')}</h2>
       <p className="meta">{w('fill_these_fields_as_you_run_the_experiment_above')}</p>
@@ -101,12 +108,15 @@ function Workshop() {
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY,JSON.stringify(progress)); setStorage(w('notes_are_saved_in_this_browser')); }
     catch { setStorage(w('browser_storage_is_unavailable_download_your_notes_before_leaving')); }
-  },[progress]);
+  },[progress,hash]);
   useEffect(() => { const change = () => {setHash(location.hash.slice(1)); setUnlocked(-1); window.scrollTo(0,0);}; window.addEventListener('hashchange',change); return () => window.removeEventListener('hashchange',change); },[]);
   useEffect(() => { if(unlocked < 0) return; const timer=setTimeout(() => setUnlocked(-1),5000); return () => clearTimeout(timer); },[unlocked]);
   useEffect(() => { if(!download) return; downloadRef.current.click(); return () => URL.revokeObjectURL(download); },[download]);
   const index = challenges.findIndex(c => c.id === hash);
   const current = index >= 0 && isUnlocked(progress,index) ? challenges[index] : null;
+  const page = current ?? home;
+  const { w, p } = workshopCopy(page);
+  useEffect(() => { document.title = page.pageTitle; }, [page]);
   useEffect(() => { if(hash && hash !== 'home' && !current) { history.replaceState(null,'',`${location.pathname}${location.search}#home`);setHash('home'); } },[hash,current]);
   function reset() { if(!window.confirm(w('reset_all_answers_this_clears_every_draft_and_submitted')))return; setProgress(emptyProgress());setUnlocked(-1);setAnnouncement(w('all_answers_reset_challenge_1_is_available'));location.hash='home'; }
   function submit(id,answers) {
@@ -117,7 +127,7 @@ function Workshop() {
     setProgress(next);
   }
   const count=submittedCount(progress);
-  return <><header><div className="header-inner workshop-header"><a className="brand" href="#home">{p('northstar_supply')} <span>{p('workshop')}</span></a><span className="header-note">{p('reliability_workshop')}</span></div></header>
+  return <WorkshopCopy.Provider value={page}><header><div className="header-inner workshop-header"><a className="brand" href="#home">{p('northstar_supply')} <span>{p('workshop')}</span></a><span className="header-note">{p('reliability_workshop')}</span></div></header>
     <main className="workshop-shell"><aside className="workshop-sidebar" aria-label={p('workshop_navigation')}>
       <a id="home-link" className="home-link" href="#home" aria-current={!current?'page':undefined}>{p('home')} <span>{p('welcome_setup')}</span></a><div className="sidebar-heading">{p('challenges')}</div>
       <nav id="challenge-nav" className="challenge-nav" aria-label={p('challenges')}>{challenges.map((c,i)=>{
@@ -127,7 +137,7 @@ function Workshop() {
         return <Tag key={c.id} href={available?`#${c.id}`:undefined} disabled={!available} type={available?undefined:'button'} aria-current={current?.id===c.id?'page':undefined}
           className={`challenge-link ${submitted?'is-complete':available?'is-available':'is-locked'} ${i===unlocked?'just-unlocked':''}`}>
           <span className={`nav-icon ${submitted?'completed':available?'unlocked':'locked'}`} aria-hidden="true"><svg viewBox="0 0 24 24">{submitted?<path d="m5 12 4.5 4.5L19 7"/>:<><rect x="5" y="10" width="14" height="11" rx="2"/><path className="lock-shackle" d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1"/></>}</svg></span>
-          <span className="challenge-link-label"><span className="challenge-number">{w('challenge',{number:c.number})}</span><strong>{c.title}</strong><span className="challenge-state">{current?.id===c.id?w('viewing',{state}):state}</span></span></Tag>;
+          <span className="challenge-link-label"><span className="challenge-number">{w('challenge',{number:c.number})}</span><strong>{page.navigation.challengeTitles[c.id]}</strong><span className="challenge-state">{current?.id===c.id?w('viewing',{state}):state}</span></span></Tag>;
       })}</nav><div className="sidebar-progress"><strong id="progress-label">{w('of_submitted',{count,total:challenges.length})}</strong>
         <div className="progress-track" aria-hidden="true"><span style={{width:`${count/challenges.length*100}%`}} /></div>
         <div className="sidebar-actions"><button type="button" className="text-button" onClick={()=>setDownload(URL.createObjectURL(new Blob([JSON.stringify(buildRecord(progress),null,2)],{type:'application/json'})))}>{p('download_notes')}</button>
@@ -137,6 +147,6 @@ function Workshop() {
     {unlocked>=0 && <div id="unlock-toast" className="unlock-toast is-visible"><span className="unlock-toast-symbol" aria-hidden="true">{p('text')}</span>
       <span className="unlock-toast-copy"><strong>{w('challenge_unlocked_2',{number:unlocked+1})}</strong><span>{p('ready_in_your_sidebar')}</span></span><a href={`#${challenges[unlocked].id}`}>{p('open')}</a></div>}
     <a ref={downloadRef} href={download||undefined} download="northstar-experiment-record.json" hidden />
-  </>;
+  </WorkshopCopy.Provider>;
 }
 createRoot(document.getElementById('workshop-root')).render(<Workshop />);

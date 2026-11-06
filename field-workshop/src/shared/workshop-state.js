@@ -1,4 +1,4 @@
-import { copy as text } from './copy.js';
+import { format, home } from './copy.js';
 export const STORAGE_KEY = 'northstar-field-workshop-v1';
 
 export { challenges } from './challenges.js';
@@ -35,11 +35,11 @@ export function saveDraft(progress, id, answers) {
 
 export function submitChallenge(progress, id, answers, submittedAt = new Date().toISOString()) {
   const index = challenges.findIndex(challenge => challenge.id === id);
-  if (index < 0 || !isUnlocked(progress, index)) throw new Error(text('progress', 'this_challenge_is_locked'));
+  if (index < 0 || !isUnlocked(progress, index)) throw new Error(challenges[Math.max(0, index)].validation.locked);
   const cleaned = {};
   for (const field of challenges[index].fields) {
     const answer = String(answers[field.key] ?? '').trim();
-    if (!answer) throw new Error(text('progress', 'please_fill_in', { label: field.label }));
+    if (!answer) throw new Error(format(challenges[index].validation.required, { label: field.label }));
     cleaned[field.key] = answer;
   }
   // Submission checks presence only. There is no grading or answer evaluation.
@@ -52,7 +52,7 @@ export function submitChallenge(progress, id, answers, submittedAt = new Date().
 
 export function buildRecord(progress, exportedAt = new Date().toISOString()) {
   return {
-    workshop: text('progress', 'northstar_supply_reliability_workshop'),
+    workshop: home.exportTitle,
     exportedAt,
     challenges: challenges.map(challenge => ({
       number: challenge.number,

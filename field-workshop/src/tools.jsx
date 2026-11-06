@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { copy as text } from '/copy.mjs';
+import { pageCopy, tools } from '/copy.mjs';
+const text = pageCopy(tools);
 function Tools() { return <>
   <header><div className="header-inner"><a className="brand" href="/">{text('toolsPage','northstar_supply_commands')}</a><nav className="links"><a href="/">{text('toolsPage','workshop_overview')}</a><a href="http://localhost:8089" target="_blank" rel="noopener">{text('toolsPage','network_faults')}</a></nav></div></header>
   <main className="reference">

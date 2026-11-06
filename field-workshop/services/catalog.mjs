@@ -1,4 +1,5 @@
-import { copy as text } from '../src/shared/copy.js';
+import { pageCopy, storefront } from '../src/shared/copy.js';
+const text = pageCopy(storefront);
 
 export function products() {
   return [

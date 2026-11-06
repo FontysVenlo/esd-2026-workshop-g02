@@ -6,7 +6,7 @@
   "scenario": "Design a repeatable fault on one lamp dependency. Show its impact on the catalog or healthy products, then test whether your mitigation contains it.",
   "why": "An enabled fallback is not proof of resilience. Show useful results before and after mitigation, including remaining uncertainty.",
   "reproduce": "Choose lamp Inventory or Shipping, a delay or disconnect, and a catalog view. A +1500 ms delay can pressure workers; a disconnect can fail aggregation.",
-  "ready": "{{ready}} Fault only the exposed lamp paths; use chair and desk as healthy comparisons.",
+  "ready": "Clear all faults and restore default settings. Start the stack with the launcher. Keep background traffic unchanged; compare fresh 60–90-second windows and changes in rejected requests. Use Storefront for customer results and Grafana for workers, queue, rejections and dependency circuits. Fault only the exposed lamp paths; use chair and desk as healthy comparisons.",
   "assignment": "Can you contain a wider failure to the affected product’s missing data?",
   "tasks": [
     {
@@ -27,7 +27,7 @@
     },
     {
       "title": "Repeat exactly and recommend",
-      "instruction": "Repeat the identical fault and traffic. Compare healthy products, catalog results and missing lamp data. Record probe behavior and rollback. {{cleanup}}"
+      "instruction": "Repeat the identical fault and traffic. Compare healthy products, catalog results and missing lamp data. Record probe behavior and rollback. Clear faults, restore defaults, and allow in-flight requests and a 5-second cooldown to finish. Verify live stock and delivery for all products, then submit your measurements."
     }
   ],
   "done": [
@@ -50,22 +50,22 @@
     {
       "key": "steadyState",
       "label": "Steady state and hypothesis",
-      "prompt": "Record the baseline and prediction. {{measurementGuidance}}"
+      "prompt": "Record the baseline and prediction. Include all products and catalog time/status; record queue size and new rejections from Grafana over the same window."
     },
     {
       "key": "faultEvidence",
       "label": "Fault result",
-      "prompt": "Record the fault settings and dependency signals. {{measurementGuidance}}"
+      "prompt": "Record the fault settings and dependency signals. Include all products and catalog time/status; record queue size and new rejections from Grafana over the same window."
     },
     {
       "key": "mitigation",
-      "label": "{{mitigationLabel}}",
-      "prompt": "Which settings did you change, and why? {{mitigationGuidance}}"
+      "label": "Mitigation and reason",
+      "prompt": "Which settings did you change, and why? Explain timeout, breaker and fallback separately."
     },
     {
       "key": "validation",
       "label": "Identical-fault validation",
-      "prompt": "Repeat the same fault and compare results. {{measurementGuidance}}"
+      "prompt": "Repeat the same fault and compare results. Include all products and catalog time/status; record queue size and new rejections from Grafana over the same window."
     },
     {
       "key": "conclusion",
@@ -73,8 +73,73 @@
       "prompt": "What improved? What risk remains? Describe rollback."
     }
   ],
-  "overview": {
-    "title": "4 · Prove useful containment",
-    "description": "Design an experiment whose mitigation visibly protects the catalog or healthy products, and document its trade-off."
+  "pageTitle": "Challenge 4 · Your containment GameDay",
+  "text": {
+    "all_four_challenges_are_submitted_download_your_notes_from": "All four challenges are submitted. Download your notes from the sidebar.",
+    "open_challenge": "Open Challenge {number} →",
+    "compare_the_reasoning_with_your_notes_exact_timings_vary": "Compare the reasoning with your notes. Exact timings vary; this is not graded.",
+    "possible_solution": "Possible solution",
+    "after_submission": "AFTER SUBMISSION",
+    "submitting_completes_the_workshop": "Submitting completes the workshop.",
+    "submitting_unlocks_challenge": "Submitting unlocks Challenge {number}.",
+    "your_solution_is_shown_alongside_your_notes": "Your solution is shown alongside your notes.",
+    "submit_notes": "Submit notes",
+    "update_submission": "Update submission",
+    "fill_these_fields_as_you_run_the_experiment_above": "Record your observations. Submit to reveal an example and unlock the next challenge.",
+    "experiment_notes": "Experiment notes",
+    "your_work": "YOUR WORK",
+    "fallbacks_timeouts": "Fallbacks & timeouts",
+    "grafana": "Grafana",
+    "network_faults": "Network Faults",
+    "storefront": "Storefront",
+    "you_are_finished_when": "You are finished when…",
+    "your_five_steps": "Your tasks",
+    "before_you_start": "Before you start",
+    "the_issue_to_reproduce": "The issue to reproduce",
+    "why_this_matters": "Why this matters",
+    "the_customer_problem": "The customer problem",
+    "challenge_of": "CHALLENGE {number} OF {total} · {level}",
+    "open_fallbacks_timeouts": "Open Fallbacks & timeouts ↗",
+    "all_answers_reset_challenge_1_is_available": "All answers reset. Challenge 1 is available.",
+    "reset_all_answers_this_clears_every_draft_and_submitted": "Reset all answers? This clears every draft and submitted answer in this browser and locks Challenges 2–4 again. Download your notes first if needed. This does not reset Docker, network faults, or mitigations.",
+    "all_four_challenges_submitted": "All four challenges submitted.",
+    "challenge_unlocked": "Challenge {number} unlocked.",
+    "northstar_supply": "Northstar Supply",
+    "viewing": "Viewing · {state}",
+    "locked": "Locked",
+    "available": "Available",
+    "just_unlocked": "Just unlocked",
+    "submitted": "Submitted",
+    "challenge": "Challenge {number}",
+    "of_submitted": "{count} of {total} submitted",
+    "challenge_unlocked_2": "Challenge {number} unlocked",
+    "browser_storage_is_unavailable_download_your_notes_before_leaving": "Browser storage is unavailable. Download your notes before leaving.",
+    "notes_are_saved_in_this_browser": "Notes are saved in this browser.",
+    "review_experiment_guide": "Review the general experiment guide on Home →"
+  },
+  "navigation": {
+    "workshop_navigation": "Workshop navigation",
+    "challenges": "Challenges",
+    "northstar_supply": "Northstar Supply",
+    "workshop": "/ Workshop",
+    "reliability_workshop": "Reliability workshop",
+    "home": "Home",
+    "welcome_setup": "Welcome & setup",
+    "download_notes": "Download notes",
+    "clear_notes": "Clear notes",
+    "text": "🔓",
+    "challenge_unlocked": "Challenge unlocked",
+    "ready_in_your_sidebar": "Ready in your sidebar",
+    "open": "Open →",
+    "challengeTitles": {
+      "challenge-1": "One slow product blocks the shop",
+      "challenge-2": "One missing quote breaks the catalog",
+      "challenge-3": "Investigate a spreading incident",
+      "challenge-4": "Your containment GameDay"
+    }
+  },
+  "validation": {
+    "locked": "This challenge is locked.",
+    "required": "Please fill in: {label}"
   }
 }

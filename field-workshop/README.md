@@ -4,13 +4,21 @@ A small, runnable commerce system for hands-on Chaos Engineering. The overview c
 
 ## Edit the website text
 
-The running website reads its copy from `content/`:
+Each page has its own file in `content/`. Open the file for the page you want to change:
 
-- `challenge-1.json` through `challenge-4.json`: one challenge per file, including its overview summary, brief, steps, completion criteria, answer labels/prompts, mitigation help, and example solution.
-- `tasks-shared.json`: repeated assignment text, including setup, cleanup, measurement guidance, mitigation guidance, and shared input labels. Challenge files insert these values with references such as `{{measurementGuidance}}`. Edit the shared value to update every challenge that uses it; keep reference names intact. References can be a complete value or part of a longer sentence and must point directly to plain text in this file.
-- `shared.json`: all remaining website copy, grouped by workshop, Storefront, Network Faults, page templates, and API messages.
+| Page | JSON file |
+| --- | --- |
+| Home | `home.json` |
+| Challenge 1–4 | `challenge-1.json` through `challenge-4.json` |
+| Storefront | `storefront.json` |
+| Network Faults (all tabs) | `network-faults.json` |
+| Optional command reference | `tools.json` |
 
-Edit JSON values while keeping keys and placeholders such as `{number}` intact. Challenge `id`, `number`, field `key`, and `mitigationGuide` are identifiers used by the application; keep them unchanged when editing wording. Text is rendered as plain text, so HTML tags in JSON are displayed literally. JSON supports `\n` for line breaks but does not support comments or trailing commas.
+Challenge files contain the full brief, setup, five tasks, completion checks, input labels/prompts and the solution revealed after submission. `tasks` is shown directly on that challenge page under “Your tasks”. Home contains only a general expandable five-step guide and its own challenge summaries.
+
+All wording is written out in the page file; there are no shared JSON files or text-fragment references. In workshop pages, `text` contains headings, buttons and messages; `navigation` contains the sidebar labels shown on that page. Repeated wording is deliberately copied into each page so editing one file changes only that page. Home summaries and sidebar titles can be edited separately from challenge headings.
+
+Keep object keys, challenge `id`/`number` and answer field `key` unchanged. Placeholders such as `{number}` and `{label}` insert runtime values; they do not load text from another file. `validation` and `api` sections hold messages shown for errors. Solutions, status messages and some controls appear only in the relevant state. Text is plain text; JSON supports `\n` but no comments or trailing commas. See [content/README.md](content/README.md) for field details.
 
 After editing, rebuild the images and restart the stack using the start launcher, then refresh the browser. Docker copies these files into the image; editing the host JSON alone does not change an already running container. Participant notes keep their existing storage format. Markdown handouts in `docs/` and the Grafana dashboard remain separate documents; synchronize their wording when changing an assignment.
 
@@ -57,7 +65,7 @@ The overview contains the working briefs; [the four assignments](docs/assignment
 
 The same console works on Windows and Mac: all buttons send platform-independent HTTP requests. **Info & commands** includes a Windows PowerShell / Mac Terminal selector for optional command examples. The [tool reference](docs/tool-reference.md) documents those APIs. The Storefront settings listener is internal to Docker and has no published host port; the console uses neither a Docker socket nor a host shell. A facilitator can seed the third assignment using [facilitator notes](docs/facilitator.md).
 
-The three-product catalog visibly demonstrates propagation: a slow lamp consumes shared workers and can delay/reject healthy products; a missing lamp quote rejects the full delivery catalog. Inventory mitigation disables the unconfirmed lamp availability action while keeping healthy products live. Enabling fallback also enables a per-product/dependency circuit breaker with a five-second cooldown and a single recovery probe. The timeout releases capacity, the breaker pauses repeated failed calls, and fallback preserves useful partial data. Grafana and Storefront show real queue, rejection, latency and circuit state.
+The three-product catalog visibly demonstrates propagation: a slow lamp consumes shared workers and can delay/reject healthy products; a missing lamp quote rejects the full delivery catalog. Inventory mitigation disables the unconfirmed lamp availability action while keeping healthy products live. Enabling fallback also enables a per-product/dependency circuit breaker with a five-second cooldown and a single recovery probe. The timeout releases capacity, the breaker pauses repeated failed calls, and fallback preserves useful partial data. Grafana shows real queue, rejection, latency and circuit state; Storefront shows customer results.
 
 The Storefront offers product availability and an order **preview**, not a live checkout. A fallback never invents stock or a shipping price: it reports that the value is unconfirmed. This is a deliberate business trade-off to discuss.
 
@@ -65,7 +73,7 @@ The Storefront offers product availability and an order **preview**, not a live 
 
 All workshop-owned pages use React: `src/storefront.jsx`, `src/workshop.jsx` (overview and all challenges), `src/fault-console.jsx`, and `src/tools.jsx`. Shared JavaScript helpers live in `src/shared/`; editable copy lives in `content/`; images and CSS live in `public/`. Run `pnpm install --frozen-lockfile --ignore-scripts` then `pnpm build` after changing source or public assets. The build generates the browser JavaScript, license notices, and minimal HTML entry shells into ignored `build/`. Do not commit generated files. Docker builds them automatically in a separate build stage, and the workshop ZIP includes only source and configuration. Grafana and Prometheus remain externally supplied applications.
 
-Product photos in `public/images/` were generated for this demo. Copy remains in `content/`; the React bundle imports shared copy at runtime so rebuilding the bundle is not required for wording edits. Rebuild/restart containers as described above. Product cards retain the previous catalog while refreshing and explicitly label it as last known data after a failure or view change. Individual checks remain independent of background catalog polling.
+Product photos in `public/images/` were generated for this demo. Copy remains in `content/`; the React bundle imports page copy at runtime so rebuilding the bundle is not required for wording edits. Rebuild/restart containers as described above. Product cards retain the previous catalog while refreshing and explicitly label it as last known data after a failure or view change. Individual checks remain independent of background catalog polling.
 
 ```powershell
 pnpm test

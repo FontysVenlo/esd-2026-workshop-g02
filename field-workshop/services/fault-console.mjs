@@ -1,4 +1,5 @@
-import { copy as text } from '../src/shared/copy.js';
+import { pageCopy, networkFaults } from '../src/shared/copy.js';
+const text = pageCopy(networkFaults);
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';

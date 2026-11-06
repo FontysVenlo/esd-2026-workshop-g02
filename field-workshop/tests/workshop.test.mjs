@@ -21,15 +21,12 @@ test('workshop overview, browser modules, and local tool guide are served', asyn
     const app = await fetch(`${base}/workshop-app.mjs`);
     assert.equal(app.status, 200);
     const appText = await app.text();
-    const copyResponse = await fetch(`${base}/content/shared.json`);
-    assert.match(copyResponse.headers.get('content-type'), /application\/json/);
-    const copy = await copyResponse.json();
-    assert.equal(copy.workshop.quick_start, 'Quick start');
-    assert.equal(copy.workshop.possible_solution, 'Possible solution');
-    const taskCopyResponse = await fetch(`${base}/content/tasks-shared.json`);
-    assert.equal(taskCopyResponse.status, 200);
-    assert.match(taskCopyResponse.headers.get('content-type'), /application\/json/);
-    const taskCopy = await taskCopyResponse.json();
+    for (const page of ['home', 'storefront', 'network-faults', 'tools']) {
+      const response = await fetch(`${base}/content/${page}.json`);
+      assert.equal(response.status, 200);
+      assert.match(response.headers.get('content-type'), /application\/json/);
+      assert.ok((await response.json()).pageTitle);
+    }
     assert.match(appText, /just-unlocked/);
     assert.match(appText, /http:\/\/localhost:3008/);
     assert.equal((await fetch(`${base}/workshop-state.mjs`)).status, 200);
@@ -41,13 +38,8 @@ test('workshop overview, browser modules, and local tool guide are served', asyn
     for (const challenge of challenges) {
       const response = await fetch(`${base}/content/${challenge.id}.json`);
       assert.equal(response.status, 200);
-      const source = await response.text();
-      const resolved = source.replace(/\{\{(\w+)\}\}/g, (_, key) => {
-        assert.equal(typeof taskCopy[key], 'string', `Missing shared task copy: ${key}`);
-        return JSON.stringify(taskCopy[key]).slice(1, -1);
-      });
-      assert.deepEqual(JSON.parse(resolved), challenge);
-      assert.doesNotMatch(JSON.stringify(challenge), /\{\{\w+\}\}/);
+      assert.deepEqual(await response.json(), challenge);
+      assert.doesNotMatch(JSON.stringify(challenge), /\{\{/);
     }
     assert.doesNotMatch(html, /\{\{\w+\./);
     const styles = await fetch(`${base}/site.css`);
