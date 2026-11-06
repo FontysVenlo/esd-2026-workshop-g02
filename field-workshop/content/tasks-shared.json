@@ -1,8 +1,8 @@
 {
-  "ready": "Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total.",
-  "cleanup": "Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.",
-  "measurementGuidance": "Include all three products, complete-catalog timing/status, worker queue and rejected-count change over the same observation window.",
-  "mitigationGuidance": "Distinguish the roles of timeout, circuit breaker and fallback.",
+  "ready": "Clear all faults and restore default settings. Start the stack with the launcher. Keep background traffic unchanged; compare fresh 60–90-second windows and changes in rejected requests. Use Storefront for customer results and Grafana for workers, queue, rejections and dependency circuits.",
+  "cleanup": "Clear faults, restore defaults, and allow in-flight requests and a 5-second cooldown to finish. Verify live stock and delivery for all products, then submit your measurements.",
+  "measurementGuidance": "Include all products and catalog time/status; record queue size and new rejections from Grafana over the same window.",
+  "mitigationGuidance": "Explain timeout, breaker and fallback separately.",
   "mitigationLabel": "Mitigation and reason",
   "conclusionLabel": "Conclusion and cleanup"
 }

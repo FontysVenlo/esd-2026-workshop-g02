@@ -16,6 +16,8 @@ After editing, rebuild the images and restart the stack using the start launcher
 
 ## What runs
 
+Storefront shows customer results; internal worker, queue, rejection and circuit monitoring lives in Grafana. The dashboard includes current counts, history, per-product dependency state and sampled retry delays. Prometheus scrapes every five seconds, so it can miss brief transitions. Rejection totals reset on Storefront restart; compare fresh equal windows using the rejection rate or estimated one-minute increase.
+
 `Browser → Storefront → Toxiproxy → Inventory / Shipping`
 
 The Storefront cannot contact either dependency directly. Toxiproxy is initialized with four fixed local branches to the same two services: the faultable lamp Inventory/Shipping paths and healthy Inventory/Shipping paths shared by chair and desk. All products share two Storefront workers, with a bounded queue (12 waiting operations, 1000 ms queue deadline). The complete catalog requires every product result unless fallback is enabled. Prometheus scrapes real application metrics every five seconds; Grafana is provisioned with a local dashboard. No CDN or cloud account is used.

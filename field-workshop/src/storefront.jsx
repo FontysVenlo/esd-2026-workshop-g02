@@ -79,7 +79,6 @@ function ProductCard({ product, result, stale }) {
       <div className="product-readings">
         <p>{result ? stock(result) : text('catalog', 'waiting')}</p>
         <p>{result?.shipping ? shipping(result) : text('catalog', 'stock_only')}</p>
-        <p className="meta">{result ? text('catalog', 'waited', { milliseconds: result.queueMs }) : '—'}</p>
       </div>
       <div className="product-buttons">
         <button className="primary" disabled={busy || (result && unconfirmed) || check?.data?.inventory.source === 'unconfirmed'} onClick={() => inspect(false)}>
@@ -95,19 +94,6 @@ function ProductCard({ product, result, stale }) {
       </div>
     </div>
   </article>;
-}
-
-function Indicators() {
-  const [{ data, error }] = usePolling('/api/system', 1000);
-  if (!data) return <div className="system-indicators">{text('catalog', error ? 'monitor_unavailable' : 'monitor_loading')}</div>;
-  return <div className="system-indicators" aria-label={text('catalog', 'monitor_label')}>
-    <span className={data.active === data.limit ? 'pressure' : ''}>{text('catalog', 'workers', data)}</span>
-    <span className={data.queued ? 'pressure' : ''}>{text('catalog', 'queue', data)}</span>
-    <span>{text('catalog', 'rejections', data)}</span>
-    <span>{text('catalog', 'circuits', { count: data.circuits.length })}</span>
-    {data.circuits.map(circuit => <span key={circuit.key} className="paused">{text('catalog', 'paused', { key: circuit.key, seconds: Math.ceil(circuit.retryInMs / 1000) })}</span>)}
-    {error && <span className="pressure">{text('catalog', 'monitor_unavailable')}</span>}
-  </div>;
 }
 
 function Storefront() {
@@ -131,7 +117,6 @@ function Storefront() {
         </div>
         <label className="auto-refresh"><input type="checkbox" checked={auto} onChange={event => setAuto(event.target.checked)} />{text('catalog', 'auto_refresh')}</label>
       </section>
-      <Indicators />
       <div className={`catalog-feedback ${state.error ? 'has-error' : ''}`} role="status" aria-live="polite">
         <strong>{state.pending ? text('catalog', 'updating') : state.error
           ? text('catalog', 'failed', { status: state.error.status ?? '—', milliseconds: state.milliseconds })

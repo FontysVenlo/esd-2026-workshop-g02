@@ -96,4 +96,8 @@ sum by (dependency, outcome) (rate(workshop_dependency_calls_total[1m]))
 sum by (dependency) (rate(workshop_fallbacks_total[1m]))
 ```
 
-The Grafana dashboard visualizes these real series. It also includes **Product p95 latency**, **Shared workers and queue**, **Capacity rejection rate**, and **Open product dependency circuits**. Product latency includes queue time; dependency latency measures the admitted backend call. Compare increments/rates for rejected requests, not the lifetime total. A fast Shipping failure can break catalog aggregation without raising queue pressure. Allow a fresh one-minute window when interpreting mitigation and up to one breaker cooldown after clearing a fault.
+Use Storefront for customer results and Grafana for internal monitoring. The dashboard starts with **Active workers**, **Waiting requests**, **Rejected since restart**, and **New rejections · last minute (estimate)**. **Shared workers and queue** includes the worker limit; **Capacity rejection rate** shows rejections per second. Compare fresh, equal one-minute windows rather than lifetime totals.
+
+**Open product dependency circuits** counts paused/probing paths. **Dependency circuit state** identifies each product/dependency: 0 closed, 1 paused, 2 probing. **Dependency retry delay** shows remaining cooldown at each scrape. Metrics are sampled every five seconds, so brief queue peaks or recovery probes can be missed; retry delay is not a live countdown. Closed paths explicitly return to zero.
+
+**Product p95 latency** includes queue time; dependency latency measures the admitted backend call. A fast Shipping failure can break the catalog without queue pressure. After cleanup, allow in-flight requests and one breaker cooldown to finish.

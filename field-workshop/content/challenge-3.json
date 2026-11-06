@@ -3,31 +3,31 @@
   "number": 3,
   "title": "Investigate a spreading incident",
   "level": "Advanced",
-  "scenario": "Support reports that a three-product catalog is slow or unavailable, although only one lamp dependency branch has been faulted. A facilitator seeds either slow lamp Inventory or disconnected lamp Shipping. Diagnose whether shared workers or aggregate error propagation explains the wider customer impact.",
-  "why": "The visible failures can be healthy products downstream of a shared bottleneck or an all-or-nothing response. Fixing the wrong dependency or enabling fallback without an appropriate timeout can leave the real problem active.",
-  "reproduce": "Ask a partner or facilitator to seed exactly one incident from docs/facilitator.md. They keep the chosen dependency and fault secret. Do not inspect Network Faults before writing your hypothesis.",
-  "ready": "{{ready}} Record the healthy baseline before your partner seeds the incident; do not clear it afterward. This challenge requires another person.",
-  "assignment": "Which lamp dependency is faulty, how does its impact spread to healthy products, and which mitigation contains that mechanism?",
+  "scenario": "A hidden fault on one lamp dependency slows or breaks the three-product catalog. Diagnose whether the impact spreads through shared workers or a failed catalog response.",
+  "why": "The visible victims may be healthy products. Find the cause before choosing a timeout, breaker or fallback.",
+  "reproduce": "Ask a partner to seed one incident from docs/facilitator.md. Record your diagnosis before inspecting Network Faults.",
+  "ready": "{{ready}} Record the healthy baseline before your partner seeds the hidden fault. Do not clear it afterward. A second person is required.",
+  "assignment": "Which lamp dependency failed, how does the impact spread, and what contains it?",
   "tasks": [
     {
       "title": "Arrange one hidden incident",
-      "instruction": "From a clean baseline, ask a partner to seed Assignment 3. Leave the exact fault secret and keep supplied traffic fixed. Write an abort condition."
+      "instruction": "Record a healthy baseline, then ask a partner to seed Assignment 3 without revealing it. Keep traffic fixed and set an abort condition."
     },
     {
       "title": "Collect the customer symptoms",
-      "instruction": "Compare availability and delivery catalog views. Record catalog times/statuses, chair/desk usefulness, active workers, queue state, and the rejected-count change with timestamps. Leave fault controls unopened."
+      "instruction": "Compare availability and delivery catalogs. Record times, status, chair/desk results, workers, queue and new rejections with timestamps. Leave fault controls closed."
     },
     {
       "title": "Write a supported diagnosis",
-      "instruction": "Use dependency outcomes/latency, product latency, and worker/queue charts. Predict the faulty dependency and whether the impact spreads through shared capacity, aggregate failure, or both. Record an alternative explanation before inspecting controls."
+      "instruction": "Use dependency outcomes, latency and worker charts to predict the fault and how it spreads. Record an alternative explanation before opening controls."
     },
     {
       "title": "Confirm and contain the mechanism",
-      "instruction": "Inspect Network Faults with the facilitator after recording your hypothesis. Apply a justified timeout/fallback setting. For slow calls use a short timeout plus fallback/breaker; for immediate disconnection use an honest partial quote. Preserve the exact original fault."
+      "instruction": "Inspect Network Faults with your partner. Keep the original fault. For slow calls, use a short timeout plus fallback/breaker; for a disconnect, preserve honest partial results."
     },
     {
       "title": "Validate the healthy products and reveal",
-      "instruction": "Retest the same catalog views and fresh windows. Compare healthy product usefulness, queue pressure, catalog time/status and the affected product’s uncertainty. Ask for the reveal and compare it with your hypothesis. {{cleanup}}"
+      "instruction": "Retest the same views in fresh windows. Compare healthy products, queue, catalog results and missing data. Ask for the reveal and check your diagnosis. {{cleanup}}"
     }
   ],
   "done": [
@@ -36,41 +36,41 @@
     "You compared the diagnosis with the reveal and restored all three products."
   ],
   "solution": [
-    "Slow Inventory can increase latency in both catalog views and occupy shared workers. Chair/desk latency or rejection signals can worsen despite healthy dependency branches.",
-    "Disconnected lamp Shipping should fail delivery aggregation but leave availability working. It can fail fast without filling the worker queue.",
-    "A short timeout bounds slow worker occupancy; the breaker pauses repeated failed product calls; fallback preserves honest partial catalog results. Choose the combination supported by the evidence.",
-    "Validate under the same fault and traffic. State which signals improved and which information remains unavailable, then restore and verify all products."
+    "Slow Inventory can delay both catalog views and occupy workers, causing healthy chair/desk requests to wait or fail.",
+    "Disconnected lamp Shipping fails delivery aggregation while availability works. Fast failure need not fill the queue.",
+    "A timeout bounds waiting; the breaker pauses repeated failures; fallback preserves partial results. Choose from the evidence.",
+    "Retest the same fault and traffic. State what improved and what remains missing, then restore all products."
   ],
   "fields": [
     {
       "key": "symptom",
       "label": "Customer symptom and time window",
-      "prompt": "Which customer route is slow or failing? When did you observe it?"
+      "prompt": "Which customer view failed or slowed, and when?"
     },
     {
       "key": "signals",
       "label": "Grafana evidence",
-      "prompt": "Which dependency and signals changed? Include panel names and your observations. A Prometheus query is optional."
+      "prompt": "Which dependency and Grafana signals changed? Name the panels."
     },
     {
       "key": "diagnosis",
       "label": "Hypothesis and uncertainty",
-      "prompt": "What is the likely fault? What else could explain the evidence?"
+      "prompt": "What is the likely fault? What else could explain it?"
     },
     {
       "key": "mitigation",
       "label": "{{mitigationLabel}}",
-      "prompt": "What did you change, and why does it address this symptom? {{mitigationGuidance}}"
+      "prompt": "What did you change, and why? {{mitigationGuidance}}"
     },
     {
       "key": "validation",
       "label": "Validation under the same incident",
-      "prompt": "Compare the same route and signals before and after the change. {{measurementGuidance}}"
+      "prompt": "Compare before and after under the same fault. {{measurementGuidance}}"
     },
     {
       "key": "conclusion",
       "label": "{{conclusionLabel}}",
-      "prompt": "What was confirmed? What trade-off remains? Confirm the facilitator removed the incident."
+      "prompt": "What did the reveal confirm? What trade-off remains? Confirm cleanup."
     }
   ],
   "overview": {

@@ -23,6 +23,18 @@ function Help() {
       <p>{w('in_network_faults_click_clear_all_faults_in_the')}</p><p>{w('verify_both_storefront_actions_work_again_and_live_stock')}</p></details>
   </details>;
 }
+function ExperimentGuide() {
+  return <details className="experiment-help experiment-guide"><summary>{w('your_five_steps')}</summary>
+    <p>{w('for_each_experiment_compare_three_runs_of_the_same')}</p>
+    {challenges.map(c => <details key={c.id} className="command-help"><summary>{c.overview.title}</summary>
+      <aside className="challenge-ready"><strong>{w('before_you_start')}</strong><p>{c.ready}</p></aside>
+      <ol className="challenge-steps">{c.tasks.map((task,i) => <li key={i}><h3>{task.title}</h3><p>{task.instruction}</p>
+        {i === 3 && c.mitigationHelp && <div className="mitigation-guide"><p>{c.mitigationHelp.description}</p><p>{c.mitigationHelp.instruction}</p>
+          <Link className="secondary next-link" href="http://localhost:8089/#mitigations">{w('open_fallbacks_timeouts')}</Link></div>}</li>)}</ol>
+      <section className="challenge-done"><h3>{w('you_are_finished_when')}</h3><ul>{c.done.map((line,i) => <li key={i}>{line}</li>)}</ul></section>
+    </details>)}
+  </details>;
+}
 function Home({ progress, reset }) {
   const next = currentChallengeIndex(progress);
   const tools = [
@@ -37,8 +49,9 @@ function Home({ progress, reset }) {
       <p className="home-lead">{w('investigate_a_small_storefront_through_four_reliability_challenges_measure')}</p>
       <div className="home-actions"><a className="primary home-cta" href={`#${challenges[next].id}`}>{submittedCount(progress) === challenges.length ? w('review_your_challenges') : w('continue_with_challenge', {number: next + 1})}</a>
         <button type="button" className="secondary home-cta" onClick={reset}>{w('reset_all_answers')}</button></div></section>
+    <ExperimentGuide />
     <section className="home-section"><div className="eyebrow">{w('your_role')}</div><h2>{w('make_a_working_shop_fail_then_improve_its_response')}</h2>
-      {['you_are_the_engineer_responsible_for_a_lamp_shop', 'the_shop_normally_starts_healthy_in_challenges_1_2', 'for_each_experiment_compare_three_runs_of_the_same'].map(key => <p key={key}>{w(key)}</p>)}
+      {['you_are_the_engineer_responsible_for_a_lamp_shop', 'the_shop_normally_starts_healthy_in_challenges_1_2'].map(key => <p key={key}>{w(key)}</p>)}
       <ul className="workshop-journey">{challenges.map(c => <li key={c.id}><strong>{c.overview.title}</strong><span>{c.overview.description}</span></li>)}</ul></section>
     <section className="home-section"><div className="eyebrow">{w('get_started')}</div><h2>{w('quick_start')}</h2>
       <ol className="quick-start">{[['start_the_stack','extract_the_zip_start_docker_desktop_then_double_click'],['read_the_customer_problem','open_challenge_1_in_the_sidebar_its_brief_explains'],['run_it_then_record_it','use_storefront_network_faults_and_grafana_fill_the_notes']].map(([title,copy]) => <li key={title}><strong>{w(title)}</strong><span>{w(copy)}</span></li>)}</ol>
@@ -57,12 +70,9 @@ function Challenge({ challenge: c, progress, update, submit }) {
     <section className="challenge-intro"><div className="eyebrow">{w('challenge_of', {number:c.number,total:challenges.length,level:c.level})}</div>
       <h1>{c.title}</h1><h2>{w('the_customer_problem')}</h2><p className="challenge-scenario">{c.scenario}</p>
       <div className="challenge-brief">{[['why_this_matters',c.why],['the_issue_to_reproduce',c.reproduce]].map(([key,copy]) => <section key={key}><h3>{w(key)}</h3><p>{copy}</p></section>)}</div>
-      <p className="challenge-assignment">{c.assignment}</p><aside className="challenge-ready"><strong>{w('before_you_start')}</strong><p>{c.ready}</p></aside>
-      <h2>{w('your_five_steps')}</h2><ol className="challenge-steps">{c.tasks.map((task,i) => <li key={i}><h3>{task.title}</h3><p>{task.instruction}</p>
-        {i === 3 && c.mitigationHelp && <div className="mitigation-guide"><p>{c.mitigationHelp.description}</p><p>{c.mitigationHelp.instruction}</p>
-          <Link className="secondary next-link" href="http://localhost:8089/#mitigations">{w('open_fallbacks_timeouts')}</Link><p className="meta">{w('settings_apply_immediately_on_windows_and_mac_no_terminal')}</p></div>}</li>)}</ol>
-      <section className="challenge-done"><h2>{w('you_are_finished_when')}</h2><ul>{c.done.map((line,i) => <li key={i}>{line}</li>)}</ul></section>
-      <Help /><div className="tool-links">{toolLinks.map(([label,href]) => <Link key={href} href={href}>{w(label)} ↗</Link>)}</div></section>
+      <p className="challenge-assignment">{c.assignment}</p>
+      <a className="text-button" href="#home">{w('review_steps_on_home')}</a>
+      <div className="tool-links">{toolLinks.map(([label,href]) => <Link key={href} href={href}>{w(label)} ↗</Link>)}</div></section>
     <div className={`challenge-columns${submission ? ' has-solution' : ''}`}><section className="notes-panel"><div className="eyebrow">{w('your_work')}</div><h2>{w('experiment_notes')}</h2>
       <p className="meta">{w('fill_these_fields_as_you_run_the_experiment_above')}</p>
       <form id="challenge-form" onSubmit={event => {
@@ -70,7 +80,7 @@ function Challenge({ challenge: c, progress, update, submit }) {
         try { submit(c.id,answers); setError(''); requestAnimationFrame(() => solutionRef.current?.scrollIntoView({behavior:'smooth',block:'nearest'})); }
         catch (error) { setError(error.message); }
       }}>{c.fields.map(field => <div key={field.key} className="field-row"><label htmlFor={`${c.id}-${field.key}`}>{field.label}<small>{field.prompt}</small></label>
-        <textarea id={`${c.id}-${field.key}`} name={field.key} required placeholder={field.prompt} value={answers[field.key] ?? ''} onChange={event => update(c.id,{...answers,[field.key]:event.target.value})} /></div>)}
+        <textarea id={`${c.id}-${field.key}`} name={field.key} required value={answers[field.key] ?? ''} onChange={event => update(c.id,{...answers,[field.key]:event.target.value})} /></div>)}
         <div className="form-footer"><button className="primary" type="submit">{w(submission ? 'update_submission' : 'submit_notes')}</button>
           <span className="meta">{submission ? w('your_solution_is_shown_alongside_your_notes') : index < challenges.length-1 ? w('submitting_unlocks_challenge',{number:index+2}) : w('submitting_completes_the_workshop')}</span></div>
         <p className="feedback error" role="status">{error}</p></form></section>

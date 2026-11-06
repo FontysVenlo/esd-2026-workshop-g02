@@ -261,10 +261,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .catalog-product.degraded { border-color: #c99a54; background: #fff4dc; }
 .catalog-product button { display: block; margin-top: 1rem; }
 .catalog-product button:disabled { opacity: .55; cursor: not-allowed; }
-.system-indicators { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
-.system-indicators span { padding: .45rem .7rem; background: #e8f0e5; border-radius: .5rem; font-size: .85rem; }
-.system-indicators .pressure, .catalog-error { color: #902e22; background: #fce7df; }
-.system-indicators .paused { color: var(--catalog-warning); background: #fff0cc; }
+.catalog-error { color: #902e22; background: #fce7df; }
 @media (max-width: 760px) { .catalog-products { grid-template-columns: 1fr; } .catalog-lab { padding: 1rem; } }
 .react-storefront { max-width: 1280px; margin: auto; padding: 3rem 1.5rem 2rem; }
 .catalog-intro { max-width: 850px; }

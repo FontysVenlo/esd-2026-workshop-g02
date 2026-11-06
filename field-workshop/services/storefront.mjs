@@ -134,11 +134,25 @@ export function createStorefrontServer(config = {}) {
     if (route === '/metrics') {
       res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4' });
       const state = capacity.snapshot();
+      const circuits = new Map(breaker.snapshot().map(circuit => [circuit.key, circuit]));
+      const circuitMetrics = products().flatMap(product => ['inventory', 'shipping'].flatMap(dependency => {
+        const circuit = circuits.get(`${product.sku}:${dependency}`);
+        const labels = `sku="${product.sku}",dependency="${dependency}"`;
+        return [
+          `workshop_circuit_state{${labels}} ${circuit ? circuit.probing ? 2 : 1 : 0}`,
+          `workshop_circuit_retry_seconds{${labels}} ${(circuit?.retryInMs ?? 0) / 1000}`
+        ];
+      }));
       return res.end(metrics.render() + [
         '# TYPE workshop_workers_active gauge', `workshop_workers_active ${state.active}`,
+        '# TYPE workshop_workers_limit gauge', `workshop_workers_limit ${state.limit}`,
         '# TYPE workshop_workers_queued gauge', `workshop_workers_queued ${state.queued}`,
         '# TYPE workshop_capacity_rejections_total counter', `workshop_capacity_rejections_total ${state.rejected}`,
-        '# TYPE workshop_open_circuits gauge', `workshop_open_circuits ${breaker.snapshot().length}`, ''
+        '# TYPE workshop_open_circuits gauge', `workshop_open_circuits ${circuits.size}`,
+        '# HELP workshop_circuit_state Product dependency circuit: 0 closed, 1 paused, 2 probing.',
+        '# TYPE workshop_circuit_state gauge',
+        '# HELP workshop_circuit_retry_seconds Seconds until a product dependency recovery probe is eligible.',
+        '# TYPE workshop_circuit_retry_seconds gauge', ...circuitMetrics, ''
       ].join('\n'));
     }
     if (route === '/api/system') return send(200, { ...capacity.snapshot(), circuits: breaker.snapshot() });

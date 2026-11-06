@@ -68,6 +68,7 @@ test('workshop overview, browser modules, and local tool guide are served', asyn
     assert.match(storefront, /src="\/storefront.mjs"/);
     const storefrontApp = await (await fetch(`${base}/storefront.mjs`)).text();
     assert.match(storefrontApp, /\/api\/catalog/);
+    assert.doesNotMatch(storefrontApp, /\/api\/system|system-indicators/, 'customer page must not poll or show internal worker monitoring');
     for (const name of ['lamp', 'chair', 'desk']) {
       const image = await fetch(`${base}/images/${name}.png`);
       assert.equal(image.status, 200);

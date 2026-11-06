@@ -12,15 +12,15 @@ Timeouts bound dependency waiting; a circuit breaker pauses a failed product/dep
 
 **Why this matters.** The mitigation now protects other products. A 400 ms timeout releases a worker, the 5-second circuit breaker stops repeated waiting on the lamp, and the fallback lets the catalog show chair and desk while lamp stock is unconfirmed. These are three different mechanisms; fallback alone does not free capacity.
 
-**The issue to reproduce.** Choose Inventory in Network Faults and apply a 1500 ms response delay. It affects only Desk Lamp’s branch. Use “Refresh all availability” in Storefront and watch the fixed background traffic fill the two shared workers.
+**The issue to reproduce.** Choose Inventory in Network Faults and apply a 1500 ms response delay. It affects only Desk Lamp’s branch. Use “Refresh all availability” in Storefront and watch the shared workers in Grafana as fixed background traffic runs.
 
-**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total.
+**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. Compare the catalog in Storefront; read workers, queue, rejections and dependency circuits in Grafana. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total.
 
 **Your question.** Can you keep the healthy chair and desk available while temporarily disabling an unconfirmed lamp availability check?
 
 1. **Measure the healthy catalog.** Use “Refresh all availability”. Record all three stock results, catalog time, workers, queue size and the starting rejected count. In Grafana inspect “Product p95 latency” and “Shared workers and queue”. Predict which products can be affected despite having healthy dependency branches; state an abort condition.
 
-2. **Create a lamp-only slowdown.** Apply +1500 ms to Inventory in Network Faults. Keep supplied traffic unchanged and refresh the catalog. Record lamp delay, chair/desk queue time or failures, catalog status, and the change in rejected requests over a fresh window. The slow request consumes actual shared workers; the indicators are measured state.
+2. **Create a lamp-only slowdown.** Apply +1500 ms to Inventory in Network Faults. Keep supplied traffic unchanged and refresh the catalog. Record lamp delay, chair/desk queue time or failures, catalog status, and the change in rejected requests over a fresh window. The slow request consumes actual shared workers; Grafana charts measured state.
 
 3. **Trace the propagation.** Compare “Dependency p95 latency”, “Product p95 latency”, “Shared workers and queue”, and “Capacity rejection rate”. Explain the path: lamp Inventory delay → occupied workers → healthy products waiting/rejected, plus the catalog waiting for every product. A queue can fluctuate; use a full window.
 
@@ -42,7 +42,7 @@ Timeouts bound dependency waiting; a circuit breaker pauses a failed product/dep
 
 **The issue to reproduce.** Choose Shipping and click Disconnect in Network Faults. Compare “Refresh all availability” with “Preview all deliveries”. The complete delivery catalog should fail even though chair and desk have healthy Shipping paths.
 
-**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total.
+**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. Compare the catalog in Storefront; read workers, queue, rejections and dependency circuits in Grafana. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total.
 
 **Your question.** Can one unavailable lamp quote be contained to that quote instead of taking down the complete delivery catalog?
 
@@ -50,7 +50,7 @@ Timeouts bound dependency waiting; a circuit breaker pauses a failed product/dep
 
 2. **Disconnect only lamp Shipping.** Choose Shipping → Disconnect. Repeat both views. Record the failed whole-catalog response, the working availability view, and Shipping failures. Do not claim worker exhaustion if the queue stays empty.
 
-3. **Identify the coupling.** Inspect “Customer request rate”, “Dependency outcomes” and worker indicators. Explain why one rejected quote prevents the aggregate catalog from returning its healthy products. Distinguish this from Challenge 1’s shared-capacity slowdown.
+3. **Identify the coupling.** Inspect “Customer request rate”, “Dependency outcomes” and “Shared workers and queue” in Grafana. Explain why one rejected quote prevents the aggregate catalog from returning its healthy products. Distinguish this from Challenge 1’s shared-capacity slowdown.
 
 4. **Allow an honest partial catalog.** Reconnect Shipping first, then apply Challenge 2 settings in Fallbacks & timeouts. Shipping fallback and its 5-second circuit breaker are enabled; the timeout stays 3000 ms because disconnection fails immediately. Stock is still authoritative.
 
@@ -70,7 +70,7 @@ Timeouts bound dependency waiting; a circuit breaker pauses a failed product/dep
 
 **The issue to reproduce.** Ask a partner or facilitator to seed exactly one incident from docs/facilitator.md. They keep the chosen dependency and fault secret. Do not inspect Network Faults before writing your hypothesis.
 
-**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total. Record the healthy baseline before your partner seeds the incident; do not clear it afterward. This challenge requires another person.
+**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. Compare the catalog in Storefront; read workers, queue, rejections and dependency circuits in Grafana. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total. Record the healthy baseline before your partner seeds the incident; do not clear it afterward. This challenge requires another person.
 
 **Your question.** Which lamp dependency is faulty, how does its impact spread to healthy products, and which mitigation contains that mechanism?
 
@@ -98,7 +98,7 @@ Timeouts bound dependency waiting; a circuit breaker pauses a failed product/dep
 
 **The issue to reproduce.** Choose Inventory or Shipping on the lamp branch and one fault: a measured delay or disconnection. Choose availability or delivery catalog. A +1500 ms delay can pressure shared workers; disconnection demonstrates aggregate error propagation.
 
-**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. In Storefront, compare the three-product catalog and its worker indicators. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total. Use only the two exposed lamp fault controls; the other product paths are the healthy comparison group.
+**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. Compare the catalog in Storefront; read workers, queue, rejections and dependency circuits in Grafana. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total. Use only the two exposed lamp fault controls; the other product paths are the healthy comparison group.
 
 **Your question.** Can you reproduce a wider customer impact and then contain it to the affected product’s missing information?
 

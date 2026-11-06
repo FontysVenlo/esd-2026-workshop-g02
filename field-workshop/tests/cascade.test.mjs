@@ -45,9 +45,13 @@ test('two slow lamp calls cause a healthy product to queue and reject; mitigatio
   const lamp1 = fetch(`${base}/api/product`);
   const lamp2 = fetch(`${base}/api/product`);
   await waitFor(base, state => state.active === 2);
+  const occupiedMetrics = await (await fetch(`${base}/metrics`)).text();
+  assert.match(occupiedMetrics, /^workshop_workers_active 2$/m);
+  assert.match(occupiedMetrics, /^workshop_workers_limit 2$/m);
   const healthyFailure = await fetch(`${base}/api/product?sku=CHAIR-02`);
   assert.equal(healthyFailure.status, 503, 'healthy branch should be affected by occupied workers');
   assert.equal((await (await fetch(`${base}/api/system`)).json()).rejected, 1);
+  assert.match(await (await fetch(`${base}/metrics`)).text(), /^workshop_capacity_rejections_total 1$/m);
   for (const resolve of pending.splice(0)) resolve();
   await Promise.all([lamp1, lamp2]);
 
@@ -56,6 +60,11 @@ test('two slow lamp calls cause a healthy product to queue and reject; mitigatio
   assert.equal(degraded.inventory.source, 'unconfirmed');
   const system = await (await fetch(`${base}/api/system`)).json();
   assert.equal(system.circuits[0].key, 'LAMP-01:inventory');
+  const pausedMetrics = await (await fetch(`${base}/metrics`)).text();
+  assert.match(pausedMetrics, /workshop_circuit_state\{sku="LAMP-01",dependency="inventory"\} 1/);
+  assert.match(pausedMetrics, /workshop_circuit_state\{sku="CHAIR-02",dependency="inventory"\} 0/);
+  const retry = pausedMetrics.match(/workshop_circuit_retry_seconds\{sku="LAMP-01",dependency="inventory"\} ([\d.]+)/);
+  assert.ok(Number(retry?.[1]) > 0 && Number(retry[1]) <= 5);
   // An open lamp circuit must not reject healthy product work or call the lamp.
   const callsBefore = pending.length;
   const responses = await Promise.all(['LAMP-01', 'CHAIR-02', 'DESK-03'].map(sku => fetch(`${base}/api/product?sku=${sku}`)));
@@ -94,6 +103,10 @@ test('one disconnected lamp quote fails the catalog; fallback preserves other li
   assert.equal(recovered.circuits.length, 0);
   const metrics = await (await fetch(`${base}/metrics`)).text();
   assert.match(metrics, /workshop_product_duration_seconds_bucket\{service="storefront",sku="CHAIR-02"/);
+  assert.match(metrics, /^workshop_open_circuits 0$/m);
+  assert.match(metrics, /workshop_circuit_state\{sku="LAMP-01",dependency="shipping"\} 0/);
+  assert.match(metrics, /workshop_circuit_retry_seconds\{sku="LAMP-01",dependency="shipping"\} 0/);
+  assert.equal((metrics.match(/^workshop_circuit_state\{/gm) ?? []).length, 6, 'all paths remain visible after recovery');
 });
 
 test('a circuit allows just one recovery probe and resets on success or disabled policy', async () => {

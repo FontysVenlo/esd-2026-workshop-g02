@@ -3,32 +3,32 @@
   "number": 1,
   "title": "One slow product blocks the shop",
   "level": "Guided entry",
-  "scenario": "Desk Lamp, Task Chair and Writing Desk share two Storefront workers. Only the lamp’s Inventory network branch becomes slow. Repeated lamp requests hold the workers; healthy chair and desk requests now queue or are rejected. The complete catalog also waits for the lamp result.",
-  "why": "The mitigation now protects other products. A 400 ms timeout releases a worker, the 5-second circuit breaker stops repeated waiting on the lamp, and the fallback lets the catalog show chair and desk while lamp stock is unconfirmed. These are three different mechanisms; fallback alone does not free capacity.",
-  "reproduce": "Choose Inventory in Network Faults and apply a 1500 ms response delay. It affects only Desk Lamp’s branch. Use “Refresh all availability” in Storefront and watch the fixed background traffic fill the two shared workers.",
+  "scenario": "One slow lamp Inventory call can occupy the shop’s two shared workers. Healthy chair and desk requests then queue or fail, and the whole catalog waits.",
+  "why": "A short timeout frees workers. A fallback keeps healthy products visible with lamp stock marked as unconfirmed.",
+  "reproduce": "In Network Faults, add 1500 ms to Inventory. Use “Refresh all availability” and watch shared workers in Grafana.",
   "ready": "{{ready}}",
-  "assignment": "Can you keep the healthy chair and desk available while temporarily disabling an unconfirmed lamp availability check?",
+  "assignment": "Assignment: Can you keep chair and desk available while lamp stock is unconfirmed?",
   "mitigationGuide": "inventory",
   "tasks": [
     {
       "title": "Measure the healthy catalog",
-      "instruction": "Use “Refresh all availability”. Record all three stock results, catalog time, workers, queue size and the starting rejected count. In Grafana inspect “Product p95 latency” and “Shared workers and queue”. Predict which products can be affected despite having healthy dependency branches; state an abort condition."
+      "instruction": "Refresh all availability. Record stock, catalog time, workers, queue and rejected count. Check “Product p95 latency” and “Shared workers and queue”. Predict the impact and set an abort condition."
     },
     {
       "title": "Create a lamp-only slowdown",
-      "instruction": "Apply +1500 ms to Inventory in Network Faults. Keep supplied traffic unchanged and refresh the catalog. Record lamp delay, chair/desk queue time or failures, catalog status, and the change in rejected requests over a fresh window. The slow request consumes actual shared workers; the indicators are measured state."
+      "instruction": "Add 1500 ms to Inventory. Keep traffic fixed. Record lamp delay, chair/desk waits or failures, catalog status and new rejections in a fresh window."
     },
     {
       "title": "Trace the propagation",
-      "instruction": "Compare “Dependency p95 latency”, “Product p95 latency”, “Shared workers and queue”, and “Capacity rejection rate”. Explain the path: lamp Inventory delay → occupied workers → healthy products waiting/rejected, plus the catalog waiting for every product. A queue can fluctuate; use a full window."
+      "instruction": "Compare dependency/product p95 latency, workers, queue and rejection rate. Explain how lamp waiting affects healthy products and the catalog."
     },
     {
       "title": "Apply containment",
-      "instruction": "Remove the fault first. Open Fallbacks & timeouts and use Challenge 1 settings. This applies a 400 ms Inventory timeout and enables fallback plus the product/dependency circuit breaker. Predict the distinct effect of each mechanism."
+      "instruction": "Remove the fault. In Fallbacks & timeouts, apply Challenge 1 settings: 400 ms Inventory timeout plus fallback and breaker. Predict each effect."
     },
     {
       "title": "Repeat the same fault and verify recovery",
-      "instruction": "Reapply the identical +1500 ms Inventory delay. Refresh several times, including within and after a 5-second cooldown. Compare chair/desk live results, queue pressure, rejection-rate changes, catalog latency, and lamp stock uncertainty. The lamp availability action should be disabled while stock is unconfirmed. {{cleanup}}"
+      "instruction": "Repeat the same delay. Compare chair/desk results, queue, new rejections and catalog time, including a 5-second recovery probe. Lamp availability should be disabled while stock is unconfirmed. {{cleanup}}"
     }
   ],
   "done": [
@@ -37,41 +37,41 @@
     "You distinguished timeout, circuit breaker and fallback; compared equal windows; and verified cleanup."
   ],
   "solution": [
-    "Healthy: all three product branches answer quickly and the complete catalog is live. Record actual local timings.",
-    "With +1500 ms on the lamp Inventory branch, repeated lamp requests can exceed two workers of capacity. Chair/desk requests wait or are rejected even though their own dependency paths are healthy. A complete catalog also waits for or fails on one missing result.",
-    "With a 400 ms timeout, a failed lamp call releases its worker sooner. The circuit breaker then skips that product/dependency path for 5 seconds; the fallback returns unknown stock instead of rejecting the entire catalog. Chair and desk can return live information.",
-    "Expect a probe and possible short latency spike every cooldown while the fault persists. HTTP 200 is not confirmed lamp stock. Remove the fault and restore defaults; verify all three recover."
+    "Healthy: all products and the catalog return live data quickly. Use your measured timings.",
+    "Slow lamp calls occupy shared workers. Healthy products can queue or fail; the catalog waits for every result.",
+    "The 400 ms timeout releases workers sooner. The breaker pauses failed lamp calls for 5 seconds; fallback returns unconfirmed stock while chair and desk stay live.",
+    "Recovery probes may briefly increase latency. HTTP 200 does not confirm lamp stock. Remove faults, restore defaults and verify recovery."
   ],
   "fields": [
     {
       "key": "steadyState",
       "label": "Healthy baseline and metric",
-      "prompt": "Which route and metric did you choose? Include your measured baseline. {{measurementGuidance}}"
+      "prompt": "Record your route and baseline. {{measurementGuidance}}"
     },
     {
       "key": "hypothesis",
       "label": "Hypothesis and abort condition",
-      "prompt": "What did you expect from +1500 ms Inventory latency, and when would you stop?"
+      "prompt": "What will +1500 ms Inventory delay affect? When would you stop?"
     },
     {
       "key": "faultEvidence",
       "label": "Fault evidence",
-      "prompt": "Record the same route under fault: latency, success rate, Inventory signal, and time window. {{measurementGuidance}}"
+      "prompt": "Record Inventory latency and customer impact. {{measurementGuidance}}"
     },
     {
       "key": "mitigation",
       "label": "{{mitigationLabel}}",
-      "prompt": "What timeout/fallback did you use, and why is it safe for a product page? {{mitigationGuidance}}"
+      "prompt": "Which settings did you use, and why? {{mitigationGuidance}}"
     },
     {
       "key": "validation",
       "label": "Same-fault validation",
-      "prompt": "What happened when you applied the identical fault after mitigation? {{measurementGuidance}}"
+      "prompt": "Compare the identical fault after mitigation. {{measurementGuidance}}"
     },
     {
       "key": "conclusion",
       "label": "{{conclusionLabel}}",
-      "prompt": "Did resilience improve? What information is now uncertain? Confirm that the fault was removed."
+      "prompt": "What improved? What remains uncertain? Confirm cleanup."
     }
   ],
   "overview": {
@@ -79,7 +79,7 @@
     "description": "Watch shared workers fill, then protect chair and desk with bounded waiting and honest partial results."
   },
   "mitigationHelp": {
-    "description": "Use the built-in 400 ms timeout, fallback and 5-second per-product/dependency circuit breaker. Under the same delay the lamp becomes unconfirmed; chair and desk should stay live.",
-    "instruction": "In Network Faults → Fallbacks & timeouts, click “Use Challenge 1 settings”. Repeat the same fault and watch the catalog, queue and product latency."
+    "description": "The preset uses a 400 ms timeout, fallback and a 5-second breaker for lamp Inventory.",
+    "instruction": "Click “Use Challenge 1 settings”, then repeat the same fault."
   }
 }
