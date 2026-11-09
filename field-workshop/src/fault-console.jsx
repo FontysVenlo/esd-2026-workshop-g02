@@ -659,6 +659,7 @@ function Console() {
           hidden={tab !== 'info'}
         >
           <h2>{faultConsolePage.underlying_api_commands}</h2>
+          <p>{faultConsolePage.info_tab_for_your_info}</p>
           <p>{faultConsolePage.these_controls_send_http_requests_to_toxiproxy_the_storefront}</p>
           <ul>
             <li>

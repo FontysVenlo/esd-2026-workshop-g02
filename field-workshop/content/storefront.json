@@ -2,8 +2,7 @@
   "storefrontPage": {
     "northstar_supply": "Northstar Supply",
     "workshop_overview": "← Workshop overview",
-    "order_preview": "Order preview",
-    "order_preview_only_no_purchase_is_made": "Order preview only. No purchase is made."
+    "order_preview": "Order preview"
   },
   "storefront": {
     "preview_ready": "Preview ready",
@@ -20,8 +19,7 @@
     "refresh_stock": "Refresh all product availability",
     "refresh_preview": "Preview all product deliveries",
     "auto_refresh": "Refresh this view every 2 seconds",
-    "explanation": "Stock and delivery are checked live. If stock cannot be confirmed, availability checking is temporarily disabled. An unavailable delivery quote is not a delivery promise. After a refresh fails, cards show the last known result until live information returns.",
-    "failed": "Whole catalog unavailable · HTTP {status} · {milliseconds} ms",
+    "explanation": "Stock and delivery information are checked in real time. If the stock service fails or responds too slowly, stock availability cannot be checked for now. If the delivery service fails, no delivery date can be guaranteed. When updating information fails, the system continues showing the last available results until the services work again.",    "failed": "Whole catalog unavailable · HTTP {status} · {milliseconds} ms",
     "stock_ready": "Availability catalog ready · {milliseconds} ms",
     "preview_ready": "Delivery catalog ready · {milliseconds} ms",
     "limited": "Limited information",
