@@ -43,9 +43,14 @@ test('each challenge shows its own complete tasks and page-local edits', async (
     for (const challenge of challenges) {
       globalThis.location = { hash: '#' + challenge.id };
       const html = renderToStaticMarkup(React.createElement(Workshop));
+      const menuEnd = html.indexOf('</nav>', html.indexOf('id="challenge-nav"'));
+      const mainStart = html.indexOf('id="challenge-detail"');
+      const instructions = html.slice(menuEnd, mainStart);
+      assert.ok(menuEnd >= 0 && mainStart > menuEnd);
+      assert.ok(instructions.includes('class="sidebar-instructions"'));
       for (const task of challenge.tasks) {
-        assert.ok(html.includes(renderToStaticMarkup(React.createElement('h3', null, task.title))));
-        assert.ok(html.includes(renderToStaticMarkup(React.createElement('p', null, task.instruction))));
+        assert.ok(instructions.includes(renderToStaticMarkup(React.createElement('h3', null, task.title))));
+        assert.ok(instructions.includes(renderToStaticMarkup(React.createElement('p', null, task.instruction))));
       }
       assert.ok(html.includes('Your tasks'));
       assert.doesNotMatch(html, /experiment-guide|\{\{/);

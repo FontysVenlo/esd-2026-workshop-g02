@@ -294,7 +294,7 @@
       "id": 15,
       "type": "timeseries",
       "title": "Dependency circuit state",
-      "description": "0 = closed, 1 = paused, 2 = recovery probe in flight. Each product/dependency has its own circuit. Five-second scrapes can miss brief probes.",
+      "description": "0 = closed, 1 = paused, 2 = recovery probe in flight. Inventory has a circuit for each product. Shipping has one shared circuit labelled all. Five-second scrapes can miss brief probes.",
       "datasource": {
         "type": "prometheus",
         "uid": "field-prometheus"

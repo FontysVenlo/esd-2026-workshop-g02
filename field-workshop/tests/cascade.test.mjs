@@ -39,7 +39,7 @@ test('two slow lamp calls cause a healthy product to queue and reject; mitigatio
   const healthy = await serve(dependency(async () => {}));
   const mitigations = createMitigations();
   const base = await serve(createStorefrontServer({
-    inventoryUrl: slow, shippingUrl: healthy, healthyInventoryUrl: healthy, healthyShippingUrl: healthy,
+    inventoryUrl: slow, shippingUrl: healthy, healthyInventoryUrl: healthy,
     mitigations, capacity: { queueTimeoutMs: 70 }
   }));
   const lamp1 = fetch(`${base}/api/product`);
@@ -76,7 +76,7 @@ test('two slow lamp calls cause a healthy product to queue and reject; mitigatio
   for (const resolve of pending.splice(0)) resolve();
 });
 
-test('one disconnected lamp quote fails the catalog; fallback preserves other live products and recovers', async () => {
+test('shared Shipping outage preserves stock with fallback and quotes recover after reconnect', async () => {
   let offline = true;
   const shipping = await serve(dependency(async (_req, res) => {
     if (offline) { res.writeHead(503); res.end('{}'); }
@@ -84,29 +84,31 @@ test('one disconnected lamp quote fails the catalog; fallback preserves other li
   const healthy = await serve(dependency(async () => {}));
   const mitigations = createMitigations();
   const base = await serve(createStorefrontServer({ inventoryUrl: healthy, shippingUrl: shipping,
-    healthyInventoryUrl: healthy, healthyShippingUrl: healthy, mitigations, breaker: { cooldownMs: 20 } }));
+    healthyInventoryUrl: healthy, mitigations, breaker: { cooldownMs: 20 } }));
   assert.equal((await fetch(`${base}/api/catalog?preview=true`)).status, 503);
   assert.equal((await fetch(`${base}/api/catalog`)).status, 200);
-  assert.equal((await fetch(`${base}/api/order-preview?sku=CHAIR-02`)).status, 200);
+  assert.equal((await fetch(`${base}/api/order-preview?sku=CHAIR-02`)).status, 503);
   mitigations.apply({ action: 'configure', dependency: 'shipping', timeoutMs: 400, fallback: true });
   const response = await fetch(`${base}/api/catalog?preview=true`);
   assert.equal(response.status, 200);
   const catalog = await response.json();
   assert.equal(catalog.products.length, 3);
-  assert.deepEqual(catalog.products.map(result => result.shipping.source), ['unavailable', 'live', 'live']);
+  assert.deepEqual(catalog.products.map(result => result.shipping.source), ['unavailable', 'unavailable', 'unavailable']);
   assert.equal(catalog.products[0].shipping.priceEur, null);
   assert.ok(catalog.products.every(result => result.inventory.source === 'live'));
+  assert.deepEqual(catalog.circuits.map(c => c.key), ['shipping']);
   offline = false;
   await new Promise(resolve => setTimeout(resolve, 25));
+  await fetch(`${base}/api/order-preview?sku=CHAIR-02`); // Successful recovery probe reopens quotes for every SKU.
   const recovered = await (await fetch(`${base}/api/catalog?preview=true`)).json();
   assert.ok(recovered.products.every(result => !result.degraded));
   assert.equal(recovered.circuits.length, 0);
   const metrics = await (await fetch(`${base}/metrics`)).text();
   assert.match(metrics, /workshop_product_duration_seconds_bucket\{service="storefront",sku="CHAIR-02"/);
   assert.match(metrics, /^workshop_open_circuits 0$/m);
-  assert.match(metrics, /workshop_circuit_state\{sku="LAMP-01",dependency="shipping"\} 0/);
-  assert.match(metrics, /workshop_circuit_retry_seconds\{sku="LAMP-01",dependency="shipping"\} 0/);
-  assert.equal((metrics.match(/^workshop_circuit_state\{/gm) ?? []).length, 6, 'all paths remain visible after recovery');
+  assert.match(metrics, /workshop_circuit_state\{sku="all",dependency="shipping"\} 0/);
+  assert.match(metrics, /workshop_circuit_retry_seconds\{sku="all",dependency="shipping"\} 0/);
+  assert.equal((metrics.match(/^workshop_circuit_state\{/gm) ?? []).length, 4, 'all paths remain visible after recovery');
 });
 
 test('a circuit allows just one recovery probe and resets on success or disabled policy', async () => {

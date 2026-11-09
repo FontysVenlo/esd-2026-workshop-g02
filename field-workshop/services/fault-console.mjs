@@ -1,11 +1,9 @@
 import { format } from '../src/shared/copy.js';
 import http from 'node:http';
-import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { renderPage, serveContentAsset } from './web-content.mjs';
+import { pageReader, serveContentAsset } from './web-content.mjs';
 
-const page = renderPage('fault-console.html');
-const siteCss = readFileSync(new URL('../build/site.css', import.meta.url));
+const page = pageReader('fault-console.html');
 const proxyNames = ['inventory', 'shipping'];
 const toxicName = 'workshop-latency';
 
@@ -87,13 +85,9 @@ export function createFaultConsoleServer(config = {}) {
     };
     if (req.method === 'GET' && route === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      return res.end(page);
+      return res.end(page());
     }
     if (req.method === 'GET' && serveContentAsset(route, res)) return;
-    if (req.method === 'GET' && route === '/site.css') {
-      res.writeHead(200, { 'Content-Type': 'text/css; charset=utf-8' });
-      return res.end(siteCss);
-    }
     if (req.method === 'GET' && route === '/health') return send(200, { status: 'ok' });
     if (route === '/api/mitigations' && ['GET', 'POST'].includes(req.method)) {
       if (req.method === 'POST') {

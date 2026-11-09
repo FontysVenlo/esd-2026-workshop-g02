@@ -5,7 +5,6 @@ const proxies = [
   { name: 'shipping', listen: '0.0.0.0:8667', upstream: 'shipping:8080' },
   { name: 'seating-inventory', listen: '0.0.0.0:8668', upstream: 'seating-inventory:8080' },
   { name: 'desks-inventory', listen: '0.0.0.0:8670', upstream: 'desks-inventory:8080' },
-  { name: 'shipping-healthy', listen: '0.0.0.0:8669', upstream: 'shipping:8080' }
 ];
 
 export async function initializeProxies(api = process.env.TOXIPROXY_API ?? 'http://localhost:8474', wait = ms => new Promise(resolve => setTimeout(resolve, ms))) {

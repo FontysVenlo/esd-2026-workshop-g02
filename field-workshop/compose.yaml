@@ -48,7 +48,7 @@ services:
     image: ghcr.io/shopify/toxiproxy:2.12.0
     ports:
       - "127.0.0.1:8478:8474"
-    expose: ["8666", "8667", "8668", "8669", "8670"]
+    expose: ["8666", "8667", "8668", "8670"]
 
   proxy-init:
     build: .
@@ -67,7 +67,6 @@ services:
       SHIPPING_URL: http://toxiproxy:8667
       DESKS_INVENTORY_URL: http://toxiproxy:8670
       SEATING_INVENTORY_URL: http://toxiproxy:8668
-      HEALTHY_SHIPPING_URL: http://toxiproxy:8669
       INVENTORY_TIMEOUT_MS: ${INVENTORY_TIMEOUT_MS:-3000}
       SHIPPING_TIMEOUT_MS: ${SHIPPING_TIMEOUT_MS:-3000}
       INVENTORY_FALLBACK: ${INVENTORY_FALLBACK:-false}

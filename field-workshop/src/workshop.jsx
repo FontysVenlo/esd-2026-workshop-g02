@@ -73,6 +73,17 @@ function FreshStartToast({ status, retry }) {
     {status.state === 'error' && <button type="button" onClick={retry}>{w('try_again')}</button>}
   </div>;
 }
+function ChallengeInstructions({ challenge: c }) {
+  const { w } = useWorkshopCopy();
+  return <section className="sidebar-instructions">
+      <details className="challenge-ready"><summary>{w('before_you_start')}</summary><p>{c.ready}</p></details>
+      <h2>{w('your_five_steps')}</h2>
+      <ol className="challenge-steps">{c.tasks.map((task,i) => <li key={i}><details><summary><h3>{task.title}</h3></summary><p>{task.instruction}</p>
+        {i === 3 && c.mitigationHelp && <div className="mitigation-guide"><p>{c.mitigationHelp.description}</p><p>{c.mitigationHelp.instruction}</p>
+          <Link className="secondary next-link" href="http://localhost:8089/#mitigations">{w('open_fallbacks_timeouts')}</Link></div>}</details></li>)}</ol>
+      <details className="challenge-done"><summary>{w('you_are_finished_when')}</summary><ul>{c.done.map((line,i) => <li key={i}>{line}</li>)}</ul></details>
+  </section>;
+}
 function Challenge({ challenge: c, progress, update, submit }) {
   const { w, page } = useWorkshopCopy();
   const [error, setError] = useState('');
@@ -86,12 +97,6 @@ function Challenge({ challenge: c, progress, update, submit }) {
       <div className="challenge-brief">{[['why_this_matters',c.why],['the_issue_to_reproduce',c.reproduce]].map(([key,copy]) => <section key={key}><h3>{w(key)}</h3><p>{copy}</p></section>)}</div>
       <p className="challenge-assignment">{c.assignment}</p>
       <a className="text-button" href="#home">{w('review_experiment_guide')}</a>
-      <aside className="challenge-ready"><strong>{w('before_you_start')}</strong><p>{c.ready}</p></aside>
-      <h2>{w('your_five_steps')}</h2>
-      <ol className="challenge-steps">{c.tasks.map((task,i) => <li key={i}><h3>{task.title}</h3><p>{task.instruction}</p>
-        {i === 3 && c.mitigationHelp && <div className="mitigation-guide"><p>{c.mitigationHelp.description}</p><p>{c.mitigationHelp.instruction}</p>
-          <Link className="secondary next-link" href="http://localhost:8089/#mitigations">{w('open_fallbacks_timeouts')}</Link></div>}</li>)}</ol>
-      <section className="challenge-done"><h2>{w('you_are_finished_when')}</h2><ul>{c.done.map((line,i) => <li key={i}>{line}</li>)}</ul></section>
       <div className="tool-links">{toolLinks.map(([label,href]) => <Link key={href} href={href}>{w(label)} ↗</Link>)}</div></section>
     <div className={`challenge-columns${submission ? ' has-solution' : ''}`}><section className="notes-panel"><div className="eyebrow">{w('your_work')}</div><h2>{w('experiment_notes')}</h2>
       <p className="meta">{w('fill_these_fields_as_you_run_the_experiment_above')}</p>
@@ -168,7 +173,7 @@ function Workshop() {
           className={`challenge-link ${submitted?'is-complete':available?'is-available':'is-locked'} ${i===unlocked?'just-unlocked':''}`}>
           <span className={`nav-icon ${submitted?'completed':available?'unlocked':'locked'}`} aria-hidden="true"><svg viewBox="0 0 24 24">{submitted?<path d="m5 12 4.5 4.5L19 7"/>:<><rect x="5" y="10" width="14" height="11" rx="2"/><path className="lock-shackle" d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1"/></>}</svg></span>
           <span className="challenge-link-label"><span className="challenge-number">{w('challenge',{number:c.number})}</span><strong>{page.navigation.challengeTitles[c.id]}</strong><span className="challenge-state">{current?.id===c.id?w('viewing',{state}):state}</span></span></Tag>;
-      })}</nav><div className="sidebar-progress"><strong id="progress-label">{w('of_submitted',{count,total:challenges.length})}</strong>
+      })}</nav>{current && <ChallengeInstructions key={current.id} challenge={current} />}<div className="sidebar-progress"><strong id="progress-label">{w('of_submitted',{count,total:challenges.length})}</strong>
         <div className="progress-track" aria-hidden="true"><span style={{width:`${count/challenges.length*100}%`}} /></div>
         <div className="sidebar-actions"><button type="button" className="text-button" onClick={()=>setDownload(URL.createObjectURL(new Blob([JSON.stringify(buildRecord(progress),null,2)],{type:'application/json'})))}>{p('download_notes')}</button>
           <button type="button" className="text-button" onClick={reset}>{p('clear_notes')}</button></div><span className="meta" role="status">{storage}</span></div></aside>

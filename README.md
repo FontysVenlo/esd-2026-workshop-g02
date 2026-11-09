@@ -21,3 +21,11 @@ All workshop services run in Docker; participants do not need Node.js, npm packa
 All four challenges can be completed in the browser. In [Network Faults](http://localhost:8089), use **Fault injection** to create the problem and **Fallbacks & timeouts** to apply or reset the shop's response immediately. The same controls work on Windows and Mac. **Info & commands** has a platform selector for optional PowerShell or Mac Terminal examples.
 
 The [workshop README](field-workshop/README.md) has the full setup, tools, and challenge instructions.
+
+## Start from a terminal and edit live
+
+Start Docker Desktop, then run `npm start` or `bun run dev` from the repository root or the workshop directory. Once ready, the launcher opens the workshop overview, Storefront, Network Faults, Grafana dashboard, and Prometheus in your default browser. Docker builds the dependencies and starts the full stack, including background traffic and Grafana. You can skip a host package install.
+
+Keep the terminal open. Saving a Home or challenge JSON file, a frontend file under `src/`, or a stylesheet under `public/` rebuilds the pages and refreshes open workshop tabs automatically. If an edit has a syntax error, the terminal shows it and the last successful page stays available. For backend changes, restart the command to rebuild the services.
+
+Press **Ctrl+C** to stop the stack. Run `npm run stop` or `bun run stop` to remove its containers.

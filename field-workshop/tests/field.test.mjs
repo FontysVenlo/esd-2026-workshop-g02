@@ -106,9 +106,8 @@ test('proxy initialization creates only fixed local service routes and is idempo
   created.inventory.listen = '[::]:8666';
   created.shipping.listen = '[::]:8667';
   await initializeProxies(api, async () => {});
-  assert.deepEqual(Object.keys(created).sort(), ['desks-inventory', 'inventory', 'seating-inventory', 'shipping', 'shipping-healthy']);
+  assert.deepEqual(Object.keys(created).sort(), ['desks-inventory', 'inventory', 'seating-inventory', 'shipping']);
   assert.equal(created['seating-inventory'].upstream, 'seating-inventory:8080');
-  assert.equal(created['shipping-healthy'].upstream, 'shipping:8080');
   assert.equal(created.inventory.upstream, 'lighting-inventory:8080');
   assert.equal(created.shipping.upstream, 'shipping:8080');
   assert.equal(created.inventory.listen, '[::]:8666');

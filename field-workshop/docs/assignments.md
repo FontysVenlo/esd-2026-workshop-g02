@@ -1,6 +1,6 @@
 # Engineering assignments
 
-Open <http://localhost:8088> for the guided workflow and <http://localhost:8088/storefront> for the three-product catalog. The start launcher supplies five requests per second. Fault controls target Lighting inventory or lamp shipping. Chair and desk use their own Seating and Desks inventory services. All products share two workers and one catalog response.
+Open <http://localhost:8088> for the guided workflow and <http://localhost:8088/storefront> for the three-product catalog. The start launcher supplies five requests per second. Fault controls target Lighting inventory or shared Shipping. Chair and desk use their own Seating and Desks inventory services. All products share two workers and one catalog response.
 
 Compare healthy, faulted and mitigated phases using fresh 60–90-second windows and unchanged traffic. No purchases are made.
 
@@ -34,86 +34,44 @@ Timeouts bound dependency waiting; a circuit breaker pauses a failed product/dep
 - You observed and explained impact on chair/desk or the complete catalog, then verified that impact shrank while lamp stock remained unconfirmed.
 - You distinguished timeout, circuit breaker and fallback; compared equal windows; and verified cleanup.
 
-## 2 — One missing quote breaks the catalog (Intermediate)
+## 2 — Keep the catalog usable during a Shipping outage
 
-**The customer problem.** The delivery catalog contains three products, but its response requires every quote to succeed. Disconnecting only the lamp’s Shipping path rejects the complete catalog, hiding the healthy chair and desk too. Availability does not require Shipping and should still work.
+The shared Shipping service is unreachable. All three inventory services still answer, but the delivery preview requires a quote for each product. Can customers see live stock for every product while every delivery estimate is unavailable?
 
-**Why this matters.** This is error propagation through a coupled catalog response. A fast disconnect need not exhaust workers. An explicit unavailable lamp quote can preserve healthy products and stock information without inventing a delivery promise.
+1. **Compare both healthy catalog views.** Refresh availability and preview deliveries. Record all products, timings and queue state. Set an abort condition and predict which view Shipping affects.
 
-**The issue to reproduce.** Choose Shipping and click Disconnect in Network Faults. Compare “Refresh all availability” with “Preview all deliveries”. The complete delivery catalog should fail even though chair and desk have healthy Shipping paths.
+2. **Disconnect shared Shipping.** Disconnect Shipping and repeat both views. Record catalog failure, working availability and Shipping errors. Check whether the queue actually fills.
 
-**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. Compare the catalog in Storefront; read workers, queue, rejections and dependency circuits in Grafana. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total.
+3. **Identify the coupling.** Check Shipping failures and queue size in Grafana. Compare stock-only results with delivery previews for the lamp, chair and desk.
 
-**Your question.** Can one unavailable lamp quote be contained to that quote instead of taking down the complete delivery catalog?
+4. **Enable fallback during the outage.** Leave Shipping disconnected and apply Challenge 2 settings. Preview all deliveries again. Record the stock and quote status for each product and watch fallback activity.
 
-1. **Compare both healthy catalog views.** Refresh availability, then preview all deliveries. Record all three results, timings, queue state and an abort condition. Predict why Shipping affects one view but not the other.
+5. **Reconnect and verify recovery.** Reconnect Shipping with fallback still enabled. After the five-second cooldown, refresh to allow a recovery probe. Refresh again and verify three live quotes. Restore default settings and submit your observations.
 
-2. **Disconnect only lamp Shipping.** Choose Shipping → Disconnect. Repeat both views. Record the failed whole-catalog response, the working availability view, and Shipping failures. Do not claim worker exhaustion if the queue stays empty.
+## 3 — Investigate a spreading incident
 
-3. **Identify the coupling.** Inspect “Customer request rate”, “Dependency outcomes” and “Shared workers and queue” in Grafana. Explain why one rejected quote prevents the aggregate catalog from returning its healthy products. Distinguish this from Challenge 1’s shared-capacity slowdown.
+A hidden incident affects the catalog. Use stock checks, delivery previews and Grafana to identify which dependency failed. Which dependency explains the symptoms, and which customer information can you preserve?
 
-4. **Allow an honest partial catalog.** Reconnect Shipping first, then apply Challenge 2 settings in Fallbacks & timeouts. Shipping fallback and its 5-second circuit breaker are enabled; the timeout stays 3000 ms because disconnection fails immediately. Stock is still authoritative.
+1. **Arrange one hidden incident.** Record a healthy baseline, then ask a partner to seed Assignment 3 without revealing it. Keep traffic fixed and set an abort condition.
 
-5. **Repeat and measure the smaller impact.** Disconnect Shipping again. Preview all deliveries: the catalog should return all three products, chair/desk with live quotes, and the lamp with an unavailable quote. Compare statuses, useful information and fallback activity. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.
+2. **Collect the customer symptoms.** Compare availability and delivery catalogs. Record times, status, chair/desk results, workers, queue and new rejections with timestamps. Leave fault controls closed.
 
-**You are finished when:**
+3. **Write a supported diagnosis.** Use dependency outcomes, latency and worker charts to predict the fault and how it spreads. Record an alternative explanation before opening controls.
 
-- You compared both complete-catalog views before, during and after mitigation of the same outage.
-- You showed healthy chair/desk delivery information surviving while only the lamp quote remained unavailable.
-- You explained aggregate error propagation without assuming a fast failure saturates workers, then restored all paths and defaults.
+4. **Confirm and contain the mechanism.** Inspect Network Faults with your partner. Keep the original fault. For slow calls, use a short timeout plus fallback/breaker; for a disconnect, preserve honest partial results.
 
-## 3 — Investigate a spreading incident (Advanced)
+5. **Validate the healthy products and reveal.** Retest under the original fault. Record which customer action improved and which information is still missing. Compare your diagnosis with the reveal. Remove the fault, allow a recovery probe, verify live stock and quotes, then restore defaults.
 
-**The customer problem.** Support reports that a three-product catalog is slow or unavailable, although only one lamp dependency branch has been faulted. A facilitator seeds either slow lamp Inventory or disconnected lamp Shipping. Diagnose whether shared workers or aggregate error propagation explains the wider customer impact.
+## 4 — Your containment GameDay
 
-**Why this matters.** The visible failures can be healthy products downstream of a shared bottleneck or an all-or-nothing response. Fixing the wrong dependency or enabling fallback without an appropriate timeout can leave the real problem active.
+Choose a dependency fault and measure the trade-off between waiting for complete results and returning useful partial information sooner. When is a faster partial catalog more useful than waiting for full results?
 
-**The issue to reproduce.** Ask a partner or facilitator to seed exactly one incident from docs/facilitator.md. They keep the chosen dependency and fault secret. Do not inspect Network Faults before writing your hypothesis.
+1. **Define a propagation hypothesis.** Choose your dependency, fault, customer action, stop condition and measurements. For slow Shipping, predict what a shorter wait will do to preview time and quote availability.
 
-**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. Compare the catalog in Storefront; read workers, queue, rejections and dependency circuits in Grafana. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total. Record the healthy baseline before your partner seeds the incident; do not clear it afterward. This challenge requires another person.
+2. **Record a healthy comparison window.** Measure all products, catalog time/status, queue and new rejections over a fixed window. Keep traffic unchanged.
 
-**Your question.** Which lamp dependency is faulty, how does its impact spread to healthy products, and which mitigation contains that mechanism?
+3. **Measure the fault.** Apply your chosen fault. Repeat the same view and count live stocks and quotes. Record catalog time, queue and new rejections.
 
-1. **Arrange one hidden incident.** From a clean baseline, ask a partner to seed Assignment 3. Leave the exact fault secret and keep supplied traffic fixed. Write an abort condition.
+4. **Choose a mechanism-specific mitigation.** Remove the fault. Choose a short timeout for slow calls and fallback/breaker for the affected dependency. Explain the missing-data response; fallback alone does not free workers.
 
-2. **Collect the customer symptoms.** Compare availability and delivery catalog views. Record catalog times/statuses, chair/desk usefulness, active workers, queue state, and the rejected-count change with timestamps. Leave fault controls unopened.
-
-3. **Write a supported diagnosis.** Use dependency outcomes/latency, product latency, and worker/queue charts. Predict the faulty dependency and whether the impact spreads through shared capacity, aggregate failure, or both. Record an alternative explanation before inspecting controls.
-
-4. **Confirm and contain the mechanism.** Inspect Network Faults with the facilitator after recording your hypothesis. Apply a justified timeout/fallback setting. For slow calls use a short timeout plus fallback/breaker; for immediate disconnection use an honest partial quote. Preserve the exact original fault.
-
-5. **Validate the healthy products and reveal.** Retest the same catalog views and fresh windows. Compare healthy product usefulness, queue pressure, catalog time/status and the affected product’s uncertainty. Ask for the reveal and compare it with your hypothesis. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.
-
-**You are finished when:**
-
-- You recorded a diagnosis and propagation mechanism before inspecting fault controls.
-- You retested the identical incident and showed which healthy-product or catalog outcome improved, while recording the affected product’s missing data.
-- You compared the diagnosis with the reveal and restored all three products.
-
-## 4 — Your containment GameDay (Capstone)
-
-**The customer problem.** Your team wants evidence that one faulty lamp dependency cannot unnecessarily hide the chair and desk. Design one repeatable local experiment that demonstrates impact beyond the lamp, then test whether your mitigation contains it.
-
-**Why this matters.** A fallback is justified by useful behavior preserved under a specific fault, not by an enabled checkbox. Your recommendation needs before-and-after evidence for the catalog or healthy products and an explicit statement of lost certainty.
-
-**The issue to reproduce.** Choose Lighting inventory or lamp Shipping and one fault: a measured delay or disconnection. Choose availability or delivery catalog. A +1500 ms delay can pressure shared workers; disconnection demonstrates aggregate error propagation.
-
-**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. Compare the catalog in Storefront; read workers, queue, rejections and dependency circuits in Grafana. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total. Use only the two exposed lamp fault controls; the other product paths are the healthy comparison group.
-
-**Your question.** Can you reproduce a wider customer impact and then contain it to the affected product’s missing information?
-
-1. **Define a propagation hypothesis.** Name the catalog view, lamp dependency, exact fault/magnitude, healthy comparison products, propagation mechanism and abort condition. Choose customer results and worker/product metrics that could disprove your hypothesis.
-
-2. **Record a healthy comparison window.** Measure all three products, catalog latency/status, worker queue and changes in cumulative rejections over a fixed window. Keep supplied traffic unchanged for every phase.
-
-3. **Reproduce impact beyond the lamp.** Apply only your chosen fault. Measure the same view and healthy products. Record whether impact spreads by queuing, rejection, aggregate failure or a combination. If no wider effect appears, report that honestly and revise the experiment before recommending mitigation.
-
-4. **Choose a mechanism-specific mitigation.** Remove the fault before configuring. Use a short dependency timeout for a slow call, enable fallback/breaker for the relevant dependency, and justify the missing-data behavior. Do not claim fallback alone releases workers.
-
-5. **Repeat exactly and recommend.** Reapply the identical fault at the same magnitude and traffic. Show whether chair/desk remain useful, whether catalog status/time improves, and what lamp information remains unavailable. Include probe behavior and exact rollback instructions. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.
-
-**You are finished when:**
-
-- A teammate can reproduce the fault, traffic, three-phase measurements, mitigation and rollback.
-- You demonstrated and measured a wider impact before mitigation, then compared healthy products and catalog usefulness under the identical fault.
-- You distinguished timeout, breaker and fallback, described remaining uncertainty/probe spikes, and restored all three products.
+5. **Repeat exactly and recommend.** Repeat the identical fault and traffic. Compare time, useful stock and missing quotes. Explain the trade-off, remove the fault, verify recovery after the cooldown and restore defaults.

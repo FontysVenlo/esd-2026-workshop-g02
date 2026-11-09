@@ -298,3 +298,14 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .catalog-explainer summary { cursor: pointer; font-weight: 600; }
 .catalog-explainer p { line-height: 1.7; color: #53665b; max-width: 90ch; }
 @media (max-width: 800px) { .react-products { grid-template-columns: 1fr; } .product-photo { aspect-ratio: 16/9; } .react-storefront { padding-top: 1.5rem; } .view-buttons { flex-wrap: wrap; } }
+
+.sidebar-instructions { border-top: 1px solid #dce5e1; margin-top: .8rem; padding: .5rem; }
+.sidebar-instructions h2 { font-size: 1.1rem; }
+.sidebar-instructions summary { cursor: pointer; font-weight: 600; }
+.sidebar-instructions .challenge-steps { gap: .7rem; }
+.sidebar-instructions summary h3 { display: inline; }
+.sidebar-instructions .challenge-ready, .sidebar-instructions .challenge-done { margin: .5rem 0; padding: .6rem; }
+@media (min-width: 761px) {
+  .workshop-shell { grid-template-columns: clamp(260px, 25vw, 360px) minmax(0, 1fr); }
+  .workshop-sidebar { max-height: calc(100dvh - 2rem); overflow-y: auto; box-sizing: border-box; }
+}

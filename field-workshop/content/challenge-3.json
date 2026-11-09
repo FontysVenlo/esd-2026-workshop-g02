@@ -3,11 +3,11 @@
   "number": 3,
   "title": "Investigate a spreading incident",
   "level": "Advanced",
-  "scenario": "A hidden fault on one lamp dependency slows or breaks the three-product catalog. Diagnose whether the impact spreads through shared workers or a failed catalog response.",
+  "scenario": "A hidden incident affects the catalog. Use stock checks, delivery previews and Grafana to identify which dependency failed.",
   "why": "The visible victims may be healthy products. Find the cause before choosing a timeout, breaker or fallback.",
   "reproduce": "Ask a partner to seed one incident from docs/facilitator.md. Record your diagnosis before inspecting Network Faults.",
   "ready": "Clear all faults and restore default settings. Start the stack with the launcher. Keep background traffic unchanged; compare fresh 60–90-second windows and changes in rejected requests. Use Storefront for customer results and Grafana for workers, queue, rejections and dependency circuits. Record the healthy baseline before your partner seeds the hidden fault. Do not clear it afterward. A second person is required.",
-  "assignment": "Which lamp dependency failed, how does the impact spread, and what contains it?",
+  "assignment": "Which dependency explains the symptoms, and which customer information can you preserve?",
   "tasks": [
     {
       "title": "Arrange one hidden incident",
@@ -27,7 +27,7 @@
     },
     {
       "title": "Validate the healthy products and reveal",
-      "instruction": "Retest the same views in fresh windows. Compare healthy products, queue, catalog results and missing data. Ask for the reveal and check your diagnosis. Clear faults, restore defaults, and allow in-flight requests and a 5-second cooldown to finish. Verify live stock and delivery for all products, then submit your measurements."
+      "instruction": "Retest under the original fault. Record which customer action improved and which information is still missing. Compare your diagnosis with the reveal. Remove the fault, allow a recovery probe, verify live stock and quotes, then restore defaults."
     }
   ],
   "done": [
@@ -37,7 +37,7 @@
   ],
   "solution": [
     "Slow Lighting inventory can delay both catalog views and occupy workers, causing healthy chair/desk requests to wait or fail.",
-    "Disconnected lamp Shipping fails delivery aggregation while availability works. Fast failure need not fill the queue.",
+    "A shared Shipping disconnect breaks delivery previews across products. Stock checks still work. Shipping fallback keeps stock visible with every quote unavailable.",
     "A timeout bounds waiting; the breaker pauses repeated failures; fallback preserves partial results. Choose from the evidence.",
     "Retest the same fault and traffic. State what improved and what remains missing, then restore all products."
   ],
@@ -140,7 +140,7 @@
     "open": "Open →",
     "challengeTitles": {
       "challenge-1": "One slow product blocks the shop",
-      "challenge-2": "One missing quote breaks the catalog",
+      "challenge-2": "Keep the catalog usable during a Shipping outage",
       "challenge-3": "Investigate a spreading incident",
       "challenge-4": "Your containment GameDay"
     }

@@ -4,15 +4,14 @@ import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
 import { Metrics } from './metrics.mjs';
 import { createMitigations, createMitigationServer } from './mitigations.mjs';
-import { renderPage, serveContentAsset } from './web-content.mjs';
+import { pageReader, serveContentAsset } from './web-content.mjs';
 import { products, inventoryCategory } from './catalog.mjs';
 import { createCapacity } from './capacity.mjs';
 import { createBreaker } from './breaker.mjs';
 
-const page = renderPage('index.html');
-const workshopPage = renderPage('workshop.html');
-const toolsPage = renderPage('tools.html');
-const siteCss = readFileSync(new URL('../build/site.css', import.meta.url));
+const page = pageReader('index.html');
+const workshopPage = pageReader('workshop.html');
+const toolsPage = pageReader('tools.html');
 const guideFiles = new Map([
   ['/docs/assignments.md', readFileSync(new URL('../docs/assignments.md', import.meta.url))],
   ['/docs/tool-reference.md', readFileSync(new URL('../docs/tool-reference.md', import.meta.url))],
@@ -27,7 +26,6 @@ export function createStorefrontServer(config = {}) {
       desks: config.desksInventoryUrl ?? process.env.DESKS_INVENTORY_URL ?? config.healthyInventoryUrl ?? config.inventoryUrl ?? 'http://localhost:8670'
     },
     shippingUrl: config.shippingUrl ?? process.env.SHIPPING_URL ?? 'http://localhost:8667',
-    healthyShippingUrl: config.healthyShippingUrl ?? process.env.HEALTHY_SHIPPING_URL ?? config.shippingUrl ?? 'http://localhost:8669',
     inventoryTimeoutMs: Number(config.inventoryTimeoutMs ?? process.env.INVENTORY_TIMEOUT_MS ?? 3000),
     shippingTimeoutMs: Number(config.shippingTimeoutMs ?? process.env.SHIPPING_TIMEOUT_MS ?? 3000),
     inventoryFallback: config.inventoryFallback ?? process.env.INVENTORY_FALLBACK === 'true',
@@ -64,12 +62,12 @@ export function createStorefrontServer(config = {}) {
   }
 
   async function call(name, sku, policy) {
-    const key = `${sku}:${name}`;
+    const key = name === 'shipping' ? 'shipping' : `${sku}:${name}`;
     if (!breaker.enter(key, policy.fallback)) {
       throw Object.assign(new Error(`${name} circuit_open`), { outcome: 'circuit_open' });
     }
     const baseUrl = name === 'inventory' ? settings.inventoryUrls[inventoryCategory[sku]]
-      : sku === 'LAMP-01' ? settings.shippingUrl : settings.healthyShippingUrl;
+      : settings.shippingUrl;
     const service = name === 'inventory' ? inventoryCategory[sku] + '-inventory' : name;
     try {
       const result = await dependency(service, baseUrl, `${name === 'inventory' ? '/stock' : '/quote'}?sku=${sku}`, policy.timeoutMs);
@@ -139,15 +137,16 @@ export function createStorefrontServer(config = {}) {
       res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4' });
       const state = capacity.snapshot();
       const circuits = new Map(breaker.snapshot().map(circuit => [circuit.key, circuit]));
-      const circuitMetrics = products().flatMap(product => ['inventory', 'shipping'].flatMap(dependency => {
-        const circuit = circuits.get(`${product.sku}:${dependency}`);
-        const service = dependency === 'inventory' ? inventoryCategory[product.sku] + '-inventory' : dependency;
-        const labels = `sku="${product.sku}",dependency="${service}"`;
+      const paths = products().map(({ sku }) => ({ sku, key: sku + ':inventory', service: inventoryCategory[sku] + '-inventory' }));
+      paths.push({ sku: 'all', key: 'shipping', service: 'shipping' });
+      const circuitMetrics = paths.flatMap(({ sku, key, service }) => {
+        const circuit = circuits.get(key);
+        const labels = `sku="${sku}",dependency="${service}"`;
         return [
           `workshop_circuit_state{${labels}} ${circuit ? circuit.probing ? 2 : 1 : 0}`,
           `workshop_circuit_retry_seconds{${labels}} ${(circuit?.retryInMs ?? 0) / 1000}`
         ];
-      }));
+      });
       return res.end(metrics.render() + [
         '# TYPE workshop_workers_active gauge', `workshop_workers_active ${state.active}`,
         '# TYPE workshop_workers_limit gauge', `workshop_workers_limit ${state.limit}`,
@@ -163,19 +162,15 @@ export function createStorefrontServer(config = {}) {
     if (route === '/api/system') return send(200, { ...capacity.snapshot(), circuits: breaker.snapshot() });
     if (route === '/storefront') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      return res.end(page);
+      return res.end(page());
     }
     if (route === '/' || route === '/workshop' || route === '/workshop/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      return res.end(workshopPage);
+      return res.end(workshopPage());
     }
     if (route === '/tools') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      return res.end(toolsPage);
-    }
-    if (route === '/site.css') {
-      res.writeHead(200, { 'Content-Type': 'text/css; charset=utf-8' });
-      return res.end(siteCss);
+      return res.end(toolsPage());
     }
     if (serveContentAsset(route, res)) return;
     if (guideFiles.has(route)) {

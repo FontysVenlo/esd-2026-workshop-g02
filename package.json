@@ -1,0 +1,9 @@
+{
+  "name": "northstar-workshop",
+  "private": true,
+  "scripts": {
+    "start": "node field-workshop/dev/start.mjs",
+    "dev": "node field-workshop/dev/start.mjs",
+    "stop": "docker compose -f field-workshop/compose.yaml -f field-workshop/compose.dev.yaml --profile load down"
+  }
+}

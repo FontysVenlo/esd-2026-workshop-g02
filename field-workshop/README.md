@@ -2,6 +2,14 @@
 
 A small, runnable commerce system for hands-on Chaos Engineering. The overview contains four assignments and saves participant notes. The customer page remains the application to investigate.
 
+## Start from a terminal and edit live
+
+Start Docker Desktop, then run `npm start` or `bun run dev` from the repository root or the workshop directory. Once ready, the launcher opens the workshop overview, Storefront, Network Faults, Grafana dashboard, and Prometheus in your default browser. Docker builds the dependencies and starts the full stack, including background traffic and Grafana. You can skip a host package install.
+
+Keep the terminal open. Saving a Home or challenge JSON file, a frontend file under `src/`, or a stylesheet under `public/` rebuilds the pages and refreshes open workshop tabs automatically. If an edit has a syntax error, the terminal shows it and the last successful page stays available. For backend changes, restart the command to rebuild the services.
+
+Press **Ctrl+C** to stop the stack. Run `npm run stop` or `bun run stop` to remove its containers.
+
 ## Edit the website text
 
 Edit the file for the page you want to change:
@@ -22,7 +30,7 @@ Storefront shows customer results; internal worker, queue, rejection and circuit
 
 `Browser → Storefront → Toxiproxy → Inventory / Shipping`
 
-The Storefront cannot contact either dependency directly. Toxiproxy routes stock checks to three separate inventory services: Lighting (lamp), Seating (chair), and Desks (desk). Shipping is shared, with separate lamp and healthy-product proxy paths. All products share two Storefront workers, with a bounded queue (12 waiting operations, 1000 ms queue deadline). The complete catalog requires every product result unless fallback is enabled. Prometheus scrapes real application metrics every five seconds; Grafana is provisioned with a local dashboard. No CDN or cloud account is used.
+The Storefront cannot contact either dependency directly. Toxiproxy routes stock checks to three separate inventory services: Lighting (lamp), Seating (chair), and Desks (desk). Shipping is shared, through one proxy for all three products. All products share two Storefront workers, with a bounded queue (12 waiting operations, 1000 ms queue deadline). The complete catalog requires every product result unless fallback is enabled. Prometheus scrapes real application metrics every five seconds; Grafana is provisioned with a local dashboard. No CDN or cloud account is used.
 
 | Tool | Local address | What you use it for |
 | --- | --- | --- |
@@ -59,7 +67,7 @@ The overview contains the working briefs; [the four assignments](docs/assignment
 
 The same console works on Windows and Mac: all buttons send platform-independent HTTP requests. **Info & commands** includes a Windows PowerShell / Mac Terminal selector for optional command examples. The [tool reference](docs/tool-reference.md) documents those APIs. The Storefront settings listener is internal to Docker and has no published host port; the console uses neither a Docker socket nor a host shell. A facilitator can seed the third assignment using [facilitator notes](docs/facilitator.md).
 
-The three-product catalog visibly demonstrates propagation: a slow lamp consumes shared workers and can delay/reject healthy products; a missing lamp quote rejects the full delivery catalog. Inventory mitigation disables the unconfirmed lamp availability action while keeping healthy products live. Enabling fallback also enables a per-product/dependency circuit breaker with a five-second cooldown and a single recovery probe. The timeout releases capacity, the breaker pauses repeated failed calls, and fallback preserves useful partial data. Grafana shows real queue, rejection, latency and circuit state; Storefront shows customer results.
+The three-product catalog visibly demonstrates propagation: a slow lamp consumes shared workers and can delay/reject healthy products; a shared Shipping outage rejects the full delivery catalog. Inventory mitigation disables the unconfirmed lamp availability action while keeping healthy products live. Enabling fallback also enables a dependency circuit breaker with a five-second cooldown and a single recovery probe. The timeout releases capacity, the breaker pauses repeated failed calls, and fallback preserves useful partial data. Grafana shows real queue, rejection, latency and circuit state; Storefront shows customer results.
 
 The Storefront offers product availability and an order **preview**, not a live checkout. A fallback never invents stock or a shipping price: it reports that the value is unconfirmed. This is a deliberate business trade-off to discuss.
 

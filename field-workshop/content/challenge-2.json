@@ -1,45 +1,45 @@
 {
   "id": "challenge-2",
   "number": 2,
-  "title": "One missing quote breaks the catalog",
+  "title": "Keep the catalog usable during a Shipping outage",
   "level": "Intermediate",
-  "scenario": "One disconnected lamp Shipping path fails the whole delivery catalog, hiding healthy chair and desk results. Availability still works because it does not use Shipping.",
-  "why": "A fast failure can break the catalog without filling workers. An unavailable lamp quote should preserve the other products without inventing delivery data.",
+  "scenario": "The shared Shipping service is unreachable. All three inventory services still answer, but the delivery preview requires a quote for each product.",
+  "why": "Customers can still browse products and check stock during a carrier outage. Showing an unavailable estimate avoids promising a price or delivery date.",
   "reproduce": "Disconnect Shipping in Network Faults. Compare “Refresh all availability” and “Preview all deliveries”.",
   "ready": "Clear all faults and restore default settings. Start the stack with the launcher. Keep background traffic unchanged; compare fresh 60–90-second windows and changes in rejected requests. Use Storefront for customer results and Grafana for workers, queue, rejections and dependency circuits.",
-  "assignment": "Can you contain the outage to one unavailable lamp quote?",
+  "assignment": "Can customers see live stock for every product while every delivery estimate is unavailable?",
   "tasks": [
     {
       "title": "Compare both healthy catalog views",
       "instruction": "Refresh availability and preview deliveries. Record all products, timings and queue state. Set an abort condition and predict which view Shipping affects."
     },
     {
-      "title": "Disconnect only lamp Shipping",
+      "title": "Disconnect shared Shipping",
       "instruction": "Disconnect Shipping and repeat both views. Record catalog failure, working availability and Shipping errors. Check whether the queue actually fills."
     },
     {
       "title": "Identify the coupling",
-      "instruction": "Check “Customer request rate”, “Dependency outcomes” and workers. Explain why one missing quote hides healthy products, and how this differs from Challenge 1."
+      "instruction": "Check Shipping failures and queue size in Grafana. Compare stock-only results with delivery previews for the lamp, chair and desk."
     },
     {
-      "title": "Allow an honest partial catalog",
-      "instruction": "Reconnect Shipping. Apply Challenge 2 settings: Shipping fallback and a 5-second breaker. Keep the 3000 ms timeout for this immediate failure."
+      "title": "Enable fallback during the outage",
+      "instruction": "Leave Shipping disconnected and apply Challenge 2 settings. Preview all deliveries again. Record the stock and quote status for each product and watch fallback activity."
     },
     {
-      "title": "Repeat and measure the smaller impact",
-      "instruction": "Disconnect Shipping again. Compare catalog status, fallback activity and live chair/desk quotes; only the lamp quote should be unavailable. Clear faults, restore defaults, and allow in-flight requests and a 5-second cooldown to finish. Verify live stock and delivery for all products, then submit your measurements."
+      "title": "Reconnect and verify recovery",
+      "instruction": "Reconnect Shipping with fallback still enabled. After the five-second cooldown, refresh to allow a recovery probe. Refresh again and verify three live quotes. Restore default settings and submit your observations."
     }
   ],
   "done": [
-    "You compared both complete-catalog views before, during and after mitigation of the same outage.",
-    "You showed healthy chair/desk delivery information surviving while only the lamp quote remained unavailable.",
-    "You explained aggregate error propagation without assuming a fast failure saturates workers, then restored all paths and defaults."
+    "You observed working availability and failed delivery previews during a shared outage.",
+    "With the outage still active, all three products showed live stock and unavailable quotes.",
+    "After reconnecting Shipping, you verified live quotes and restored defaults."
   ],
   "solution": [
-    "A missing lamp quote fails /api/catalog?preview=true. Availability works without Shipping.",
-    "Shipping fallback returns an unavailable lamp quote, preserving lamp stock and live chair/desk data without inventing a price or date.",
-    "The breaker pauses failed lamp Shipping calls for 5 seconds before a probe. Fast failures may leave the queue empty.",
-    "Reconnect, restore defaults and verify live data for all products. Compare equal observation windows."
+    "Stock checks use the category inventory services. Delivery previews also need shared Shipping.",
+    "With fallback off, the unavailable quotes cause the delivery request to fail. With fallback on, all three stocks remain visible and all three quotes are marked unavailable.",
+    "The shared breaker pauses repeated Shipping calls for five seconds before allowing one probe. A fast disconnect can leave the worker queue empty.",
+    "Reconnecting restores the network path. A successful probe allows live quotes on subsequent previews."
   ],
   "fields": [
     {
@@ -55,7 +55,7 @@
     {
       "key": "faultEvidence",
       "label": "Outage evidence",
-      "prompt": "Introduce the fault by deactivating the shipping service. Investigate availability and deliveries on the Storefront. Include all products and catalog time/status; record queue size and new rejections from Grafana over the same window."
+      "prompt": "Disconnect shared Shipping. Compare availability and delivery for all products. Record catalog status, queue size and new rejections."
     },
     {
       "key": "mitigation",
@@ -74,10 +74,10 @@
     }
   ],
   "mitigationHelp": {
-    "description": "Shipping fallback preserves the catalog with an unavailable lamp quote; the breaker pauses failed calls for 5 seconds.",
-    "instruction": "Use Challenge 2 settings. A slow Shipping fault also needs a shorter timeout."
+    "description": "Shipping fallback returns an unavailable quote. The shared breaker limits repeated calls during the outage.",
+    "instruction": "Apply Challenge 2 settings while Shipping is disconnected."
   },
-  "pageTitle": "Challenge 2 · One missing quote breaks the catalog",
+  "pageTitle": "Challenge 2 · Keep the catalog usable during a Shipping outage",
   "text": {
     "all_four_challenges_are_submitted_download_your_notes_from": "All four challenges are submitted. Download your notes from the sidebar.",
     "open_challenge": "Open Challenge {number} →",
@@ -144,7 +144,7 @@
     "open": "Open →",
     "challengeTitles": {
       "challenge-1": "One slow product blocks the shop",
-      "challenge-2": "One missing quote breaks the catalog",
+      "challenge-2": "Keep the catalog usable during a Shipping outage",
       "challenge-3": "Investigate a spreading incident",
       "challenge-4": "Your containment GameDay"
     }

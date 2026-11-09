@@ -83,7 +83,7 @@
     "open": "Open →",
     "challengeTitles": {
       "challenge-1": "One slow product blocks the shop",
-      "challenge-2": "One missing quote breaks the catalog",
+      "challenge-2": "Keep the catalog usable during a Shipping outage",
       "challenge-3": "Investigate a spreading incident",
       "challenge-4": "Your containment GameDay"
     }
@@ -96,18 +96,18 @@
     },
     {
       "id": "challenge-2",
-      "title": "2 · A missing quote hides the catalog",
-      "description": "Disconnect lamp Shipping, then shrink the impact from the complete delivery catalog to one unavailable quote."
+      "title": "2 · Browse during a Shipping outage",
+      "description": "Disconnect shared Shipping. Keep stock visible while quotes are unavailable, then reconnect and verify recovery."
     },
     {
       "id": "challenge-3",
       "title": "3 · Find how the incident spreads",
-      "description": "Diagnose a hidden lamp fault from catalog failures, healthy-product impact and real worker indicators."
+      "description": "Diagnose a hidden dependency fault from stock, delivery and worker signals."
     },
     {
       "id": "challenge-4",
       "title": "4 · Prove useful containment",
-      "description": "Design an experiment whose mitigation visibly protects the catalog or healthy products, and document its trade-off."
+      "description": "Measure the trade-off between how long customers wait and how much information the catalog can return."
     }
   ],
   "guide": {

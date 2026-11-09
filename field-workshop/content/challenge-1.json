@@ -144,7 +144,7 @@
     "open": "Open →",
     "challengeTitles": {
       "challenge-1": "One slow product blocks the shop",
-      "challenge-2": "One missing quote breaks the catalog",
+      "challenge-2": "Keep the catalog usable during a Shipping outage",
       "challenge-3": "Investigate a spreading incident",
       "challenge-4": "Your containment GameDay"
     }

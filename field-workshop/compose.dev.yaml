@@ -1,0 +1,36 @@
+# Terminal development mode. The normal workshop launchers use compose.yaml alone.
+x-live-ui: &live-ui
+  environment:
+    WORKSHOP_LIVE_DIR: /live
+  volumes:
+    - workshop-ui:/live:ro
+  depends_on:
+    ui-watch:
+      condition: service_healthy
+
+services:
+  ui-watch:
+    build:
+      context: .
+      target: frontend
+    command: ["node", "dev/watch.mjs"]
+    environment:
+      WORKSHOP_LIVE_DIR: /live
+    volumes:
+      - ./content:/build/content:ro
+      - ./src:/build/src:ro
+      - ./public:/build/public:ro
+      - ./dev:/build/dev:ro
+      - workshop-ui:/live
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('fs').accessSync('/live/revision')"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  storefront:
+    <<: *live-ui
+  fault-console:
+    <<: *live-ui
+
+volumes:
+  workshop-ui:

@@ -14,7 +14,7 @@ async function request(path) {
 }
 
 // Three lamp requests per second can exhaust two workers under a 1.5 s delay.
-// The other products use the SAME services through separate healthy proxy paths.
+// Stock comes from separate category services. Delivery previews call shared Shipping.
 // Keep this traffic fixed across healthy, faulted and mitigated measurements.
 setInterval(() => request('/api/product'), 500);
 setInterval(() => request('/api/order-preview'), 1000);

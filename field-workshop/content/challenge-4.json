@@ -3,23 +3,23 @@
   "number": 4,
   "title": "Your containment GameDay",
   "level": "Capstone",
-  "scenario": "Design a repeatable fault on one lamp dependency. Show its impact on the catalog or healthy products, then test whether your mitigation contains it.",
+  "scenario": "Choose a dependency fault and measure the trade-off between waiting for complete results and returning useful partial information sooner.",
   "why": "An enabled fallback is not proof of resilience. Show useful results before and after mitigation, including remaining uncertainty.",
-  "reproduce": "Choose Lighting inventory or lamp Shipping, a delay or disconnect, and a catalog view. A +1500 ms delay can pressure workers; a disconnect can fail aggregation.",
-  "ready": "Clear all faults and restore default settings. Start the stack with the launcher. Keep background traffic unchanged; compare fresh 60–90-second windows and changes in rejected requests. Use Storefront for customer results and Grafana for workers, queue, rejections and dependency circuits. Fault only the exposed lamp paths; use chair and desk as healthy comparisons.",
-  "assignment": "Can you contain a wider failure to the affected product’s missing data?",
+  "reproduce": "For the worked example, add 1500 ms to shared Shipping. You can also design a Lighting inventory experiment. Use the same action and traffic in every phase.",
+  "ready": "Clear all faults and restore default settings. Start the stack with the launcher. Keep background traffic unchanged; compare fresh 60–90-second windows and changes in rejected requests. Use Storefront for customer results and Grafana for workers, queue, rejections and dependency circuits.",
+  "assignment": "When is a faster partial catalog more useful than waiting for full results?",
   "tasks": [
     {
       "title": "Define a propagation hypothesis",
-      "instruction": "Specify catalog view, dependency, fault/magnitude, healthy comparisons and abort condition. Predict the spread and choose signals that could disprove it."
+      "instruction": "Choose your dependency, fault, customer action, stop condition and measurements. For slow Shipping, predict what a shorter wait will do to preview time and quote availability."
     },
     {
       "title": "Record a healthy comparison window",
       "instruction": "Measure all products, catalog time/status, queue and new rejections over a fixed window. Keep traffic unchanged."
     },
     {
-      "title": "Reproduce impact beyond the lamp",
-      "instruction": "Apply your fault and repeat the measurements. Identify queuing, rejection or catalog failure. If no wider impact appears, record it and revise your experiment."
+      "title": "Measure the fault",
+      "instruction": "Apply your chosen fault. Repeat the same view and count live stocks and quotes. Record catalog time, queue and new rejections."
     },
     {
       "title": "Choose a mechanism-specific mitigation",
@@ -27,18 +27,18 @@
     },
     {
       "title": "Repeat exactly and recommend",
-      "instruction": "Repeat the identical fault and traffic. Compare healthy products, catalog results and missing lamp data. Record probe behavior and rollback. Clear faults, restore defaults, and allow in-flight requests and a 5-second cooldown to finish. Verify live stock and delivery for all products, then submit your measurements."
+      "instruction": "Repeat the identical fault and traffic. Compare time, useful stock and missing quotes. Explain the trade-off, remove the fault, verify recovery after the cooldown and restore defaults."
     }
   ],
   "done": [
     "A teammate can reproduce the fault, traffic, three-phase measurements, mitigation and rollback.",
-    "You demonstrated and measured a wider impact before mitigation, then compared healthy products and catalog usefulness under the identical fault.",
+    "You compared customer wait time and information available under the same fault before and after mitigation.",
     "You distinguished timeout, breaker and fallback, described remaining uncertainty/probe spikes, and restored all three products."
   ],
   "solution": [
     "A valid experiment compares healthy, faulted and mitigated phases under identical fault and traffic, showing wider impact and the remaining trade-off.",
-    "Example: add 1500 ms to lamp Shipping during delivery refresh. Retest with a 400 ms timeout plus fallback/breaker.",
-    "Chair and desk retain live data; the lamp quote is unavailable. Expect 5-second recovery probes. Compare queue and new rejections.",
+    "Example: delay shared Shipping by 1500 ms. Measure delivery previews with default settings, then repeat with a 400 ms Shipping timeout and fallback enabled.",
+    "A shorter timeout can free workers sooner. During the delay, all three quotes may be unavailable while stock remains visible. Count usable quotes alongside response time and rejections.",
     "Distinguish catalog failure from worker pressure. Restore defaults, clear faults and verify live results."
   ],
   "fields": [
@@ -140,7 +140,7 @@
     "open": "Open →",
     "challengeTitles": {
       "challenge-1": "One slow product blocks the shop",
-      "challenge-2": "One missing quote breaks the catalog",
+      "challenge-2": "Keep the catalog usable during a Shipping outage",
       "challenge-3": "Investigate a spreading incident",
       "challenge-4": "Your containment GameDay"
     }

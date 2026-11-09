@@ -4,7 +4,10 @@
   "type": "module",
   "scripts": {
     "test": "node build.mjs && node --test tests/*.test.mjs",
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "start": "node dev/start.mjs",
+    "dev": "node dev/start.mjs",
+    "stop": "docker compose -f compose.yaml -f compose.dev.yaml --profile load down"
   },
   "dependencies": {
     "react": "19.3.1",
