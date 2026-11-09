@@ -1,16 +1,22 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { afterEach, test } from 'node:test';
-import { createMitigations, createMitigationServer, defaultMitigations } from '../services/mitigations.mjs';
+import {
+  createMitigations,
+  createMitigationServer,
+  defaultMitigations,
+} from '../services/mitigations.mjs';
 import { createStorefrontServer } from '../services/storefront.mjs';
 import { createFaultConsoleServer } from '../services/fault-console.mjs';
 
 const servers = [];
 afterEach(async () => {
-  await Promise.all(servers.splice(0).map(server => new Promise(resolve => server.close(resolve))));
+  await Promise.all(
+    servers.splice(0).map((server) => new Promise((resolve) => server.close(resolve))),
+  );
 });
 async function listen(server) {
-  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   servers.push(server);
   return `http://127.0.0.1:${server.address().port}`;
 }
@@ -20,34 +26,59 @@ function json(res, status, body) {
 }
 async function fixture(inventoryHandler = (_req, res) => json(res, 200, { quantity: 12 })) {
   const inventoryUrl = await listen(http.createServer(inventoryHandler));
-  const shippingUrl = await listen(http.createServer((_req, res) => json(res, 503, { error: 'provider offline' })));
+  const shippingUrl = await listen(
+    http.createServer((_req, res) => json(res, 503, { error: 'provider offline' })),
+  );
   const mitigations = createMitigations();
   const mitigationApi = await listen(createMitigationServer(mitigations));
-  const storefront = await listen(createStorefrontServer({ inventoryUrl, shippingUrl, mitigations }));
+  const storefront = await listen(
+    createStorefrontServer({ inventoryUrl, shippingUrl, mitigations }),
+  );
   let faultCalls = 0;
-  const toxiproxyApi = await listen(http.createServer((_req, res) => { faultCalls++; json(res, 500, {}); }));
+  const toxiproxyApi = await listen(
+    http.createServer((_req, res) => {
+      faultCalls++;
+      json(res, 500, {});
+    }),
+  );
   const consoleBase = await listen(createFaultConsoleServer({ mitigationApi, toxiproxyApi }));
-  const apply = (body, headers = {}) => fetch(`${consoleBase}/api/mitigations`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body)
-  });
+  const apply = (body, headers = {}) =>
+    fetch(`${consoleBase}/api/mitigations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(body),
+    });
   return { storefront, consoleBase, mitigations, apply, faultCalls: () => faultCalls };
 }
 
 test('browser settings change actual stock responses without restarting or changing faults', async () => {
   const { storefront, consoleBase, apply, faultCalls } = await fixture(async (_req, res) => {
-    await new Promise(resolve => setTimeout(resolve, 120));
+    await new Promise((resolve) => setTimeout(resolve, 120));
     json(res, 200, { quantity: 12 });
   });
   const initial = await (await fetch(`${consoleBase}/api/mitigations`)).json();
   assert.deepEqual(initial, defaultMitigations);
   assert.equal((await (await fetch(`${storefront}/api/product`)).json()).inventory.source, 'live');
-  const response = await apply({ action: 'configure', dependency: 'inventory', timeoutMs: 50, fallback: true });
+  const response = await apply({
+    action: 'configure',
+    dependency: 'inventory',
+    timeoutMs: 50,
+    fallback: true,
+  });
   assert.equal(response.status, 200);
   assert.deepEqual((await response.json()).shipping, defaultMitigations.shipping);
   const fallback = await fetch(`${storefront}/api/product`);
   assert.equal(fallback.status, 200);
-  assert.deepEqual((await fallback.json()).inventory, { available: null, quantity: null, source: 'unconfirmed', warning: 'Availability cannot be confirmed.' });
-  assert.match(await (await fetch(`${storefront}/metrics`)).text(), /workshop_fallbacks_total\{service="storefront",dependency="lighting-inventory"\} 1/);
+  assert.deepEqual((await fallback.json()).inventory, {
+    available: null,
+    quantity: null,
+    source: 'unconfirmed',
+    warning: 'Availability cannot be confirmed.',
+  });
+  assert.match(
+    await (await fetch(`${storefront}/metrics`)).text(),
+    /workshop_fallbacks_total\{service="storefront",dependency="lighting-inventory"\} 1/,
+  );
   assert.equal(faultCalls(), 0, 'a mitigation must not remove or replace the injected fault');
   assert.equal((await apply({ action: 'reset' })).status, 200);
   assert.equal((await (await fetch(`${storefront}/api/product`)).json()).inventory.source, 'live');
@@ -77,13 +108,40 @@ test('settings reject invalid and cross-origin changes without changing active p
     { action: 'configure', dependency: 'inventory', timeoutMs: 5001, fallback: true },
     { action: 'configure', dependency: 'inventory', timeoutMs: 1.5, fallback: true },
     { action: 'configure', dependency: 'inventory', timeoutMs: 400, fallback: 'true' },
-    { action: 'configure', dependency: 'inventory', timeoutMs: 400, fallback: true, command: 'anything' },
-    { action: 'reset', dependency: 'inventory' }, null, []
-  ]) assert.equal((await apply(input)).status, 400);
+    {
+      action: 'configure',
+      dependency: 'inventory',
+      timeoutMs: 400,
+      fallback: true,
+      command: 'anything',
+    },
+    { action: 'reset', dependency: 'inventory' },
+    null,
+    [],
+  ])
+    assert.equal((await apply(input)).status, 400);
   assert.equal((await apply({ action: 'reset' }, { Origin: 'http://evil.example' })).status, 403);
   assert.equal((await apply({ action: 'reset' }, { 'Content-Type': 'text/plain' })).status, 415);
-  assert.equal((await fetch(`${consoleBase}/api/mitigations`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{' })).status, 400);
-  assert.equal((await fetch(`${consoleBase}/api/mitigations`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: 'x'.repeat(1025) })).status, 413);
+  assert.equal(
+    (
+      await fetch(`${consoleBase}/api/mitigations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{',
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await fetch(`${consoleBase}/api/mitigations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: 'x'.repeat(1025),
+      })
+    ).status,
+    413,
+  );
   assert.deepEqual(mitigations.snapshot(), defaultMitigations);
   assert.equal((await fetch(`${consoleBase}/api/mitigations`, { method: 'PUT' })).status, 405);
 });
@@ -91,8 +149,12 @@ test('settings reject invalid and cross-origin changes without changing active p
 test('an in-flight customer request keeps its original policy when settings change', async () => {
   let notifyStarted;
   let release;
-  const started = new Promise(resolve => { notifyStarted = resolve; });
-  const gate = new Promise(resolve => { release = resolve; });
+  const started = new Promise((resolve) => {
+    notifyStarted = resolve;
+  });
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
   const { storefront, apply } = await fixture(async (_req, res) => {
     notifyStarted();
     await gate;
@@ -111,22 +173,55 @@ test('an in-flight customer request keeps its original policy when settings chan
 test('the public customer server does not expose the settings listener', async () => {
   const { storefront } = await fixture();
   assert.equal((await fetch(`${storefront}/settings`)).status, 404);
-  assert.equal((await fetch(`${storefront}/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"action":"reset"}' })).status, 405);
+  assert.equal(
+    (
+      await fetch(`${storefront}/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{"action":"reset"}',
+      })
+    ).status,
+    405,
+  );
 });
 
 test('opening a new challenge clears network faults and restores default mitigations', async () => {
   const toxiproxyCalls = [];
   let toxiproxyStatus = 204;
-  const toxiproxyApi = await listen(http.createServer((req, res) => { toxiproxyCalls.push(`${req.method} ${req.url}`); res.writeHead(toxiproxyStatus); res.end(); }));
+  const toxiproxyApi = await listen(
+    http.createServer((req, res) => {
+      toxiproxyCalls.push(`${req.method} ${req.url}`);
+      res.writeHead(toxiproxyStatus);
+      res.end();
+    }),
+  );
   const mitigations = createMitigations();
-  mitigations.apply({ action: 'configure', dependency: 'inventory', timeoutMs: 400, fallback: true });
-  const storefront = await listen(createStorefrontServer({ inventoryUrl: toxiproxyApi, shippingUrl: toxiproxyApi, toxiproxyApi, mitigations }));
-  const reset = (headers = {}) => fetch(`${storefront}/api/workshop/reset`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: '{}'
+  mitigations.apply({
+    action: 'configure',
+    dependency: 'inventory',
+    timeoutMs: 400,
+    fallback: true,
   });
+  const storefront = await listen(
+    createStorefrontServer({
+      inventoryUrl: toxiproxyApi,
+      shippingUrl: toxiproxyApi,
+      toxiproxyApi,
+      mitigations,
+    }),
+  );
+  const reset = (headers = {}) =>
+    fetch(`${storefront}/api/workshop/reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: '{}',
+    });
 
   assert.equal((await reset({ Origin: 'http://attacker.example' })).status, 403);
-  assert.equal((await fetch(`${storefront}/api/workshop/reset`, { method: 'POST', body: '{}' })).status, 415);
+  assert.equal(
+    (await fetch(`${storefront}/api/workshop/reset`, { method: 'POST', body: '{}' })).status,
+    415,
+  );
   assert.deepEqual(toxiproxyCalls, []);
   assert.equal(mitigations.snapshot().inventory.timeoutMs, 400);
 
@@ -134,7 +229,11 @@ test('opening a new challenge clears network faults and restores default mitigat
   const failed = await reset();
   assert.equal(failed.status, 502);
   assert.match((await failed.json()).error, /Network faults could not be cleared/);
-  assert.equal(mitigations.snapshot().inventory.fallback, true, 'settings stay put when faults could not be cleared');
+  assert.equal(
+    mitigations.snapshot().inventory.fallback,
+    true,
+    'settings stay put when faults could not be cleared',
+  );
 
   toxiproxyStatus = 204;
   const response = await reset();

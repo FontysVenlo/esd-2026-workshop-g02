@@ -1,0 +1,4 @@
+**/node_modules/
+field-workshop/build/
+dist/
+**/pnpm-lock.yaml

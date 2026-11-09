@@ -6,15 +6,23 @@ export function createCapacity({ limit = 2, maxQueue = 12, queueTimeoutMs = 1000
   const queue = [];
   function release() {
     const next = queue.shift();
-    if (next) { clearTimeout(next.timer); next.resolve(release); }
-    else active--;
+    if (next) {
+      clearTimeout(next.timer);
+      next.resolve(release);
+    } else active--;
   }
   return {
     snapshot: () => ({ active, queued: queue.length, rejected, limit }),
     acquire() {
-      if (active < limit) { active++; return Promise.resolve(release); }
+      if (active < limit) {
+        active++;
+        return Promise.resolve(release);
+      }
       const error = () => Object.assign(new Error('capacity'), { outcome: 'capacity' });
-      if (queue.length >= maxQueue) { rejected++; return Promise.reject(error()); }
+      if (queue.length >= maxQueue) {
+        rejected++;
+        return Promise.reject(error());
+      }
       return new Promise((resolve, reject) => {
         const entry = { resolve };
         entry.timer = setTimeout(() => {
@@ -24,6 +32,6 @@ export function createCapacity({ limit = 2, maxQueue = 12, queueTimeoutMs = 1000
         }, queueTimeoutMs);
         queue.push(entry);
       });
-    }
+    },
   };
 }

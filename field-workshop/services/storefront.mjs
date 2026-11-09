@@ -15,30 +15,52 @@ const toolsPage = pageReader('tools.html');
 const guideFiles = new Map([
   ['/docs/assignments.md', readFileSync(new URL('../docs/assignments.md', import.meta.url))],
   ['/docs/tool-reference.md', readFileSync(new URL('../docs/tool-reference.md', import.meta.url))],
-  ['/docs/experiment-record.md', readFileSync(new URL('../docs/experiment-record.md', import.meta.url))]
+  [
+    '/docs/experiment-record.md',
+    readFileSync(new URL('../docs/experiment-record.md', import.meta.url)),
+  ],
 ]);
 
 export function createStorefrontServer(config = {}) {
   const settings = {
     inventoryUrls: {
-      lighting: config.lightingInventoryUrl ?? process.env.LIGHTING_INVENTORY_URL ?? config.inventoryUrl ?? 'http://localhost:8666',
-      seating: config.seatingInventoryUrl ?? process.env.SEATING_INVENTORY_URL ?? config.healthyInventoryUrl ?? config.inventoryUrl ?? 'http://localhost:8668',
-      desks: config.desksInventoryUrl ?? process.env.DESKS_INVENTORY_URL ?? config.healthyInventoryUrl ?? config.inventoryUrl ?? 'http://localhost:8670'
+      lighting:
+        config.lightingInventoryUrl ??
+        process.env.LIGHTING_INVENTORY_URL ??
+        config.inventoryUrl ??
+        'http://localhost:8666',
+      seating:
+        config.seatingInventoryUrl ??
+        process.env.SEATING_INVENTORY_URL ??
+        config.healthyInventoryUrl ??
+        config.inventoryUrl ??
+        'http://localhost:8668',
+      desks:
+        config.desksInventoryUrl ??
+        process.env.DESKS_INVENTORY_URL ??
+        config.healthyInventoryUrl ??
+        config.inventoryUrl ??
+        'http://localhost:8670',
     },
     shippingUrl: config.shippingUrl ?? process.env.SHIPPING_URL ?? 'http://localhost:8667',
-    inventoryTimeoutMs: Number(config.inventoryTimeoutMs ?? process.env.INVENTORY_TIMEOUT_MS ?? 3000),
+    inventoryTimeoutMs: Number(
+      config.inventoryTimeoutMs ?? process.env.INVENTORY_TIMEOUT_MS ?? 3000,
+    ),
     shippingTimeoutMs: Number(config.shippingTimeoutMs ?? process.env.SHIPPING_TIMEOUT_MS ?? 3000),
     inventoryFallback: config.inventoryFallback ?? process.env.INVENTORY_FALLBACK === 'true',
     shippingFallback: config.shippingFallback ?? process.env.SHIPPING_FALLBACK === 'true',
-    toxiproxyApi: config.toxiproxyApi ?? process.env.TOXIPROXY_API ?? 'http://localhost:8474'
+    toxiproxyApi: config.toxiproxyApi ?? process.env.TOXIPROXY_API ?? 'http://localhost:8474',
   };
   for (const timeout of [settings.inventoryTimeoutMs, settings.shippingTimeoutMs]) {
-    if (!Number.isFinite(timeout) || timeout < 1) throw new Error('Dependency timeouts must be positive milliseconds');
+    if (!Number.isFinite(timeout) || timeout < 1)
+      throw new Error('Dependency timeouts must be positive milliseconds');
   }
-  const mitigations = config.mitigations ?? createMitigations({
-    inventory: { timeoutMs: settings.inventoryTimeoutMs, fallback: settings.inventoryFallback },
-    shipping: { timeoutMs: settings.shippingTimeoutMs, fallback: settings.shippingFallback }
-  });
+  const mitigations =
+    config.mitigations ??
+    createMitigations({
+      inventory: { timeoutMs: settings.inventoryTimeoutMs, fallback: settings.inventoryFallback },
+      shipping: { timeoutMs: settings.shippingTimeoutMs, fallback: settings.shippingFallback },
+    });
   const metrics = new Metrics('storefront');
   const capacity = createCapacity(config.capacity);
   const breaker = createBreaker(config.breaker);
@@ -47,13 +69,16 @@ export function createStorefrontServer(config = {}) {
   async function dependency(name, baseUrl, path, timeoutMs) {
     const started = performance.now();
     try {
-      const response = await fetch(new URL(path, baseUrl), { signal: AbortSignal.timeout(timeoutMs) });
+      const response = await fetch(new URL(path, baseUrl), {
+        signal: AbortSignal.timeout(timeoutMs),
+      });
       if (!response.ok) throw new Error(`Dependency returned ${response.status}`);
       const body = await response.json();
       metrics.dependency(name, 'success', (performance.now() - started) / 1000);
       return body;
     } catch (error) {
-      const outcome = error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'timeout' : 'failure';
+      const outcome =
+        error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'timeout' : 'failure';
       metrics.dependency(name, outcome, (performance.now() - started) / 1000);
       const failure = new Error(`${name} ${outcome}`);
       failure.outcome = outcome;
@@ -66,11 +91,16 @@ export function createStorefrontServer(config = {}) {
     if (!breaker.enter(key, policy.fallback)) {
       throw Object.assign(new Error(`${name} circuit_open`), { outcome: 'circuit_open' });
     }
-    const baseUrl = name === 'inventory' ? settings.inventoryUrls[inventoryCategory[sku]]
-      : settings.shippingUrl;
+    const baseUrl =
+      name === 'inventory' ? settings.inventoryUrls[inventoryCategory[sku]] : settings.shippingUrl;
     const service = name === 'inventory' ? inventoryCategory[sku] + '-inventory' : name;
     try {
-      const result = await dependency(service, baseUrl, `${name === 'inventory' ? '/stock' : '/quote'}?sku=${sku}`, policy.timeoutMs);
+      const result = await dependency(
+        service,
+        baseUrl,
+        `${name === 'inventory' ? '/stock' : '/quote'}?sku=${sku}`,
+        policy.timeoutMs,
+      );
       breaker.success(key);
       return result;
     } catch (error) {
@@ -87,7 +117,12 @@ export function createStorefrontServer(config = {}) {
       if (!policy.fallback) throw error;
       metrics.fallback(inventoryCategory[sku] + '-inventory');
       // A fallback must not claim the item is in stock when the source of truth is unavailable.
-      return { available: null, quantity: null, source: 'unconfirmed', warning: "Availability cannot be confirmed." };
+      return {
+        available: null,
+        quantity: null,
+        source: 'unconfirmed',
+        warning: 'Availability cannot be confirmed.',
+      };
     }
   }
 
@@ -98,7 +133,13 @@ export function createStorefrontServer(config = {}) {
     } catch (error) {
       if (!policy.fallback) throw error;
       metrics.fallback('shipping');
-      return { method: null, priceEur: null, etaDays: null, source: 'unavailable', warning: "Shipping quote is temporarily unavailable." };
+      return {
+        method: null,
+        priceEur: null,
+        etaDays: null,
+        source: 'unavailable',
+        warning: 'Shipping quote is temporarily unavailable.',
+      };
     }
   }
 
@@ -112,15 +153,20 @@ export function createStorefrontServer(config = {}) {
       // Shipping call must not hide an Inventory request still using capacity.
       const results = await Promise.allSettled([
         stock(policy.inventory, product.sku),
-        ...(preview ? [shipping(policy.shipping, product.sku)] : [])
+        ...(preview ? [shipping(policy.shipping, product.sku)] : []),
       ]);
-      const failure = results.find(result => result.status === 'rejected');
+      const failure = results.find((result) => result.status === 'rejected');
       if (failure) throw failure.reason;
       const inventory = results[0].value;
       const delivery = results[1]?.value;
       const { quantity: _quantity, ...description } = product;
-      return { product: description, inventory, ...(delivery ? { shipping: delivery } : {}),
-        degraded: inventory.source !== 'live' || Boolean(delivery && delivery.source !== 'live'), queueMs };
+      return {
+        product: description,
+        inventory,
+        ...(delivery ? { shipping: delivery } : {}),
+        degraded: inventory.source !== 'live' || Boolean(delivery && delivery.source !== 'live'),
+        queueMs,
+      };
     } finally {
       release?.();
       metrics.product(product.sku, (performance.now() - queuedAt) / 1000);
@@ -131,35 +177,50 @@ export function createStorefrontServer(config = {}) {
     const url = new URL(req.url, 'http://localhost');
     const route = url.pathname;
     if (req.method === 'POST' && route === '/api/workshop/reset') return resetEnvironment();
-    if (req.method !== 'GET') return send(405, { error: "Method not allowed" });
+    if (req.method !== 'GET') return send(405, { error: 'Method not allowed' });
     if (route === '/health') return send(200, { status: 'ok' });
     if (route === '/metrics') {
       res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4' });
       const state = capacity.snapshot();
-      const circuits = new Map(breaker.snapshot().map(circuit => [circuit.key, circuit]));
-      const paths = products().map(({ sku }) => ({ sku, key: sku + ':inventory', service: inventoryCategory[sku] + '-inventory' }));
+      const circuits = new Map(breaker.snapshot().map((circuit) => [circuit.key, circuit]));
+      const paths = products().map(({ sku }) => ({
+        sku,
+        key: sku + ':inventory',
+        service: inventoryCategory[sku] + '-inventory',
+      }));
       paths.push({ sku: 'all', key: 'shipping', service: 'shipping' });
       const circuitMetrics = paths.flatMap(({ sku, key, service }) => {
         const circuit = circuits.get(key);
         const labels = `sku="${sku}",dependency="${service}"`;
         return [
-          `workshop_circuit_state{${labels}} ${circuit ? circuit.probing ? 2 : 1 : 0}`,
-          `workshop_circuit_retry_seconds{${labels}} ${(circuit?.retryInMs ?? 0) / 1000}`
+          `workshop_circuit_state{${labels}} ${circuit ? (circuit.probing ? 2 : 1) : 0}`,
+          `workshop_circuit_retry_seconds{${labels}} ${(circuit?.retryInMs ?? 0) / 1000}`,
         ];
       });
-      return res.end(metrics.render() + [
-        '# TYPE workshop_workers_active gauge', `workshop_workers_active ${state.active}`,
-        '# TYPE workshop_workers_limit gauge', `workshop_workers_limit ${state.limit}`,
-        '# TYPE workshop_workers_queued gauge', `workshop_workers_queued ${state.queued}`,
-        '# TYPE workshop_capacity_rejections_total counter', `workshop_capacity_rejections_total ${state.rejected}`,
-        '# TYPE workshop_open_circuits gauge', `workshop_open_circuits ${circuits.size}`,
-        '# HELP workshop_circuit_state Product dependency circuit: 0 closed, 1 paused, 2 probing.',
-        '# TYPE workshop_circuit_state gauge',
-        '# HELP workshop_circuit_retry_seconds Seconds until a product dependency recovery probe is eligible.',
-        '# TYPE workshop_circuit_retry_seconds gauge', ...circuitMetrics, ''
-      ].join('\n'));
+      return res.end(
+        metrics.render() +
+          [
+            '# TYPE workshop_workers_active gauge',
+            `workshop_workers_active ${state.active}`,
+            '# TYPE workshop_workers_limit gauge',
+            `workshop_workers_limit ${state.limit}`,
+            '# TYPE workshop_workers_queued gauge',
+            `workshop_workers_queued ${state.queued}`,
+            '# TYPE workshop_capacity_rejections_total counter',
+            `workshop_capacity_rejections_total ${state.rejected}`,
+            '# TYPE workshop_open_circuits gauge',
+            `workshop_open_circuits ${circuits.size}`,
+            '# HELP workshop_circuit_state Product dependency circuit: 0 closed, 1 paused, 2 probing.',
+            '# TYPE workshop_circuit_state gauge',
+            '# HELP workshop_circuit_retry_seconds Seconds until a product dependency recovery probe is eligible.',
+            '# TYPE workshop_circuit_retry_seconds gauge',
+            ...circuitMetrics,
+            '',
+          ].join('\n'),
+      );
     }
-    if (route === '/api/system') return send(200, { ...capacity.snapshot(), circuits: breaker.snapshot() });
+    if (route === '/api/system')
+      return send(200, { ...capacity.snapshot(), circuits: breaker.snapshot() });
     if (route === '/storefront') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       return res.end(page());
@@ -177,41 +238,65 @@ export function createStorefrontServer(config = {}) {
       res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
       return res.end(guideFiles.get(route));
     }
-    if (!['/api/product', '/api/order-preview', '/api/catalog'].includes(route)) return send(404, { error: "Not found" });
+    if (!['/api/product', '/api/order-preview', '/api/catalog'].includes(route))
+      return send(404, { error: 'Not found' });
 
     const started = performance.now();
     // Keep one consistent policy for the entire customer request, even if the
     // operator changes settings while a dependency request is in flight.
     const policy = mitigations.snapshot();
     const currentPolicy = JSON.stringify(policy);
-    if (currentPolicy !== previousPolicy) { breaker.reset(); previousPolicy = currentPolicy; }
+    if (currentPolicy !== previousPolicy) {
+      breaker.reset();
+      previousPolicy = currentPolicy;
+    }
     try {
       if (route === '/api/catalog') {
         // The catalog is one customer response. Without fallback, one missing
         // product rejects the complete view, demonstrating error propagation.
-        const results = await Promise.allSettled(products().map(product => productResult(product, url.searchParams.get('preview') === 'true', policy)));
-        const failure = results.find(result => result.status === 'rejected');
+        const results = await Promise.allSettled(
+          products().map((product) =>
+            productResult(product, url.searchParams.get('preview') === 'true', policy),
+          ),
+        );
+        const failure = results.find((result) => result.status === 'rejected');
         if (failure) throw failure.reason;
-        return sendApi(200, { products: results.map(result => result.value), system: capacity.snapshot(), circuits: breaker.snapshot() });
+        return sendApi(200, {
+          products: results.map((result) => result.value),
+          system: capacity.snapshot(),
+          circuits: breaker.snapshot(),
+        });
       }
-      const product = products().find(product => product.sku === (url.searchParams.get('sku') ?? 'LAMP-01'));
-      if (!product) return sendApi(404, { error: "Not found" });
+      const product = products().find(
+        (product) => product.sku === (url.searchParams.get('sku') ?? 'LAMP-01'),
+      );
+      if (!product) return sendApi(404, { error: 'Not found' });
       const result = await productResult(product, route === '/api/order-preview', policy);
-      return sendApi(200, { ...result, note: "Preview only. No order is placed." });
+      return sendApi(200, { ...result, note: 'Preview only. No order is placed.' });
     } catch (error) {
       return sendApi(error.outcome === 'timeout' ? 504 : 503, {
-        error: (error.outcome === 'capacity' ? "The shop is busy. Please try again shortly." : route === '/api/catalog' ? "The catalog could not be refreshed. Please try again or check a product individually." : "Product information is temporarily unavailable."),
-        failedDependency: error.message.split(' ')[0]
+        error:
+          error.outcome === 'capacity'
+            ? 'The shop is busy. Please try again shortly.'
+            : route === '/api/catalog'
+              ? 'The catalog could not be refreshed. Please try again or check a product individually.'
+              : 'Product information is temporarily unavailable.',
+        failedDependency: error.message.split(' ')[0],
       });
     }
 
     // Called by the workshop page when a newly unlocked challenge is opened, so
     // each challenge starts with no network faults and default mitigations.
     async function resetEnvironment() {
-      if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`) return send(403, { error: "Cross-origin changes are not allowed" });
-      if (!req.headers['content-type']?.startsWith('application/json')) return send(415, { error: "JSON is required" });
+      if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`)
+        return send(403, { error: 'Cross-origin changes are not allowed' });
+      if (!req.headers['content-type']?.startsWith('application/json'))
+        return send(415, { error: 'JSON is required' });
       try {
-        const response = await fetch(new URL('/reset', settings.toxiproxyApi), { method: 'POST', signal: AbortSignal.timeout(3000) });
+        const response = await fetch(new URL('/reset', settings.toxiproxyApi), {
+          method: 'POST',
+          signal: AbortSignal.timeout(3000),
+        });
         if (!response.ok) throw new Error(`Toxiproxy returned ${response.status}`);
       } catch (error) {
         return send(502, { error: `Network faults could not be cleared: ${error.message}` });
@@ -219,7 +304,9 @@ export function createStorefrontServer(config = {}) {
       const restored = mitigations.apply({ action: 'reset' });
       breaker.reset();
       previousPolicy = JSON.stringify(restored);
-      console.log('Workshop fresh start: network faults cleared, default timeouts and fallbacks restored');
+      console.log(
+        'Workshop fresh start: network faults cleared, default timeouts and fallbacks restored',
+      );
       return send(200, { faults: 'cleared', mitigations: restored });
     }
 
@@ -229,7 +316,10 @@ export function createStorefrontServer(config = {}) {
     }
 
     function send(status, body) {
-      res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.writeHead(status, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store',
+      });
       res.end(JSON.stringify(body));
     }
   });
@@ -237,9 +327,18 @@ export function createStorefrontServer(config = {}) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const mitigations = createMitigations({
-    inventory: { timeoutMs: Number(process.env.INVENTORY_TIMEOUT_MS ?? 3000), fallback: process.env.INVENTORY_FALLBACK === 'true' },
-    shipping: { timeoutMs: Number(process.env.SHIPPING_TIMEOUT_MS ?? 3000), fallback: process.env.SHIPPING_FALLBACK === 'true' }
+    inventory: {
+      timeoutMs: Number(process.env.INVENTORY_TIMEOUT_MS ?? 3000),
+      fallback: process.env.INVENTORY_FALLBACK === 'true',
+    },
+    shipping: {
+      timeoutMs: Number(process.env.SHIPPING_TIMEOUT_MS ?? 3000),
+      fallback: process.env.SHIPPING_FALLBACK === 'true',
+    },
   });
   createStorefrontServer({ mitigations }).listen(Number(process.env.PORT ?? 8080), '0.0.0.0');
-  createMitigationServer(mitigations).listen(Number(process.env.MITIGATION_PORT ?? 8081), '0.0.0.0');
+  createMitigationServer(mitigations).listen(
+    Number(process.env.MITIGATION_PORT ?? 8081),
+    '0.0.0.0',
+  );
 }

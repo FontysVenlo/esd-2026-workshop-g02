@@ -1,7 +1,11 @@
 const buckets = [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 10];
 
 function labels(values) {
-  return `{${Object.entries(values).map(([key, value]) => `${key}="${String(value).replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`).join(',')}}`;
+  return `{${Object.entries(values)
+    .map(
+      ([key, value]) => `${key}="${String(value).replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`,
+    )
+    .join(',')}}`;
 }
 
 function add(map, values, amount = 1) {
@@ -56,23 +60,46 @@ export class Metrics {
     const lines = [];
     const counter = (name, help, entries) => {
       lines.push(`# HELP ${name} ${help}`, `# TYPE ${name} counter`);
-      for (const { values, amount } of entries.values()) lines.push(`${name}${labels(values)} ${amount}`);
+      for (const { values, amount } of entries.values())
+        lines.push(`${name}${labels(values)} ${amount}`);
     };
     const histogram = (name, help, entries) => {
       lines.push(`# HELP ${name} ${help}`, `# TYPE ${name} histogram`);
       for (const { values, count, sum, buckets: counts } of entries.values()) {
-        buckets.forEach((bound, index) => lines.push(`${name}_bucket${labels({ ...values, le: bound })} ${counts[index]}`));
+        buckets.forEach((bound, index) =>
+          lines.push(`${name}_bucket${labels({ ...values, le: bound })} ${counts[index]}`),
+        );
         lines.push(`${name}_bucket${labels({ ...values, le: '+Inf' })} ${count}`);
         lines.push(`${name}_sum${labels(values)} ${sum}`);
         lines.push(`${name}_count${labels(values)} ${count}`);
       }
     };
     counter('workshop_http_requests_total', 'Completed application HTTP requests.', this.requests);
-    histogram('workshop_http_request_duration_seconds', 'Application HTTP request duration.', this.requestDurations);
-    counter('workshop_dependency_calls_total', 'Completed calls from the storefront to a dependency.', this.dependencies);
-    histogram('workshop_dependency_duration_seconds', 'Storefront dependency call duration.', this.dependencyDurations);
-    counter('workshop_fallbacks_total', 'Fallback responses used by the storefront.', this.fallbacks);
-    histogram('workshop_product_duration_seconds', 'Product processing including shared worker queue time.', this.productDurations);
+    histogram(
+      'workshop_http_request_duration_seconds',
+      'Application HTTP request duration.',
+      this.requestDurations,
+    );
+    counter(
+      'workshop_dependency_calls_total',
+      'Completed calls from the storefront to a dependency.',
+      this.dependencies,
+    );
+    histogram(
+      'workshop_dependency_duration_seconds',
+      'Storefront dependency call duration.',
+      this.dependencyDurations,
+    );
+    counter(
+      'workshop_fallbacks_total',
+      'Fallback responses used by the storefront.',
+      this.fallbacks,
+    );
+    histogram(
+      'workshop_product_duration_seconds',
+      'Product processing including shared worker queue time.',
+      this.productDurations,
+    );
     return `${lines.join('\n')}\n`;
   }
 }

@@ -7,12 +7,14 @@ import { initializeProxies } from '../services/proxy-init.mjs';
 
 const servers = [];
 afterEach(async () => {
-  await Promise.all(servers.splice(0).map(server => new Promise(resolve => server.close(resolve))));
+  await Promise.all(
+    servers.splice(0).map((server) => new Promise((resolve) => server.close(resolve))),
+  );
 });
 
 async function serve(handler) {
   const server = http.createServer(handler);
-  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   servers.push(server);
   return `http://127.0.0.1:${server.address().port}`;
 }
@@ -26,12 +28,15 @@ test('real proxy-path delay increases customer latency and is recorded', async (
   let proxyCalls = 0;
   const inventoryProxy = await serve(async (_req, res) => {
     proxyCalls += 1;
-    await new Promise(resolve => setTimeout(resolve, 120));
+    await new Promise((resolve) => setTimeout(resolve, 120));
     json(res, 200, { quantity: 12 });
   });
   const shippingProxy = await serve((_req, res) => json(res, 200, { priceEur: 4.9, etaDays: 3 }));
-  const storefront = createStorefrontServer({ inventoryUrl: inventoryProxy, shippingUrl: shippingProxy });
-  await new Promise(resolve => storefront.listen(0, '127.0.0.1', resolve));
+  const storefront = createStorefrontServer({
+    inventoryUrl: inventoryProxy,
+    shippingUrl: shippingProxy,
+  });
+  await new Promise((resolve) => storefront.listen(0, '127.0.0.1', resolve));
   servers.push(storefront);
   const base = `http://127.0.0.1:${storefront.address().port}`;
   const started = performance.now();
@@ -42,24 +47,39 @@ test('real proxy-path delay increases customer latency and is recorded', async (
   assert.equal((await response.json()).inventory.source, 'live');
   assert.equal(proxyCalls, 1);
   const metrics = await (await fetch(`${base}/metrics`)).text();
-  assert.match(metrics, /workshop_http_requests_total\{service="storefront",route="\/api\/product",status="200"\} 1/);
-  assert.match(metrics, /workshop_dependency_calls_total\{service="storefront",dependency="lighting-inventory",outcome="success"\} 1/);
+  assert.match(
+    metrics,
+    /workshop_http_requests_total\{service="storefront",route="\/api\/product",status="200"\} 1/,
+  );
+  assert.match(
+    metrics,
+    /workshop_dependency_calls_total\{service="storefront",dependency="lighting-inventory",outcome="success"\} 1/,
+  );
 });
 
 test('inventory timeout fails closed or returns explicitly unconfirmed stock with fallback', async () => {
   const inventoryProxy = await serve(async (_req, res) => {
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
     json(res, 200, { quantity: 12 });
   });
   const shippingProxy = await serve((_req, res) => json(res, 200, { priceEur: 4.9 }));
-  const strict = createStorefrontServer({ inventoryUrl: inventoryProxy, shippingUrl: shippingProxy, inventoryTimeoutMs: 40 });
-  await new Promise(resolve => strict.listen(0, '127.0.0.1', resolve));
+  const strict = createStorefrontServer({
+    inventoryUrl: inventoryProxy,
+    shippingUrl: shippingProxy,
+    inventoryTimeoutMs: 40,
+  });
+  await new Promise((resolve) => strict.listen(0, '127.0.0.1', resolve));
   servers.push(strict);
   const strictResponse = await fetch(`http://127.0.0.1:${strict.address().port}/api/product`);
   assert.equal(strictResponse.status, 504);
 
-  const resilient = createStorefrontServer({ inventoryUrl: inventoryProxy, shippingUrl: shippingProxy, inventoryTimeoutMs: 40, inventoryFallback: true });
-  await new Promise(resolve => resilient.listen(0, '127.0.0.1', resolve));
+  const resilient = createStorefrontServer({
+    inventoryUrl: inventoryProxy,
+    shippingUrl: shippingProxy,
+    inventoryTimeoutMs: 40,
+    inventoryFallback: true,
+  });
+  await new Promise((resolve) => resilient.listen(0, '127.0.0.1', resolve));
   servers.push(resilient);
   const base = `http://127.0.0.1:${resilient.address().port}`;
   const response = await fetch(`${base}/api/product`);
@@ -68,19 +88,32 @@ test('inventory timeout fails closed or returns explicitly unconfirmed stock wit
   assert.equal(body.degraded, true);
   assert.equal(body.inventory.available, null);
   assert.equal(body.inventory.source, 'unconfirmed');
-  assert.match(await (await fetch(`${base}/metrics`)).text(), /workshop_fallbacks_total\{service="storefront",dependency="lighting-inventory"\} 1/);
+  assert.match(
+    await (await fetch(`${base}/metrics`)).text(),
+    /workshop_fallbacks_total\{service="storefront",dependency="lighting-inventory"\} 1/,
+  );
 });
 
 test('shipping failure affects order preview but can be isolated from inventory', async () => {
   const inventoryProxy = await serve((_req, res) => json(res, 200, { quantity: 12 }));
   const shippingProxy = await serve((_req, res) => json(res, 503, { error: 'offline' }));
-  const strict = createStorefrontServer({ inventoryUrl: inventoryProxy, shippingUrl: shippingProxy });
-  await new Promise(resolve => strict.listen(0, '127.0.0.1', resolve));
+  const strict = createStorefrontServer({
+    inventoryUrl: inventoryProxy,
+    shippingUrl: shippingProxy,
+  });
+  await new Promise((resolve) => strict.listen(0, '127.0.0.1', resolve));
   servers.push(strict);
-  assert.equal((await fetch(`http://127.0.0.1:${strict.address().port}/api/order-preview`)).status, 503);
+  assert.equal(
+    (await fetch(`http://127.0.0.1:${strict.address().port}/api/order-preview`)).status,
+    503,
+  );
 
-  const resilient = createStorefrontServer({ inventoryUrl: inventoryProxy, shippingUrl: shippingProxy, shippingFallback: true });
-  await new Promise(resolve => resilient.listen(0, '127.0.0.1', resolve));
+  const resilient = createStorefrontServer({
+    inventoryUrl: inventoryProxy,
+    shippingUrl: shippingProxy,
+    shippingFallback: true,
+  });
+  await new Promise((resolve) => resilient.listen(0, '127.0.0.1', resolve));
   servers.push(resilient);
   const response = await fetch(`http://127.0.0.1:${resilient.address().port}/api/order-preview`);
   const body = await response.json();
@@ -106,7 +139,12 @@ test('proxy initialization creates only fixed local service routes and is idempo
   created.inventory.listen = '[::]:8666';
   created.shipping.listen = '[::]:8667';
   await initializeProxies(api, async () => {});
-  assert.deepEqual(Object.keys(created).sort(), ['desks-inventory', 'inventory', 'seating-inventory', 'shipping']);
+  assert.deepEqual(Object.keys(created).sort(), [
+    'desks-inventory',
+    'inventory',
+    'seating-inventory',
+    'shipping',
+  ]);
   assert.equal(created['seating-inventory'].upstream, 'seating-inventory:8080');
   assert.equal(created.inventory.upstream, 'lighting-inventory:8080');
   assert.equal(created.shipping.upstream, 'shipping:8080');
@@ -116,10 +154,12 @@ test('proxy initialization creates only fixed local service routes and is idempo
 test('each product reaches its own category service and each service rejects other categories', async () => {
   const options = {};
   for (const [category, sku, otherSku] of [
-    ['lighting', 'LAMP-01', 'CHAIR-02'], ['seating', 'CHAIR-02', 'DESK-03'], ['desks', 'DESK-03', 'LAMP-01']
+    ['lighting', 'LAMP-01', 'CHAIR-02'],
+    ['seating', 'CHAIR-02', 'DESK-03'],
+    ['desks', 'DESK-03', 'LAMP-01'],
   ]) {
     const server = createInventoryServer(category);
-    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     servers.push(server);
     const base = 'http://127.0.0.1:' + server.address().port;
     options[category + 'InventoryUrl'] = base;
@@ -127,9 +167,12 @@ test('each product reaches its own category service and each service rejects oth
     assert.equal((await (await fetch(base + '/stock?sku=' + sku)).json()).sku, sku);
   }
   const storefront = createStorefrontServer(options);
-  await new Promise(resolve => storefront.listen(0, '127.0.0.1', resolve));
+  await new Promise((resolve) => storefront.listen(0, '127.0.0.1', resolve));
   servers.push(storefront);
   const result = await fetch('http://127.0.0.1:' + storefront.address().port + '/api/catalog');
   assert.equal(result.status, 200);
-  assert.deepEqual((await result.json()).products.map(p => p.inventory.quantity), [12, 8, 5]);
+  assert.deepEqual(
+    (await result.json()).products.map((p) => p.inventory.quantity),
+    [12, 8, 5],
+  );
 });

@@ -4,6 +4,11 @@
   "scripts": {
     "start": "node field-workshop/dev/start.mjs",
     "dev": "node field-workshop/dev/start.mjs",
-    "stop": "docker compose -f field-workshop/compose.yaml -f field-workshop/compose.dev.yaml --profile load down"
+    "stop": "docker compose -f field-workshop/compose.yaml -f field-workshop/compose.dev.yaml --profile load down",
+    "format": "prettier --write \"field-workshop/{src,services,tests,dev}/**/*.{js,jsx,mjs}\" \"field-workshop/build.mjs\" \"field-workshop/public/*.css\"",
+    "format:check": "prettier --check \"field-workshop/{src,services,tests,dev}/**/*.{js,jsx,mjs}\" \"field-workshop/build.mjs\" \"field-workshop/public/*.css\""
+  },
+  "devDependencies": {
+    "prettier": "3.9.10"
   }
 }

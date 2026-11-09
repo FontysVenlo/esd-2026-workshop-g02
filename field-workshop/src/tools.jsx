@@ -1,41 +1,134 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-function Tools() { return <>
-  <header><div className="header-inner"><a className="brand" href="/">{"Northstar Supply / Commands"}</a><nav className="links"><a href="/">{"Workshop overview"}</a><a href="http://localhost:8089" target="_blank" rel="noopener">{"Network faults"}</a></nav></div></header>
-  <main className="reference">
-    <div className="intro"><h1>{"Optional command reference"}</h1><p>{"The workshop can be completed entirely in the browser on Windows and Mac. Use"} <a href="http://localhost:8089" target="_blank" rel="noopener">{"Fault injection"}</a> {"to create the problem and"} <a href="http://localhost:8089/#mitigations" target="_blank" rel="noopener">{"Fallbacks & timeouts"}</a> {"to change the shop's response."}</p><p>{"You do not need to type any of the commands below. The console's"} <strong>{"Info & commands"}</strong> {"tab also shows the last request with a Windows/Mac selector."}</p></div>
-    <section>
-      <h2>{"What changes when I enable fallback and its circuit breaker?"}</h2>
-      <p>{"Inventory fallback returns"} <strong>{"Stock unconfirmed"}</strong> {"if stock cannot be checked. Shipping fallback keeps the preview useful with"} <strong>{"Shipping quote unavailable"}</strong>{". A short timeout bounds dependency waiting and releases shared workers. Enabling fallback also pauses a failed product/dependency for five seconds before one recovery probe. The fallback preserves the complete catalog with honest partial information. These settings apply immediately."}</p>
-      <p>{"Restore defaults in"} <strong>{"Fallbacks & timeouts"}</strong>{", then clear the fault in"} <strong>{"Fault injection"}</strong>{". Your answers remain saved. Runtime settings last until Storefront restarts and reloads its startup configuration."}</p>
-    </section>
-    <section>
-      <h2>{"Windows · PowerShell"}</h2>
-      <h3>{"Inventory timeout and fallback"}</h3>
-      <pre>{"Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{\"action\":\"configure\",\"dependency\":\"inventory\",\"timeoutMs\":400,\"fallback\":true}'"}</pre>
-      <h3>{"Shipping fallback"}</h3>
-      <pre>{"Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{\"action\":\"configure\",\"dependency\":\"shipping\",\"timeoutMs\":3000,\"fallback\":true}'"}</pre>
-      <h3>{"Restore default settings"}</h3>
-      <pre>{"Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{\"action\":\"reset\"}'"}</pre>
-      <h3>{"Inventory latency"}</h3>
-      <pre>{"Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/action' -ContentType 'application/json' -Body '{\"action\":\"set-latency\",\"proxy\":\"inventory\",\"latencyMs\":1500}'"}</pre>
-    </section>
-    <section>
-      <h2>{"Mac · Terminal"}</h2>
-      <h3>{"Inventory timeout and fallback"}</h3>
-      <pre>{"curl -f -sS -X POST 'http://localhost:8089/api/mitigations' -H 'Content-Type: application/json' --data '{\"action\":\"configure\",\"dependency\":\"inventory\",\"timeoutMs\":400,\"fallback\":true}'"}</pre>
-      <h3>{"Shipping fallback"}</h3>
-      <pre>{"curl -f -sS -X POST 'http://localhost:8089/api/mitigations' -H 'Content-Type: application/json' --data '{\"action\":\"configure\",\"dependency\":\"shipping\",\"timeoutMs\":3000,\"fallback\":true}'"}</pre>
-      <h3>{"Restore default settings"}</h3>
-      <pre>{"curl -f -sS -X POST 'http://localhost:8089/api/mitigations' -H 'Content-Type: application/json' --data '{\"action\":\"reset\"}'"}</pre>
-      <h3>{"Inventory latency"}</h3>
-      <pre>{"curl -f -sS -X POST 'http://localhost:8089/api/action' -H 'Content-Type: application/json' --data '{\"action\":\"set-latency\",\"proxy\":\"inventory\",\"latencyMs\":1500}'"}</pre>
-    </section>
-    <section>
-      <h2>{"What happens underneath?"}</h2>
-      <p>{"Fault requests change the real"} <strong>{"Toxiproxy"}</strong> {"paths. Mitigation requests change the Storefront's live timeout and fallback policies through an internal Docker listener. No Docker socket or host shell is exposed to the console."}</p>
-      <p><a href="/docs/tool-reference.md">{"Full technical reference"}</a> {"·"} <a href="http://localhost:3008/d/field-workshop/field-workshop" target="_blank" rel="noopener">{"Grafana"}</a></p>
-    </section>
-  </main>
-</>; }
+function Tools() {
+  return (
+    <>
+      <header>
+        <div className="header-inner">
+          <a className="brand" href="/">
+            {'Northstar Supply / Commands'}
+          </a>
+          <nav className="links">
+            <a href="/">{'Workshop overview'}</a>
+            <a href="http://localhost:8089" target="_blank" rel="noopener">
+              {'Network faults'}
+            </a>
+          </nav>
+        </div>
+      </header>
+      <main className="reference">
+        <div className="intro">
+          <h1>{'Optional command reference'}</h1>
+          <p>
+            {'The workshop can be completed entirely in the browser on Windows and Mac. Use'}{' '}
+            <a href="http://localhost:8089" target="_blank" rel="noopener">
+              {'Fault injection'}
+            </a>{' '}
+            {'to create the problem and'}{' '}
+            <a href="http://localhost:8089/#mitigations" target="_blank" rel="noopener">
+              {'Fallbacks & timeouts'}
+            </a>{' '}
+            {"to change the shop's response."}
+          </p>
+          <p>
+            {"You do not need to type any of the commands below. The console's"}{' '}
+            <strong>{'Info & commands'}</strong>{' '}
+            {'tab also shows the last request with a Windows/Mac selector.'}
+          </p>
+        </div>
+        <section>
+          <h2>{'What changes when I enable fallback and its circuit breaker?'}</h2>
+          <p>
+            {'Inventory fallback returns'} <strong>{'Stock unconfirmed'}</strong>{' '}
+            {'if stock cannot be checked. Shipping fallback keeps the preview useful with'}{' '}
+            <strong>{'Shipping quote unavailable'}</strong>
+            {
+              '. A short timeout bounds dependency waiting and releases shared workers. Enabling fallback also pauses a failed product/dependency for five seconds before one recovery probe. The fallback preserves the complete catalog with honest partial information. These settings apply immediately.'
+            }
+          </p>
+          <p>
+            {'Restore defaults in'} <strong>{'Fallbacks & timeouts'}</strong>
+            {', then clear the fault in'} <strong>{'Fault injection'}</strong>
+            {
+              '. Your answers remain saved. Runtime settings last until Storefront restarts and reloads its startup configuration.'
+            }
+          </p>
+        </section>
+        <section>
+          <h2>{'Windows · PowerShell'}</h2>
+          <h3>{'Inventory timeout and fallback'}</h3>
+          <pre>
+            {
+              'Invoke-RestMethod -Method Post -Uri \'http://localhost:8089/api/mitigations\' -ContentType \'application/json\' -Body \'{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":true}\''
+            }
+          </pre>
+          <h3>{'Shipping fallback'}</h3>
+          <pre>
+            {
+              'Invoke-RestMethod -Method Post -Uri \'http://localhost:8089/api/mitigations\' -ContentType \'application/json\' -Body \'{"action":"configure","dependency":"shipping","timeoutMs":3000,"fallback":true}\''
+            }
+          </pre>
+          <h3>{'Restore default settings'}</h3>
+          <pre>
+            {
+              "Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{\"action\":\"reset\"}'"
+            }
+          </pre>
+          <h3>{'Inventory latency'}</h3>
+          <pre>
+            {
+              'Invoke-RestMethod -Method Post -Uri \'http://localhost:8089/api/action\' -ContentType \'application/json\' -Body \'{"action":"set-latency","proxy":"inventory","latencyMs":1500}\''
+            }
+          </pre>
+        </section>
+        <section>
+          <h2>{'Mac · Terminal'}</h2>
+          <h3>{'Inventory timeout and fallback'}</h3>
+          <pre>
+            {
+              'curl -f -sS -X POST \'http://localhost:8089/api/mitigations\' -H \'Content-Type: application/json\' --data \'{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":true}\''
+            }
+          </pre>
+          <h3>{'Shipping fallback'}</h3>
+          <pre>
+            {
+              'curl -f -sS -X POST \'http://localhost:8089/api/mitigations\' -H \'Content-Type: application/json\' --data \'{"action":"configure","dependency":"shipping","timeoutMs":3000,"fallback":true}\''
+            }
+          </pre>
+          <h3>{'Restore default settings'}</h3>
+          <pre>
+            {
+              "curl -f -sS -X POST 'http://localhost:8089/api/mitigations' -H 'Content-Type: application/json' --data '{\"action\":\"reset\"}'"
+            }
+          </pre>
+          <h3>{'Inventory latency'}</h3>
+          <pre>
+            {
+              'curl -f -sS -X POST \'http://localhost:8089/api/action\' -H \'Content-Type: application/json\' --data \'{"action":"set-latency","proxy":"inventory","latencyMs":1500}\''
+            }
+          </pre>
+        </section>
+        <section>
+          <h2>{'What happens underneath?'}</h2>
+          <p>
+            {'Fault requests change the real'} <strong>{'Toxiproxy'}</strong>{' '}
+            {
+              "paths. Mitigation requests change the Storefront's live timeout and fallback policies through an internal Docker listener. No Docker socket or host shell is exposed to the console."
+            }
+          </p>
+          <p>
+            <a href="/docs/tool-reference.md">{'Full technical reference'}</a> {'·'}{' '}
+            <a
+              href="http://localhost:3008/d/field-workshop/field-workshop"
+              target="_blank"
+              rel="noopener"
+            >
+              {'Grafana'}
+            </a>
+          </p>
+        </section>
+      </main>
+    </>
+  );
+}
 createRoot(document.getElementById('tools-root')).render(<Tools />);

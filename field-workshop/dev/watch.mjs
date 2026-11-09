@@ -9,7 +9,7 @@ mkdirSync(output, { recursive: true });
 
 // Polling also detects atomic editor saves across Docker Desktop bind mounts.
 function snapshot(dir) {
-  return readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const file = path.join(dir, entry.name);
     if (entry.isDirectory()) return snapshot(file);
     const { mtimeMs, size } = statSync(file);

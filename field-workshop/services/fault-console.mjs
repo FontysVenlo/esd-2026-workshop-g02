@@ -9,16 +9,23 @@ const toxicName = 'workshop-latency';
 
 export function createFaultConsoleServer(config = {}) {
   const api = config.toxiproxyApi ?? process.env.TOXIPROXY_API ?? 'http://localhost:8474';
-  const mitigationApi = config.mitigationApi ?? process.env.STOREFRONT_ADMIN_URL ?? 'http://storefront:8081';
+  const mitigationApi =
+    config.mitigationApi ?? process.env.STOREFRONT_ADMIN_URL ?? 'http://storefront:8081';
 
   async function callToxiproxy(method, path, body) {
     const response = await fetch(new URL(path, api), {
       method,
       headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal: AbortSignal.timeout(3000)
+      signal: AbortSignal.timeout(3000),
     });
-    if (!response.ok) throw new Error(format("Toxiproxy returned {status}: {detail}", { status: response.status, detail: (await response.text()).slice(0, 200) }));
+    if (!response.ok)
+      throw new Error(
+        format('Toxiproxy returned {status}: {detail}', {
+          status: response.status,
+          detail: (await response.text()).slice(0, 200),
+        }),
+      );
     const text = await response.text();
     return text ? JSON.parse(text) : null;
   }
@@ -27,15 +34,16 @@ export function createFaultConsoleServer(config = {}) {
     const proxies = await callToxiproxy('GET', '/proxies');
     const result = {};
     for (const name of proxyNames) {
-      if (!proxies[name]) throw new Error(format("{dependency} proxy is missing", { dependency: name }));
+      if (!proxies[name])
+        throw new Error(format('{dependency} proxy is missing', { dependency: name }));
       result[name] = {
         enabled: proxies[name].enabled,
-        toxics: (proxies[name].toxics ?? []).map(toxic => ({
+        toxics: (proxies[name].toxics ?? []).map((toxic) => ({
           name: toxic.name,
           type: toxic.type,
           stream: toxic.stream,
-          attributes: toxic.attributes
-        }))
+          attributes: toxic.attributes,
+        })),
       };
     }
     return result;
@@ -49,29 +57,35 @@ export function createFaultConsoleServer(config = {}) {
       return command;
     }
     const proxy = input?.proxy;
-    if (!proxyNames.includes(proxy)) throw new Error("Choose Inventory or Shipping");
+    if (!proxyNames.includes(proxy)) throw new Error('Choose Inventory or Shipping');
     const base = `/proxies/${proxy}`;
     let command;
     if (action === 'set-latency') {
       const latencyMs = input?.latencyMs;
       if (!Number.isInteger(latencyMs) || latencyMs < 50 || latencyMs > 5000) {
-        throw new Error("Latency must be a whole number from 50 to 5000 ms");
+        throw new Error('Latency must be a whole number from 50 to 5000 ms');
       }
       const current = await state();
-      const existing = current[proxy].toxics.some(toxic => toxic.name === toxicName);
+      const existing = current[proxy].toxics.some((toxic) => toxic.name === toxicName);
       command = {
         method: 'POST',
         path: existing ? `${base}/toxics/${toxicName}` : `${base}/toxics`,
-        body: { name: toxicName, type: 'latency', stream: 'downstream', attributes: { latency: latencyMs, jitter: 0 } }
+        body: {
+          name: toxicName,
+          type: 'latency',
+          stream: 'downstream',
+          attributes: { latency: latencyMs, jitter: 0 },
+        },
       };
     } else if (action === 'remove-latency') {
       const current = await state();
-      if (!current[proxy].toxics.some(toxic => toxic.name === toxicName)) throw new Error("No console-managed latency is active on this path");
+      if (!current[proxy].toxics.some((toxic) => toxic.name === toxicName))
+        throw new Error('No console-managed latency is active on this path');
       command = { method: 'DELETE', path: `${base}/toxics/${toxicName}` };
     } else if (action === 'disconnect' || action === 'reconnect') {
       command = { method: 'POST', path: base, body: { enabled: action === 'reconnect' } };
     } else {
-      throw new Error("Unknown action");
+      throw new Error('Unknown action');
     }
     await callToxiproxy(command.method, command.path, command.body);
     return command;
@@ -80,7 +94,10 @@ export function createFaultConsoleServer(config = {}) {
   return http.createServer(async (req, res) => {
     const route = new URL(req.url, 'http://localhost').pathname;
     const send = (status, body) => {
-      res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.writeHead(status, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store',
+      });
       res.end(JSON.stringify(body));
     };
     if (req.method === 'GET' && route === '/') {
@@ -91,8 +108,10 @@ export function createFaultConsoleServer(config = {}) {
     if (req.method === 'GET' && route === '/health') return send(200, { status: 'ok' });
     if (route === '/api/mitigations' && ['GET', 'POST'].includes(req.method)) {
       if (req.method === 'POST') {
-        if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`) return send(403, { error: "Cross-origin changes are not allowed" });
-        if (!req.headers['content-type']?.startsWith('application/json')) return send(415, { error: "JSON is required" });
+        if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`)
+          return send(403, { error: 'Cross-origin changes are not allowed' });
+        if (!req.headers['content-type']?.startsWith('application/json'))
+          return send(415, { error: 'JSON is required' });
       }
       try {
         let body;
@@ -100,50 +119,76 @@ export function createFaultConsoleServer(config = {}) {
           let raw = '';
           for await (const chunk of req) {
             raw += chunk;
-            if (raw.length > 1024) return send(413, { error: "Request is too large" });
+            if (raw.length > 1024) return send(413, { error: 'Request is too large' });
           }
-          try { body = JSON.stringify(JSON.parse(raw)); }
-          catch { return send(400, { error: "Invalid JSON" }); }
+          try {
+            body = JSON.stringify(JSON.parse(raw));
+          } catch {
+            return send(400, { error: 'Invalid JSON' });
+          }
         }
         const response = await fetch(new URL('/settings', mitigationApi), {
           method: req.method,
           headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
           body,
-          signal: AbortSignal.timeout(3000)
+          signal: AbortSignal.timeout(3000),
         });
         return send(response.status, await response.json());
       } catch (error) {
-        return send(502, { error: format("Cannot reach Storefront settings: {error}", { error: error.message }) });
+        return send(502, {
+          error: format('Cannot reach Storefront settings: {error}', { error: error.message }),
+        });
       }
     }
     if (req.method === 'GET' && route === '/api/state') {
-      try { return send(200, await state()); }
-      catch (error) { return send(502, { error: format("Cannot read Toxiproxy state: {error}", { error: error.message }) }); }
+      try {
+        return send(200, await state());
+      } catch (error) {
+        return send(502, {
+          error: format('Cannot read Toxiproxy state: {error}', { error: error.message }),
+        });
+      }
     }
     if (req.method === 'POST' && route === '/api/action') {
-      if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`) return send(403, { error: "Cross-origin changes are not allowed" });
-      if (!req.headers['content-type']?.startsWith('application/json')) return send(415, { error: "JSON is required" });
+      if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`)
+        return send(403, { error: 'Cross-origin changes are not allowed' });
+      if (!req.headers['content-type']?.startsWith('application/json'))
+        return send(415, { error: 'JSON is required' });
       try {
         let raw = '';
         for await (const chunk of req) {
           raw += chunk;
-          if (raw.length > 1024) return send(413, { error: "Request is too large" });
+          if (raw.length > 1024) return send(413, { error: 'Request is too large' });
         }
         let input;
-        try { input = JSON.parse(raw); }
-        catch { return send(400, { error: "Invalid JSON" }); }
-        if (input?.action !== 'reset' && !['inventory', 'shipping'].includes(input?.proxy)) return send(400, { error: "Choose Inventory or Shipping" });
-        if (input?.action === 'set-latency' && (!Number.isInteger(input.latencyMs) || input.latencyMs < 50 || input.latencyMs > 5000)) {
-          return send(400, { error: "Latency must be a whole number from 50 to 5000 ms" });
+        try {
+          input = JSON.parse(raw);
+        } catch {
+          return send(400, { error: 'Invalid JSON' });
         }
-        if (!['reset', 'set-latency', 'remove-latency', 'disconnect', 'reconnect'].includes(input?.action)) return send(400, { error: "Unknown action" });
+        if (input?.action !== 'reset' && !['inventory', 'shipping'].includes(input?.proxy))
+          return send(400, { error: 'Choose Inventory or Shipping' });
+        if (
+          input?.action === 'set-latency' &&
+          (!Number.isInteger(input.latencyMs) || input.latencyMs < 50 || input.latencyMs > 5000)
+        ) {
+          return send(400, { error: 'Latency must be a whole number from 50 to 5000 ms' });
+        }
+        if (
+          !['reset', 'set-latency', 'remove-latency', 'disconnect', 'reconnect'].includes(
+            input?.action,
+          )
+        )
+          return send(400, { error: 'Unknown action' });
         const command = await act(input);
         return send(200, { command, state: await state() });
       } catch (error) {
-        return send(502, { error: format("Toxiproxy change failed: {error}", { error: error.message }) });
+        return send(502, {
+          error: format('Toxiproxy change failed: {error}', { error: error.message }),
+        });
       }
     }
-    send(req.method === 'GET' || req.method === 'POST' ? 404 : 405, { error: "Not found" });
+    send(req.method === 'GET' || req.method === 'POST' ? 404 : 405, { error: 'Not found' });
   });
 }
 

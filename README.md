@@ -29,3 +29,10 @@ Start Docker Desktop, then run `npm start` or `bun run dev` from the repository 
 Keep the terminal open. Saving a Home or challenge JSON file, a frontend file under `src/`, or a stylesheet under `public/` rebuilds the pages and refreshes open workshop tabs automatically. If an edit has a syntax error, the terminal shows it and the last successful page stays available. For backend changes, restart the command to rebuild the services.
 
 Press **Ctrl+C** to stop the stack. Run `npm run stop` or `bun run stop` to remove its containers.
+## Formatting and display names
+
+From the repository root, run `bun install` to install the pinned Prettier version. Use `bun run format` to format the workshop JavaScript, JSX and CSS, or `bun run format:check` to check them. The same scripts work with npm after `npm install`. Formatting rules live in [.prettierrc.json](.prettierrc.json).
+
+Edit Grafana labels in the [dashboard JSON](field-workshop/observability/grafana/dashboards/field-workshop.json). The top-level `title` names the dashboard. Each panel has its own `title`, and its targets use `legendFormat` for series names such as “Active workers”. The `More diagnostics` row contains the panels hidden on first load. If you rename a panel mentioned in a challenge or the cheatsheet, update that reference too.
+
+The “Info & commands” tab belongs to Network Faults. Edit the button text in [fault-console.jsx](field-workshop/src/fault-console.jsx), then update the same wording in its feedback message and the [command guide](field-workshop/src/tools.jsx).

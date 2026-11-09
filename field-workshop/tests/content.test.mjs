@@ -32,14 +32,36 @@ test('each challenge shows its own complete tasks and page-local edits', async (
   const source = readFileSync(new URL('../src/workshop.jsx', import.meta.url), 'utf8')
     .replace("'/copy.mjs'", "'./shared/copy.js'")
     .replace("'/workshop-state.mjs'", "'./shared/workshop-state.js'")
-    .replace("createRoot(document.getElementById('workshop-root')).render(<Workshop />);", 'export { Workshop, challenges, home };');
+    .replace(
+      "createRoot(document.getElementById('workshop-root')).render(<Workshop />);",
+      'export { Workshop, challenges, home };',
+    );
   const output = fileURLToPath(new URL('../build/workshop-content-test.mjs', import.meta.url));
   const originalLocation = globalThis.location;
   const originalStorage = globalThis.localStorage;
   try {
-    await build({ stdin: { contents: source, loader: 'jsx', resolveDir: fileURLToPath(new URL('../src/', import.meta.url)) }, outfile: output, bundle: true, platform: 'node', format: 'esm', packages: 'external' });
+    await build({
+      stdin: {
+        contents: source,
+        loader: 'jsx',
+        resolveDir: fileURLToPath(new URL('../src/', import.meta.url)),
+      },
+      outfile: output,
+      bundle: true,
+      platform: 'node',
+      format: 'esm',
+      packages: 'external',
+    });
     const { Workshop, challenges, home: page } = await import(pathToFileURL(output));
-    globalThis.localStorage = { getItem: () => JSON.stringify({ drafts: {}, submissions: Object.fromEntries(challenges.map(c => [c.id, {submittedAt: '2026-11-06', answers: {}}])) }) };
+    globalThis.localStorage = {
+      getItem: () =>
+        JSON.stringify({
+          drafts: {},
+          submissions: Object.fromEntries(
+            challenges.map((c) => [c.id, { submittedAt: '2026-11-06', answers: {} }]),
+          ),
+        }),
+    };
     for (const challenge of challenges) {
       globalThis.location = { hash: '#' + challenge.id };
       const html = renderToStaticMarkup(React.createElement(Workshop));
@@ -49,8 +71,14 @@ test('each challenge shows its own complete tasks and page-local edits', async (
       assert.ok(menuEnd >= 0 && mainStart > menuEnd);
       assert.ok(instructions.includes('class="sidebar-instructions"'));
       for (const task of challenge.tasks) {
-        assert.ok(instructions.includes(renderToStaticMarkup(React.createElement('h3', null, task.title))));
-        assert.ok(instructions.includes(renderToStaticMarkup(React.createElement('p', null, task.instruction))));
+        assert.ok(
+          instructions.includes(renderToStaticMarkup(React.createElement('h3', null, task.title))),
+        );
+        assert.ok(
+          instructions.includes(
+            renderToStaticMarkup(React.createElement('p', null, task.instruction)),
+          ),
+        );
       }
       assert.ok(html.includes('Your tasks'));
       assert.doesNotMatch(html, /experiment-guide|\{\{/);
@@ -68,6 +96,10 @@ test('each challenge shows its own complete tasks and page-local edits', async (
   } finally {
     globalThis.location = originalLocation;
     globalThis.localStorage = originalStorage;
-    try { unlinkSync(output); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    try {
+      unlinkSync(output);
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
   }
 });

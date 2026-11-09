@@ -7,7 +7,10 @@ const proxies = [
   { name: 'desks-inventory', listen: '0.0.0.0:8670', upstream: 'desks-inventory:8080' },
 ];
 
-export async function initializeProxies(api = process.env.TOXIPROXY_API ?? 'http://localhost:8474', wait = ms => new Promise(resolve => setTimeout(resolve, ms))) {
+export async function initializeProxies(
+  api = process.env.TOXIPROXY_API ?? 'http://localhost:8474',
+  wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+) {
   let existing;
   for (let attempt = 0; attempt < 30; attempt += 1) {
     try {
@@ -23,7 +26,10 @@ export async function initializeProxies(api = process.env.TOXIPROXY_API ?? 'http
   for (const proxy of proxies) {
     if (existing[proxy.name]) {
       // Toxiproxy normalizes 0.0.0.0 to [::] on some hosts; compare the effective port.
-      if (existing[proxy.name].upstream !== proxy.upstream || !existing[proxy.name].listen.endsWith(`:${proxy.listen.split(':').at(-1)}`)) {
+      if (
+        existing[proxy.name].upstream !== proxy.upstream ||
+        !existing[proxy.name].listen.endsWith(`:${proxy.listen.split(':').at(-1)}`)
+      ) {
         throw new Error(`Existing ${proxy.name} proxy points to the wrong service`);
       }
       continue;
@@ -31,15 +37,18 @@ export async function initializeProxies(api = process.env.TOXIPROXY_API ?? 'http
     const response = await fetch(`${api}/proxies`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...proxy, enabled: true })
+      body: JSON.stringify({ ...proxy, enabled: true }),
     });
-    if (!response.ok) throw new Error(`Could not create ${proxy.name} proxy: ${response.status} ${await response.text()}`);
+    if (!response.ok)
+      throw new Error(
+        `Could not create ${proxy.name} proxy: ${response.status} ${await response.text()}`,
+      );
     console.log(`Created ${proxy.name} proxy`);
   }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  initializeProxies().catch(error => {
+  initializeProxies().catch((error) => {
     console.error(error);
     process.exitCode = 1;
   });
