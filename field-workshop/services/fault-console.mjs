@@ -1,3 +1,4 @@
+import { readPageCopy } from './page-copy.mjs';
 import { format } from '../src/shared/copy.js';
 import http from 'node:http';
 import { pathToFileURL } from 'node:url';
@@ -21,7 +22,7 @@ export function createFaultConsoleServer(config = {}) {
     });
     if (!response.ok)
       throw new Error(
-        format('Toxiproxy returned {status}: {detail}', {
+        format(readPageCopy('network-faults').api.toxiproxy_returned, {
           status: response.status,
           detail: (await response.text()).slice(0, 200),
         }),
@@ -35,7 +36,9 @@ export function createFaultConsoleServer(config = {}) {
     const result = {};
     for (const name of proxyNames) {
       if (!proxies[name])
-        throw new Error(format('{dependency} proxy is missing', { dependency: name }));
+        throw new Error(
+          format(readPageCopy('network-faults').api.proxy_missing, { dependency: name }),
+        );
       result[name] = {
         enabled: proxies[name].enabled,
         toxics: (proxies[name].toxics ?? []).map((toxic) => ({
@@ -57,13 +60,16 @@ export function createFaultConsoleServer(config = {}) {
       return command;
     }
     const proxy = input?.proxy;
-    if (!proxyNames.includes(proxy)) throw new Error('Choose Inventory or Shipping');
+    if (!proxyNames.includes(proxy))
+      throw new Error(readPageCopy('network-faults').api.choose_inventory_or_shipping);
     const base = `/proxies/${proxy}`;
     let command;
     if (action === 'set-latency') {
       const latencyMs = input?.latencyMs;
       if (!Number.isInteger(latencyMs) || latencyMs < 50 || latencyMs > 5000) {
-        throw new Error('Latency must be a whole number from 50 to 5000 ms');
+        throw new Error(
+          readPageCopy('network-faults').api.latency_must_be_a_whole_number_from_50_to_5000_ms,
+        );
       }
       const current = await state();
       const existing = current[proxy].toxics.some((toxic) => toxic.name === toxicName);
@@ -80,12 +86,14 @@ export function createFaultConsoleServer(config = {}) {
     } else if (action === 'remove-latency') {
       const current = await state();
       if (!current[proxy].toxics.some((toxic) => toxic.name === toxicName))
-        throw new Error('No console-managed latency is active on this path');
+        throw new Error(
+          readPageCopy('network-faults').api.no_console_managed_latency_is_active_on_this_path,
+        );
       command = { method: 'DELETE', path: `${base}/toxics/${toxicName}` };
     } else if (action === 'disconnect' || action === 'reconnect') {
       command = { method: 'POST', path: base, body: { enabled: action === 'reconnect' } };
     } else {
-      throw new Error('Unknown action');
+      throw new Error(readPageCopy('network-faults').api.unknown_action);
     }
     await callToxiproxy(command.method, command.path, command.body);
     return command;
@@ -109,9 +117,11 @@ export function createFaultConsoleServer(config = {}) {
     if (route === '/api/mitigations' && ['GET', 'POST'].includes(req.method)) {
       if (req.method === 'POST') {
         if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`)
-          return send(403, { error: 'Cross-origin changes are not allowed' });
+          return send(403, {
+            error: readPageCopy('network-faults').api.cross_origin_changes_are_not_allowed,
+          });
         if (!req.headers['content-type']?.startsWith('application/json'))
-          return send(415, { error: 'JSON is required' });
+          return send(415, { error: readPageCopy('network-faults').api.json_is_required });
       }
       try {
         let body;
@@ -119,12 +129,13 @@ export function createFaultConsoleServer(config = {}) {
           let raw = '';
           for await (const chunk of req) {
             raw += chunk;
-            if (raw.length > 1024) return send(413, { error: 'Request is too large' });
+            if (raw.length > 1024)
+              return send(413, { error: readPageCopy('network-faults').api.request_is_too_large });
           }
           try {
             body = JSON.stringify(JSON.parse(raw));
           } catch {
-            return send(400, { error: 'Invalid JSON' });
+            return send(400, { error: readPageCopy('network-faults').api.invalid_json });
           }
         }
         const response = await fetch(new URL('/settings', mitigationApi), {
@@ -136,7 +147,9 @@ export function createFaultConsoleServer(config = {}) {
         return send(response.status, await response.json());
       } catch (error) {
         return send(502, {
-          error: format('Cannot reach Storefront settings: {error}', { error: error.message }),
+          error: format(readPageCopy('network-faults').api.cannot_reach_settings, {
+            error: error.message,
+          }),
         });
       }
     }
@@ -145,50 +158,62 @@ export function createFaultConsoleServer(config = {}) {
         return send(200, await state());
       } catch (error) {
         return send(502, {
-          error: format('Cannot read Toxiproxy state: {error}', { error: error.message }),
+          error: format(readPageCopy('network-faults').api.cannot_read_state, {
+            error: error.message,
+          }),
         });
       }
     }
     if (req.method === 'POST' && route === '/api/action') {
       if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`)
-        return send(403, { error: 'Cross-origin changes are not allowed' });
+        return send(403, {
+          error: readPageCopy('network-faults').api.cross_origin_changes_are_not_allowed,
+        });
       if (!req.headers['content-type']?.startsWith('application/json'))
-        return send(415, { error: 'JSON is required' });
+        return send(415, { error: readPageCopy('network-faults').api.json_is_required });
       try {
         let raw = '';
         for await (const chunk of req) {
           raw += chunk;
-          if (raw.length > 1024) return send(413, { error: 'Request is too large' });
+          if (raw.length > 1024)
+            return send(413, { error: readPageCopy('network-faults').api.request_is_too_large });
         }
         let input;
         try {
           input = JSON.parse(raw);
         } catch {
-          return send(400, { error: 'Invalid JSON' });
+          return send(400, { error: readPageCopy('network-faults').api.invalid_json });
         }
         if (input?.action !== 'reset' && !['inventory', 'shipping'].includes(input?.proxy))
-          return send(400, { error: 'Choose Inventory or Shipping' });
+          return send(400, {
+            error: readPageCopy('network-faults').api.choose_inventory_or_shipping,
+          });
         if (
           input?.action === 'set-latency' &&
           (!Number.isInteger(input.latencyMs) || input.latencyMs < 50 || input.latencyMs > 5000)
         ) {
-          return send(400, { error: 'Latency must be a whole number from 50 to 5000 ms' });
+          return send(400, {
+            error:
+              readPageCopy('network-faults').api.latency_must_be_a_whole_number_from_50_to_5000_ms,
+          });
         }
         if (
           !['reset', 'set-latency', 'remove-latency', 'disconnect', 'reconnect'].includes(
             input?.action,
           )
         )
-          return send(400, { error: 'Unknown action' });
+          return send(400, { error: readPageCopy('network-faults').api.unknown_action });
         const command = await act(input);
         return send(200, { command, state: await state() });
       } catch (error) {
         return send(502, {
-          error: format('Toxiproxy change failed: {error}', { error: error.message }),
+          error: format(readPageCopy('network-faults').api.change_failed, { error: error.message }),
         });
       }
     }
-    send(req.method === 'GET' || req.method === 'POST' ? 404 : 405, { error: 'Not found' });
+    send(req.method === 'GET' || req.method === 'POST' ? 404 : 405, {
+      error: readPageCopy('network-faults').api.not_found,
+    });
   });
 }
 

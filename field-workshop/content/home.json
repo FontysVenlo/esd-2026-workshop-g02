@@ -65,7 +65,10 @@
     "of_submitted": "{count} of {total} submitted",
     "challenge_unlocked_2": "Challenge {number} unlocked",
     "browser_storage_is_unavailable_download_your_notes_before_leaving": "Browser storage is unavailable. Download your notes before leaving.",
-    "notes_are_saved_in_this_browser": "Notes are saved in this browser."
+    "notes_are_saved_in_this_browser": "Notes are saved in this browser.",
+    "reset_pending_symbol": "…",
+    "reset_failed_symbol": "!",
+    "reset_done_symbol": "✓"
   },
   "navigation": {
     "workshop_navigation": "Workshop navigation",

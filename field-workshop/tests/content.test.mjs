@@ -80,7 +80,7 @@ test('each challenge shows its own complete tasks and page-local edits', async (
           ),
         );
       }
-      assert.ok(html.includes('Your tasks'));
+      assert.ok(html.includes(challenge.text.your_five_steps));
       assert.doesNotMatch(html, /experiment-guide|\{\{/);
       challenge.tasks[0].instruction = 'Unique edit for ' + challenge.id;
       challenge.text.experiment_notes = 'Notes for ' + challenge.id;

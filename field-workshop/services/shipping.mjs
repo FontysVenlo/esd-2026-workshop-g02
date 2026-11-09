@@ -1,3 +1,4 @@
+import { readPageCopy } from './page-copy.mjs';
 import http from 'node:http';
 import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
@@ -14,7 +15,7 @@ export function createShippingServer() {
       return res.end(metrics.render());
     }
     if (path === '/quote') return respond(200, { method: 'standard', priceEur: 4.9, etaDays: 3 });
-    return respond(404, { error: 'not found' });
+    return respond(404, { error: readPageCopy('storefront').api.not_found });
 
     function respond(status, body) {
       if (path === '/quote') metrics.request(path, status, (performance.now() - started) / 1000);

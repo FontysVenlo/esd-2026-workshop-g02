@@ -23,7 +23,7 @@ services:
       - ./dev:/build/dev:ro
       - workshop-ui:/live
     healthcheck:
-      test: ["CMD", "node", "-e", "require('fs').accessSync('/live/revision')"]
+      test: ["CMD", "node", "-e", "require('fs').accessSync('/live/page-copy.json'); require('fs').accessSync('/live/revision')"]
       interval: 2s
       timeout: 3s
       retries: 30

@@ -122,7 +122,11 @@
     "fresh_start_failed": "Fresh start failed",
     "the_environment_could_not_be_reset": "{error}. Try again, or in Network Faults click Clear all faults and Restore defaults before you begin.",
     "try_again": "Try again",
-    "fresh_start_announcement": "Fresh start: network faults cleared and default timeouts and fallbacks restored."
+    "fresh_start_announcement": "Fresh start: network faults cleared and default timeouts and fallbacks restored.",
+    "external_link_symbol": "↗",
+    "reset_pending_symbol": "…",
+    "reset_failed_symbol": "!",
+    "reset_done_symbol": "✓"
   },
   "navigation": {
     "workshop_navigation": "Workshop navigation",

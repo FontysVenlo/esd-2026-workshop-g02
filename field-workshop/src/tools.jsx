@@ -1,129 +1,95 @@
+import page from '../content/tools.json' with { type: 'json' };
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+const { toolsPage } = page;
+
 function Tools() {
   return (
     <>
       <header>
         <div className="header-inner">
           <a className="brand" href="/">
-            {'Northstar Supply / Commands'}
+            {toolsPage.northstar_supply_commands}
           </a>
           <nav className="links">
-            <a href="/">{'Workshop overview'}</a>
+            <a href="/">{toolsPage.workshop_overview}</a>
             <a href="http://localhost:8089" target="_blank" rel="noopener">
-              {'Network faults'}
+              {toolsPage.network_faults}
             </a>
           </nav>
         </div>
       </header>
       <main className="reference">
         <div className="intro">
-          <h1>{'Optional command reference'}</h1>
+          <h1>{toolsPage.optional_command_reference}</h1>
           <p>
-            {'The workshop can be completed entirely in the browser on Windows and Mac. Use'}{' '}
+            {toolsPage.the_workshop_can_be_completed_entirely_in_the_browser}{' '}
             <a href="http://localhost:8089" target="_blank" rel="noopener">
-              {'Fault injection'}
+              {toolsPage.fault_injection}
             </a>{' '}
-            {'to create the problem and'}{' '}
+            {toolsPage.to_create_the_problem_and}{' '}
             <a href="http://localhost:8089/#mitigations" target="_blank" rel="noopener">
-              {'Fallbacks & timeouts'}
+              {toolsPage.fallbacks_timeouts}
             </a>{' '}
-            {"to change the shop's response."}
+            {toolsPage.to_change_the_shop_s_response}
           </p>
           <p>
-            {"You do not need to type any of the commands below. The console's"}{' '}
-            <strong>{'Info & commands'}</strong>{' '}
-            {'tab also shows the last request with a Windows/Mac selector.'}
+            {toolsPage.you_do_not_need_to_type_any_of_the}{' '}
+            <strong>{toolsPage.info_commands}</strong>{' '}
+            {toolsPage.tab_also_shows_the_last_request_with_a_windows}
           </p>
         </div>
         <section>
-          <h2>{'What changes when I enable fallback and its circuit breaker?'}</h2>
+          <h2>{toolsPage.what_changes_when_i_enable_a_fallback}</h2>
           <p>
-            {'Inventory fallback returns'} <strong>{'Stock unconfirmed'}</strong>{' '}
-            {'if stock cannot be checked. Shipping fallback keeps the preview useful with'}{' '}
-            <strong>{'Shipping quote unavailable'}</strong>
-            {
-              '. A short timeout bounds dependency waiting and releases shared workers. Enabling fallback also pauses a failed product/dependency for five seconds before one recovery probe. The fallback preserves the complete catalog with honest partial information. These settings apply immediately.'
-            }
+            {toolsPage.inventory_fallback_returns} <strong>{toolsPage.stock_unconfirmed}</strong>{' '}
+            {toolsPage.if_stock_cannot_be_checked_shipping_fallback_keeps_the}{' '}
+            <strong>{toolsPage.shipping_quote_unavailable}</strong>
+            {toolsPage.a_timeout_limits_the_dependency_wait_these_controls_change}
           </p>
           <p>
-            {'Restore defaults in'} <strong>{'Fallbacks & timeouts'}</strong>
-            {', then clear the fault in'} <strong>{'Fault injection'}</strong>
-            {
-              '. Your answers remain saved. Runtime settings last until Storefront restarts and reloads its startup configuration.'
-            }
+            {toolsPage.restore_defaults_in} <strong>{toolsPage.fallbacks_timeouts}</strong>
+            {toolsPage.then_clear_the_fault_in} <strong>{toolsPage.fault_injection}</strong>
+            {toolsPage.your_answers_remain_saved_runtime_settings_last_until_storefront}
           </p>
         </section>
         <section>
-          <h2>{'Windows · PowerShell'}</h2>
-          <h3>{'Inventory timeout and fallback'}</h3>
-          <pre>
-            {
-              'Invoke-RestMethod -Method Post -Uri \'http://localhost:8089/api/mitigations\' -ContentType \'application/json\' -Body \'{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":true}\''
-            }
-          </pre>
-          <h3>{'Shipping fallback'}</h3>
-          <pre>
-            {
-              'Invoke-RestMethod -Method Post -Uri \'http://localhost:8089/api/mitigations\' -ContentType \'application/json\' -Body \'{"action":"configure","dependency":"shipping","timeoutMs":3000,"fallback":true}\''
-            }
-          </pre>
-          <h3>{'Restore default settings'}</h3>
-          <pre>
-            {
-              "Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{\"action\":\"reset\"}'"
-            }
-          </pre>
-          <h3>{'Inventory latency'}</h3>
-          <pre>
-            {
-              'Invoke-RestMethod -Method Post -Uri \'http://localhost:8089/api/action\' -ContentType \'application/json\' -Body \'{"action":"set-latency","proxy":"inventory","latencyMs":1500}\''
-            }
-          </pre>
+          <h2>{toolsPage.windows_powershell}</h2>
+          <h3>{toolsPage.inventory_timeout_and_fallback}</h3>
+          <pre>{toolsPage.invoke_restmethod_method_post_uri_http_localhost_8089_api}</pre>
+          <h3>{toolsPage.shipping_fallback}</h3>
+          <pre>{toolsPage.invoke_restmethod_method_post_uri_http_localhost_8089_api_2}</pre>
+          <h3>{toolsPage.restore_default_settings}</h3>
+          <pre>{toolsPage.invoke_restmethod_method_post_uri_http_localhost_8089_api_3}</pre>
+          <h3>{toolsPage.inventory_latency}</h3>
+          <pre>{toolsPage.invoke_restmethod_method_post_uri_http_localhost_8089_api_4}</pre>
         </section>
         <section>
-          <h2>{'Mac · Terminal'}</h2>
-          <h3>{'Inventory timeout and fallback'}</h3>
-          <pre>
-            {
-              'curl -f -sS -X POST \'http://localhost:8089/api/mitigations\' -H \'Content-Type: application/json\' --data \'{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":true}\''
-            }
-          </pre>
-          <h3>{'Shipping fallback'}</h3>
-          <pre>
-            {
-              'curl -f -sS -X POST \'http://localhost:8089/api/mitigations\' -H \'Content-Type: application/json\' --data \'{"action":"configure","dependency":"shipping","timeoutMs":3000,"fallback":true}\''
-            }
-          </pre>
-          <h3>{'Restore default settings'}</h3>
-          <pre>
-            {
-              "curl -f -sS -X POST 'http://localhost:8089/api/mitigations' -H 'Content-Type: application/json' --data '{\"action\":\"reset\"}'"
-            }
-          </pre>
-          <h3>{'Inventory latency'}</h3>
-          <pre>
-            {
-              'curl -f -sS -X POST \'http://localhost:8089/api/action\' -H \'Content-Type: application/json\' --data \'{"action":"set-latency","proxy":"inventory","latencyMs":1500}\''
-            }
-          </pre>
+          <h2>{toolsPage.mac_terminal}</h2>
+          <h3>{toolsPage.inventory_timeout_and_fallback}</h3>
+          <pre>{toolsPage.curl_f_ss_x_post_http_localhost_8089_api}</pre>
+          <h3>{toolsPage.shipping_fallback}</h3>
+          <pre>{toolsPage.curl_f_ss_x_post_http_localhost_8089_api_2}</pre>
+          <h3>{toolsPage.restore_default_settings}</h3>
+          <pre>{toolsPage.curl_f_ss_x_post_http_localhost_8089_api_3}</pre>
+          <h3>{toolsPage.inventory_latency}</h3>
+          <pre>{toolsPage.curl_f_ss_x_post_http_localhost_8089_api_4}</pre>
         </section>
         <section>
-          <h2>{'What happens underneath?'}</h2>
+          <h2>{toolsPage.what_happens_underneath}</h2>
           <p>
-            {'Fault requests change the real'} <strong>{'Toxiproxy'}</strong>{' '}
-            {
-              "paths. Mitigation requests change the Storefront's live timeout and fallback policies through an internal Docker listener. No Docker socket or host shell is exposed to the console."
-            }
+            {toolsPage.fault_requests_change_the_real} <strong>{toolsPage.toxiproxy}</strong>{' '}
+            {toolsPage.paths_mitigation_requests_change_the_storefront_s_live_timeout}
           </p>
           <p>
-            <a href="/docs/tool-reference.md">{'Full technical reference'}</a> {'·'}{' '}
+            <a href="/docs/tool-reference.md">{toolsPage.full_technical_reference}</a>{' '}
+            {toolsPage.text}{' '}
             <a
               href="http://localhost:3008/d/field-workshop/field-workshop"
               target="_blank"
               rel="noopener"
             >
-              {'Grafana'}
+              {toolsPage.grafana}
             </a>
           </p>
         </section>

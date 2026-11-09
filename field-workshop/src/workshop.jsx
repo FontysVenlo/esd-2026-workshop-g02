@@ -204,7 +204,13 @@ function FreshStartToast({ status, retry }) {
       role="status"
     >
       <span className="unlock-toast-symbol" aria-hidden="true">
-        {status.state === 'error' ? '!' : status.state === 'done' ? '✓' : '…'}
+        {w(
+          status.state === 'error'
+            ? 'reset_failed_symbol'
+            : status.state === 'done'
+              ? 'reset_done_symbol'
+              : 'reset_pending_symbol',
+        )}
       </span>
       <span className="unlock-toast-copy">
         {status.state === 'pending' && (
@@ -309,7 +315,7 @@ function Challenge({ challenge: c, progress, update, submit }) {
         <div className="tool-links">
           {toolLinks.map(([label, href]) => (
             <Link key={href} href={href}>
-              {w(label)} ↗
+              {w(label)} {w('external_link_symbol')}
             </Link>
           ))}
         </div>

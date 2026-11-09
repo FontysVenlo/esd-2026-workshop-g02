@@ -1,3 +1,4 @@
+import { readPageCopy } from './page-copy.mjs';
 import http from 'node:http';
 
 export const defaultMitigations = Object.freeze({
@@ -11,21 +12,24 @@ export function createMitigations(initial = defaultMitigations) {
     snapshot: () => structuredClone(settings),
     apply(input) {
       if (!input || typeof input !== 'object' || Array.isArray(input))
-        throw new Error('Choose mitigation settings');
+        throw new Error(readPageCopy('network-faults').api.choose_mitigation_settings);
       if (input.action === 'reset' && Object.keys(input).length === 1) {
         settings = structuredClone(defaultMitigations);
       } else {
         if (input.action !== 'configure' || !['inventory', 'shipping'].includes(input.dependency))
-          throw new Error('Choose Inventory or Shipping');
+          throw new Error(readPageCopy('network-faults').api.choose_inventory_or_shipping);
         if (
           Object.keys(input).some(
             (key) => !['action', 'dependency', 'timeoutMs', 'fallback'].includes(key),
           )
         )
-          throw new Error('Unknown mitigation setting');
+          throw new Error(readPageCopy('network-faults').api.unknown_mitigation_setting);
         if (!Number.isInteger(input.timeoutMs) || input.timeoutMs < 50 || input.timeoutMs > 5000)
-          throw new Error('Timeout must be a whole number from 50 to 5000 ms');
-        if (typeof input.fallback !== 'boolean') throw new Error('Fallback must be true or false');
+          throw new Error(
+            readPageCopy('network-faults').api.timeout_must_be_a_whole_number_from_50_to_5000_ms,
+          );
+        if (typeof input.fallback !== 'boolean')
+          throw new Error(readPageCopy('network-faults').api.fallback_must_be_true_or_false);
         settings = {
           ...settings,
           [input.dependency]: { timeoutMs: input.timeoutMs, fallback: input.fallback },
@@ -44,15 +48,18 @@ export function createMitigationServer(mitigations) {
       res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify(body));
     };
-    if (req.url !== '/settings') return send(404, { error: 'Not found' });
+    if (req.url !== '/settings')
+      return send(404, { error: readPageCopy('network-faults').api.not_found });
     if (req.method === 'GET') return send(200, mitigations.snapshot());
-    if (req.method !== 'POST') return send(405, { error: 'Method not allowed' });
+    if (req.method !== 'POST')
+      return send(405, { error: readPageCopy('network-faults').api.method_not_allowed });
     if (!req.headers['content-type']?.startsWith('application/json'))
-      return send(415, { error: 'JSON is required' });
+      return send(415, { error: readPageCopy('network-faults').api.json_is_required });
     let raw = '';
     for await (const chunk of req) {
       raw += chunk;
-      if (raw.length > 1024) return send(413, { error: 'Request is too large' });
+      if (raw.length > 1024)
+        return send(413, { error: readPageCopy('network-faults').api.request_is_too_large });
     }
     try {
       send(200, mitigations.apply(JSON.parse(raw)));

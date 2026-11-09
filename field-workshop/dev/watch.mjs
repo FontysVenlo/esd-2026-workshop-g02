@@ -1,4 +1,12 @@
-import { cpSync, mkdirSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  readFileSync,
+  mkdirSync,
+  readdirSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -27,7 +35,14 @@ function refresh() {
     if (result.status !== 0) return;
     cpSync('build', output, { recursive: true });
     cpSync('dev/reload.js', path.join(output, 'reload.js'));
-    cpSync('content/home.json', path.join(output, 'home.json'));
+    const pages = Object.fromEntries(
+      ['home', 'storefront', 'network-faults', 'tools'].map((name) => [
+        name,
+        JSON.parse(readFileSync('content/' + name + '.json', 'utf8')),
+      ]),
+    );
+    writeFileSync(path.join(output, 'page-copy.next'), JSON.stringify(pages));
+    renameSync(path.join(output, 'page-copy.next'), path.join(output, 'page-copy.json'));
     writeFileSync(path.join(output, 'revision.next'), randomUUID());
     renameSync(path.join(output, 'revision.next'), path.join(output, 'revision'));
     console.log('Pages updated. Workshop: http://localhost:8088');

@@ -1,8 +1,19 @@
+import { readPageCopy } from './page-copy.mjs';
 export function products() {
   return [
-    { sku: 'LAMP-01', name: 'Desk Lamp', priceEur: 29.9, quantity: 12 },
-    { sku: 'CHAIR-02', name: 'Task Chair', priceEur: 89.9, quantity: 8 },
-    { sku: 'DESK-03', name: 'Writing Desk', priceEur: 149.9, quantity: 5 },
+    {
+      sku: 'LAMP-01',
+      name: readPageCopy('storefront').api.product_name,
+      priceEur: 29.9,
+      quantity: 12,
+    },
+    {
+      sku: 'CHAIR-02',
+      name: readPageCopy('storefront').catalog.chair,
+      priceEur: 89.9,
+      quantity: 8,
+    },
+    { sku: 'DESK-03', name: readPageCopy('storefront').catalog.desk, priceEur: 149.9, quantity: 5 },
   ];
 }
 

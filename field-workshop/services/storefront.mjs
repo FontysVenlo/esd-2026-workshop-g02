@@ -1,3 +1,5 @@
+import { readPageCopy } from './page-copy.mjs';
+import { format } from '../src/shared/copy.js';
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
@@ -121,7 +123,7 @@ export function createStorefrontServer(config = {}) {
         available: null,
         quantity: null,
         source: 'unconfirmed',
-        warning: 'Availability cannot be confirmed.',
+        warning: readPageCopy('storefront').api.inventory_warning,
       };
     }
   }
@@ -138,7 +140,7 @@ export function createStorefrontServer(config = {}) {
         priceEur: null,
         etaDays: null,
         source: 'unavailable',
-        warning: 'Shipping quote is temporarily unavailable.',
+        warning: readPageCopy('storefront').api.shipping_warning,
       };
     }
   }
@@ -177,7 +179,8 @@ export function createStorefrontServer(config = {}) {
     const url = new URL(req.url, 'http://localhost');
     const route = url.pathname;
     if (req.method === 'POST' && route === '/api/workshop/reset') return resetEnvironment();
-    if (req.method !== 'GET') return send(405, { error: 'Method not allowed' });
+    if (req.method !== 'GET')
+      return send(405, { error: readPageCopy('storefront').api.method_not_allowed });
     if (route === '/health') return send(200, { status: 'ok' });
     if (route === '/metrics') {
       res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4' });
@@ -239,7 +242,7 @@ export function createStorefrontServer(config = {}) {
       return res.end(guideFiles.get(route));
     }
     if (!['/api/product', '/api/order-preview', '/api/catalog'].includes(route))
-      return send(404, { error: 'Not found' });
+      return send(404, { error: readPageCopy('storefront').api.not_found });
 
     const started = performance.now();
     // Keep one consistent policy for the entire customer request, even if the
@@ -270,17 +273,17 @@ export function createStorefrontServer(config = {}) {
       const product = products().find(
         (product) => product.sku === (url.searchParams.get('sku') ?? 'LAMP-01'),
       );
-      if (!product) return sendApi(404, { error: 'Not found' });
+      if (!product) return sendApi(404, { error: readPageCopy('storefront').api.not_found });
       const result = await productResult(product, route === '/api/order-preview', policy);
       return sendApi(200, { ...result, note: 'Preview only. No order is placed.' });
     } catch (error) {
       return sendApi(error.outcome === 'timeout' ? 504 : 503, {
         error:
           error.outcome === 'capacity'
-            ? 'The shop is busy. Please try again shortly.'
+            ? readPageCopy('storefront').catalog.capacity_error
             : route === '/api/catalog'
-              ? 'The catalog could not be refreshed. Please try again or check a product individually.'
-              : 'Product information is temporarily unavailable.',
+              ? readPageCopy('storefront').catalog.catalog_error
+              : readPageCopy('storefront').catalog.product_error,
         failedDependency: error.message.split(' ')[0],
       });
     }
@@ -289,17 +292,24 @@ export function createStorefrontServer(config = {}) {
     // each challenge starts with no network faults and default mitigations.
     async function resetEnvironment() {
       if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`)
-        return send(403, { error: 'Cross-origin changes are not allowed' });
+        return send(403, {
+          error: readPageCopy('storefront').api.cross_origin_changes_are_not_allowed,
+        });
       if (!req.headers['content-type']?.startsWith('application/json'))
-        return send(415, { error: 'JSON is required' });
+        return send(415, { error: readPageCopy('storefront').api.json_is_required });
       try {
         const response = await fetch(new URL('/reset', settings.toxiproxyApi), {
           method: 'POST',
           signal: AbortSignal.timeout(3000),
         });
-        if (!response.ok) throw new Error(`Toxiproxy returned ${response.status}`);
+        if (!response.ok)
+          throw new Error(
+            format(readPageCopy('storefront').api.proxy_reset_status, { status: response.status }),
+          );
       } catch (error) {
-        return send(502, { error: `Network faults could not be cleared: ${error.message}` });
+        return send(502, {
+          error: format(readPageCopy('storefront').api.reset_failed, { error: error.message }),
+        });
       }
       const restored = mitigations.apply({ action: 'reset' });
       breaker.reset();

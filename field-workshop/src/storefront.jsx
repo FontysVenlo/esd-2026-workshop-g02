@@ -2,10 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { format } from '/copy.mjs';
 
+import page from '../content/storefront.json' with { type: 'json' };
+
+const { catalog, storefront, storefrontPage } = page;
+
 const products = [
-  { sku: 'LAMP-01', name: 'Desk Lamp', image: '/images/lamp.png', price: 29.9 },
-  { sku: 'CHAIR-02', name: 'Task Chair', image: '/images/chair.png', price: 89.9 },
-  { sku: 'DESK-03', name: 'Writing Desk', image: '/images/desk.png', price: 149.9 },
+  { sku: 'LAMP-01', name: page.api.product_name, image: '/images/lamp.png', price: 29.9 },
+  { sku: 'CHAIR-02', name: catalog.chair, image: '/images/chair.png', price: 89.9 },
+  { sku: 'DESK-03', name: catalog.desk, image: '/images/desk.png', price: 149.9 },
 ];
 
 // A single request per polling loop. Background updates never clear the current
@@ -99,15 +103,15 @@ function ProductCard({ product, result, stale }) {
   }
   const stock = (value) =>
     value?.inventory.source === 'live'
-      ? format('{quantity} in stock', { quantity: value.inventory.quantity })
-      : 'Stock unconfirmed';
+      ? format(storefront.in_stock, { quantity: value.inventory.quantity })
+      : storefront.stock_unconfirmed;
   const shipping = (value) =>
     value.shipping.source === 'live'
-      ? format(' · Shipping €{price} · About {days} days', {
+      ? format(storefront.shipping_about_days, {
           price: value.shipping.priceEur.toFixed(2),
           days: value.shipping.etaDays,
         })
-      : ' · Shipping quote unavailable';
+      : storefront.shipping_quote_unavailable;
   return (
     <article className={`react-product ${stale ? 'stale' : result?.degraded ? 'degraded' : ''}`}>
       <div className="product-photo">
@@ -116,23 +120,23 @@ function ProductCard({ product, result, stale }) {
       <div className="react-product-content">
         <div className="product-heading">
           <h2>{product.name}</h2>
-          <span>€{product.price.toFixed(2)}</span>
+          <span>{format(catalog.price, { price: product.price.toFixed(2) })}</span>
         </div>
         <p className="meta">{product.sku}</p>
         <div
           className={`product-state ${stale ? 'state-stale' : result?.degraded ? 'state-limited' : 'state-live'}`}
         >
           {stale
-            ? 'Last known result'
+            ? catalog.stale
             : !result
-              ? 'Not checked yet'
+              ? catalog.waiting
               : result.degraded
-                ? 'Limited information'
-                : 'Live information'}
+                ? catalog.limited
+                : catalog.live}
         </div>
         <div className="product-readings">
-          <p>{result ? stock(result) : 'Not checked yet'}</p>
-          <p>{result?.shipping ? shipping(result) : 'Delivery quote shown in delivery view'}</p>
+          <p>{result ? stock(result) : catalog.waiting}</p>
+          <p>{result?.shipping ? shipping(result) : catalog.stock_only}</p>
         </div>
         <div className="product-buttons">
           <button
@@ -142,27 +146,27 @@ function ProductCard({ product, result, stale }) {
             }
             onClick={() => inspect(false)}
           >
-            {result && unconfirmed ? 'Availability temporarily disabled' : 'Check this product'}
+            {result && unconfirmed ? catalog.disabled : catalog.available}
           </button>
           <button className="secondary" disabled={busy} onClick={() => inspect(true)}>
-            {'Order preview'}
+            {storefrontPage.order_preview}
           </button>
         </div>
         <div className="individual-result" role="status" aria-live="polite">
           {busy ? (
-            'Checking this product…'
+            catalog.checking
           ) : check?.error ? (
             check.error
           ) : check?.data ? (
             <>
-              {format('{stock} · {milliseconds} ms', {
+              {format(catalog.individual_result, {
                 stock: stock(check.data),
                 milliseconds: check.milliseconds,
               })}
               {check.data.shipping && <span>{shipping(check.data)}</span>}
             </>
           ) : (
-            'Run an individual check to compare with the shared catalog.'
+            catalog.individual_hint
           )}
         </div>
       </div>
@@ -171,6 +175,9 @@ function ProductCard({ product, result, stale }) {
 }
 
 function Storefront() {
+  useEffect(() => {
+    document.title = page.pageTitle;
+  }, []);
   const [preview, setPreview] = useState(false);
   const [auto, setAuto] = useState(true);
   const [state, refresh] = usePolling(`/api/catalog?preview=${preview}`, 2000, auto);
@@ -184,37 +191,33 @@ function Storefront() {
       <header>
         <div className="header-inner storefront-header">
           <a className="brand" href="/storefront">
-            {'Northstar Supply'}
-            <span className="brand-dot">.</span>
+            {storefrontPage.northstar_supply}
+            <span className="brand-dot">{catalog.brand_suffix}</span>
           </a>
-          <a href="/">{'← Workshop overview'}</a>
+          <a href="/">{storefrontPage.workshop_overview}</a>
         </div>
       </header>
       <main className="react-storefront">
         <div className="catalog-intro">
-          <div className="eyebrow">{'LIVE CATALOG'}</div>
-          <h1>{'Three products. One shared shop.'}</h1>
-          <p>
-            {
-              'Browse three home-office essentials. Check current availability or preview delivery for the whole catalog or an individual product.'
-            }
-          </p>
+          {catalog.eyebrow && <div className="eyebrow">{catalog.eyebrow}</div>}
+          <h1>{catalog.title}</h1>
+          {catalog.description && <p>{catalog.description}</p>}
         </div>
-        <section className="catalog-controls" aria-label={'Catalog view and refresh controls'}>
+        <section className="catalog-controls" aria-label={catalog.controls_label}>
           <div className="view-buttons">
             <button
               className={preview ? 'secondary' : 'primary'}
               aria-pressed={!preview}
               onClick={() => selectView(false)}
             >
-              {'Refresh all availability'}
+              {catalog.refresh_stock}
             </button>
             <button
               className={preview ? 'primary' : 'secondary'}
               aria-pressed={preview}
               onClick={() => selectView(true)}
             >
-              {'Preview all deliveries'}
+              {catalog.refresh_preview}
             </button>
           </div>
           <label className="auto-refresh">
@@ -223,7 +226,7 @@ function Storefront() {
               checked={auto}
               onChange={(event) => setAuto(event.target.checked)}
             />
-            {'Refresh this view every 2 seconds'}
+            {catalog.auto_refresh}
           </label>
         </section>
         <div
@@ -233,32 +236,18 @@ function Storefront() {
         >
           <strong>
             {state.pending
-              ? 'Updating catalog…'
+              ? catalog.updating
               : state.error
-                ? format('Whole catalog unavailable · HTTP {status} · {milliseconds} ms', {
-                    status: state.error.status ?? '—',
+                ? format(catalog.failed, {
+                    status: state.error.status ?? catalog.unknown_status,
                     milliseconds: state.milliseconds,
                   })
-                : format(
-                    preview
-                      ? 'Delivery catalog ready · {milliseconds} ms'
-                      : 'Availability catalog ready · {milliseconds} ms',
-                    { milliseconds: state.milliseconds },
-                  )}
+                : format(preview ? catalog.preview_ready : catalog.stock_ready, {
+                    milliseconds: state.milliseconds,
+                  })}
           </strong>
-          {state.error && (
-            <p>
-              {state.error.message ||
-                'Could not refresh the catalog. No current live result is shown.'}
-            </p>
-          )}
-          {stale && state.data && (
-            <span>
-              {
-                'Showing the last successful catalog. It is not a current confirmation; individual product checks remain available.'
-              }
-            </span>
-          )}
+          {state.error && <p>{state.error.message || catalog.connection_error}</p>}
+          {stale && state.data && <span>{catalog.stale_notice}</span>}
         </div>
         <div className="react-products">
           {products.map((product) => (
@@ -271,14 +260,10 @@ function Storefront() {
           ))}
         </div>
         <details className="catalog-explainer">
-          <summary>{'About availability and delivery'}</summary>
-          <p>
-            {
-              'Stock and delivery are checked live. If stock cannot be confirmed, availability checking is temporarily disabled. An unavailable delivery quote is not a delivery promise. After a refresh fails, cards show the last known result until live information returns.'
-            }
-          </p>
+          <summary>{catalog.explanation_title}</summary>
+          <p>{catalog.explanation}</p>
         </details>
-        <p className="meta preview-note">{'Order preview only. No purchase is made.'}</p>
+        <p className="meta preview-note">{storefrontPage.order_preview_only_no_purchase_is_made}</p>
       </main>
     </>
   );

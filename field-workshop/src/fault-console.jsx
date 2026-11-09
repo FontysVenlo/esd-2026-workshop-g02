@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import page from '../content/network-faults.json' with { type: 'json' };
 import { format } from '/copy.mjs';
+
+const { faultConsole, faultConsolePage } = page;
 
 async function request(path, body) {
   const response = await fetch(path, {
@@ -12,29 +15,36 @@ async function request(path, body) {
   });
   const data = await response.json();
   if (!response.ok)
-    throw new Error(data.error ?? format('Request failed: {status}', { status: response.status }));
+    throw new Error(data.error ?? format(faultConsole.request_failed, { status: response.status }));
   return data;
 }
 function FaultState({ state }) {
-  if (!state) return <p>{'Current state is unavailable.'}</p>;
+  if (!state) return <p>{faultConsole.current_state_is_unavailable}</p>;
   return (
     <div id="state" className="status-grid">
       {['inventory', 'shipping'].map((name) => (
         <article className="status-card" key={name}>
-          <h3>{name === 'inventory' ? 'Lighting inventory' : 'Shipping (all products)'}</h3>
+          <h3>{name === 'inventory' ? faultConsolePage.inventory : faultConsolePage.shipping}</h3>
           <span className={`badge${state[name].enabled ? '' : ' off'}`}>
-            {state[name].enabled ? 'Connected' : 'Disconnected'}
+            {state[name].enabled ? faultConsole.connected : faultConsole.disconnected}
           </span>
           {!state[name].toxics.length ? (
-            <p>{'No active faults'}</p>
+            <p>{faultConsole.no_active_faults}</p>
           ) : (
             <ul className="faults">
               {state[name].toxics.map((toxic) => (
                 <li key={toxic.name}>
-                  {toxic.name}: {toxic.type}
-                  {toxic.type === 'latency'
-                    ? ` (${toxic.attributes?.latency ?? '?'} ms)`
-                    : ''} · {toxic.stream}
+                  {format(faultConsole.toxic_detail, {
+                    name: toxic.name,
+                    type: toxic.type,
+                    stream: toxic.stream,
+                    delay:
+                      toxic.type === 'latency'
+                        ? format(faultConsole.latency_detail, {
+                            milliseconds: toxic.attributes?.latency ?? faultConsole.unknown_value,
+                          })
+                        : '',
+                  })}
                 </li>
               ))}
             </ul>
@@ -133,7 +143,7 @@ function Console() {
     setBusy(true);
     try {
       setFaults(await request('/api/state'));
-      setMessage({ text: 'Showing current Toxiproxy state.' });
+      setMessage({ text: faultConsole.showing_current_toxiproxy_state });
     } catch (error) {
       setMessage({ text: error.message, error: true });
     } finally {
@@ -148,36 +158,39 @@ function Console() {
       action === 'set-latency' &&
       (!Number.isInteger(latencyMs) || latencyMs < 50 || latencyMs > 5000)
     ) {
-      setMessage({ text: 'Choose a whole-number delay from 50 to 5000 ms.', error: true });
+      setMessage({ text: faultConsole.choose_a_whole_number_delay_from_50_to_5000, error: true });
       return;
     }
     if (
       action === 'reset' &&
-      !window.confirm(
-        'Restore both proxy paths and remove every active Toxiproxy fault in this local workshop?',
-      )
+      !window.confirm(faultConsole.restore_both_proxy_paths_and_remove_every_active_toxiproxy)
     )
       return;
     faultLock.current = true;
     setBusy(true);
-    setMessage({ text: 'Sending change to Toxiproxy…' });
+    setMessage({ text: faultConsole.sending_change_to_toxiproxy });
     try {
       const body = { action, proxy, latencyMs },
         result = await request('/api/action', body);
       setFaults(result.state);
       setLastRequest({ path: '/api/action', body });
       setCommand(
-        `${result.command.method} ${result.command.path}${result.command.body ? `\nContent-Type: application/json\n\n${JSON.stringify(result.command.body, null, 2)}` : ''}`,
+        format(result.command.body ? faultConsole.request_with_body : faultConsole.request_line, {
+          method: result.command.method,
+          path: result.command.path,
+          body: JSON.stringify(result.command.body, null, 2),
+        }),
       );
       setMessage({
-        text: format('Change applied. {method} {path}. Open “Info & commands” to inspect it.', {
+        text: format(faultConsole.change_applied_open_info_commands_to_inspect_it, {
           method: result.command.method,
+          tab: faultConsolePage.info_commands,
           path: result.command.path,
         }),
       });
     } catch (error) {
       setMessage({
-        text: format('{error} Refresh the state before trying again.', { error: error.message }),
+        text: format(faultConsole.refresh_the_state_before_trying_again, { error: error.message }),
         error: true,
       });
     } finally {
@@ -192,17 +205,17 @@ function Console() {
     if (mitigationLock.current) return;
     mitigationLock.current = true;
     setMitigationBusy(true);
-    setMitigationMessage({ text: 'Reading active Storefront settings…' });
+    setMitigationMessage({ text: faultConsole.reading_active_storefront_settings });
     try {
       const settings = await request('/api/mitigations');
       setActive(settings);
       setDraft(settings);
       setMitigationMessage({
-        text: 'Showing active settings. Edit and apply a dependency, or use its challenge preset.',
+        text: faultConsole.showing_active_settings_edit_and_apply_a_dependency_or,
       });
     } catch (error) {
       setMitigationMessage({
-        text: format('{error} Refresh settings to try again.', { error: error.message }),
+        text: format(faultConsole.refresh_settings_to_try_again, { error: error.message }),
         error: true,
       });
     } finally {
@@ -217,36 +230,36 @@ function Console() {
       (!Number.isInteger(input.timeoutMs) || input.timeoutMs < 50 || input.timeoutMs > 5000)
     ) {
       setMitigationMessage({
-        text: 'Choose a whole-number timeout from 50 to 5000 ms.',
+        text: faultConsole.choose_a_whole_number_timeout_from_50_to_5000,
         error: true,
       });
       return;
     }
     mitigationLock.current = true;
     setMitigationBusy(true);
-    setMitigationMessage({ text: 'Applying settings to Storefront…' });
+    setMitigationMessage({ text: faultConsole.applying_settings_to_storefront });
     try {
       const settings = await request('/api/mitigations', input);
       setActive(settings);
       setDraft(settings);
       setLastRequest({ path: '/api/mitigations', body: input });
       setCommand(
-        format('POST /api/mitigations\nContent-Type: application/json\n\n{body}', {
+        format(faultConsole.post_api_mitigations_content_type_application_json, {
           body: JSON.stringify(input, null, 2),
         }),
       );
       setMitigationMessage({
         text:
           input.action === 'reset'
-            ? 'Defaults restored: both timeouts are 3000 ms and both fallbacks are off. Network faults remain unchanged.'
-            : format(
-                '{dependency} settings applied. Repeat the same customer action in Storefront; no restart is needed.',
-                { dependency: input.dependency === 'inventory' ? 'Inventory' : 'Shipping' },
-              ),
+            ? faultConsole.defaults_restored_both_timeouts_are_3000_ms_and_both
+            : format(faultConsole.settings_applied, {
+                dependency:
+                  input.dependency === 'inventory' ? faultConsole.inventory : faultConsole.shipping,
+              }),
       });
     } catch (error) {
       setMitigationMessage({
-        text: format('{error} Refresh settings to check the active state before trying again.', {
+        text: format(faultConsole.refresh_settings_to_check_the_active_state_before_trying, {
           error: error.message,
         }),
         error: true,
@@ -257,43 +270,46 @@ function Console() {
     }
   }
   const platformCommand = !lastRequest
-    ? 'Apply a fault or mitigation to see the equivalent command here.'
+    ? faultConsolePage.apply_a_fault_or_mitigation_to_see_the_equivalent
     : platform === 'windows'
-      ? format(
-          "Invoke-RestMethod -Method Post -Uri '{url}' -ContentType 'application/json' -Body '{body}'",
-          { url: `${location.origin}${lastRequest.path}`, body: JSON.stringify(lastRequest.body) },
-        )
-      : `curl -f -sS -X POST '${location.origin}${lastRequest.path}' \\\n  -H 'Content-Type: application/json' \\\n  --data '${JSON.stringify(lastRequest.body)}'`;
+      ? format(faultConsole.invoke_restmethod_method_post_uri_contenttype_application_json_body, {
+          url: `${location.origin}${lastRequest.path}`,
+          body: JSON.stringify(lastRequest.body),
+        })
+      : format(faultConsole.curl_command, {
+          url: location.origin + lastRequest.path,
+          body: JSON.stringify(lastRequest.body),
+        });
   return (
     <>
       <header>
         <div className="header-inner">
           <a className="brand" href="http://localhost:8088/">
-            {'Northstar Supply / Network faults'}
+            {faultConsolePage.northstar_supply_network_faults}
           </a>
           <nav className="links">
-            <a href="http://localhost:8088/">{'Workshop overview'}</a>
+            <a href="http://localhost:8088/">{faultConsolePage.workshop_overview}</a>
             <a
               href="http://localhost:3008/d/field-workshop/field-workshop"
               target="_blank"
               rel="noopener"
             >
-              {'Grafana'}
+              {faultConsolePage.grafana}
             </a>
           </nav>
         </div>
       </header>
       <main>
         <div className="intro">
-          <div className="eyebrow">{'Operator tool'}</div>
-          <h1>{'Network faults & fallbacks'}</h1>
-          <p>
-            {
-              'Lighting, Seating and Desks have separate inventory services. Fault Lighting inventory or the shared Shipping connection for all products. Compare customer results in Storefront and worker, queue and circuit metrics in Grafana before and after mitigation.'
-            }
-          </p>
+          <div className="eyebrow">{faultConsolePage.operator_tool}</div>
+          <h1>{faultConsolePage.network_faults_fallbacks}</h1>
+          <p>{faultConsolePage.create_a_dependency_problem_in_the_first_tab_then}</p>
         </div>
-        <div className="tabs" role="tablist" aria-label={'Network fault console views'}>
+        <div
+          className="tabs"
+          role="tablist"
+          aria-label={faultConsolePage.network_fault_console_views}
+        >
           <button
             id="controls-tab"
             ref={(node) => {
@@ -308,7 +324,7 @@ function Console() {
             onClick={() => selectTab('controls')}
             onKeyDown={(event) => moveTab(event, 'controls')}
           >
-            {'Fault injection'}
+            {faultConsolePage.fault_injection}
           </button>
           <button
             id="mitigations-tab"
@@ -324,7 +340,7 @@ function Console() {
             onClick={() => selectTab('mitigations')}
             onKeyDown={(event) => moveTab(event, 'mitigations')}
           >
-            {'Fallbacks & timeouts'}
+            {faultConsolePage.fallbacks_timeouts}
           </button>
           <button
             id="info-tab"
@@ -340,7 +356,7 @@ function Console() {
             onClick={() => selectTab('info')}
             onKeyDown={(event) => moveTab(event, 'info')}
           >
-            {'Info & commands'}
+            {faultConsolePage.info_commands}
           </button>
         </div>
         <section
@@ -350,7 +366,7 @@ function Console() {
           aria-labelledby="controls-tab"
           hidden={tab !== 'controls'}
         >
-          <h2>{'Current state'}</h2>
+          <h2>{faultConsolePage.current_state}</h2>
           <button
             onClick={refresh}
             disabled={busy}
@@ -358,20 +374,20 @@ function Console() {
             className="secondary"
             type="button"
           >
-            {'Refresh'}
+            {faultConsolePage.refresh}
           </button>
           <FaultState state={faults} />
-          <h2>{'Apply a fault'}</h2>
+          <h2>{faultConsolePage.apply_a_fault}</h2>
           <div className="controls">
             <label>
-              {'Dependency'}
+              {faultConsolePage.dependency}
               <select id="proxy" value={proxy} onChange={(event) => setProxy(event.target.value)}>
-                <option value="inventory">{'Lighting inventory'}</option>
-                <option value="shipping">{'Shipping (all products)'}</option>
+                <option value="inventory">{faultConsolePage.inventory}</option>
+                <option value="shipping">{faultConsolePage.shipping}</option>
               </select>
             </label>
             <label>
-              {'Response delay (ms)'}
+              {faultConsolePage.response_delay_ms}
               <input
                 id="latency"
                 type="number"
@@ -391,7 +407,7 @@ function Console() {
               disabled={busy}
               onClick={() => perform('set-latency')}
             >
-              {'Apply delay'}
+              {faultConsolePage.apply_delay}
             </button>
             <button
               className="action secondary"
@@ -400,7 +416,7 @@ function Console() {
               disabled={busy}
               onClick={() => perform('remove-latency')}
             >
-              {'Remove delay'}
+              {faultConsolePage.remove_delay}
             </button>
             <button
               className="action danger"
@@ -409,7 +425,7 @@ function Console() {
               disabled={busy}
               onClick={() => perform('disconnect')}
             >
-              {'Disconnect'}
+              {faultConsolePage.disconnect}
             </button>
             <button
               className="action secondary"
@@ -418,7 +434,7 @@ function Console() {
               disabled={busy}
               onClick={() => perform('reconnect')}
             >
-              {'Reconnect'}
+              {faultConsolePage.reconnect}
             </button>
           </div>
           <button
@@ -428,12 +444,10 @@ function Console() {
             className="secondary"
             type="button"
           >
-            {'Clear all faults'}
+            {faultConsolePage.clear_all_faults}
           </button>
           <p className="meta">
-            {
-              'Clears all four proxy branches. Notes, metrics, and mitigation settings remain. Allow one 5-second breaker cooldown for recovery, or restore default settings.'
-            }
+            {faultConsolePage.clears_toxiproxy_faults_only_notes_metrics_and_mitigation_settings}
           </p>
           <p id="message" className={`message ${message.error ? 'error' : ''}`} role="status">
             {message.text}
@@ -446,19 +460,14 @@ function Console() {
           aria-labelledby="mitigations-tab"
           hidden={tab !== 'mitigations'}
         >
-          <h2>{"Change the shop's response"}</h2>
+          <h2>{faultConsolePage.change_the_shop_s_response}</h2>
           <p>
-            {'A'} <strong>{'timeout'}</strong> {'is how long Storefront waits for a dependency. A'}{' '}
-            <strong>{'fallback'}</strong>{' '}
-            {
-              'provides an honest replacement when that dependency fails or takes too long. Inventory has a breaker for each product. Shipping has one shared breaker. After a failure it waits five seconds before allowing one probe. A short timeout frees a worker; the breaker reduces repeated waiting; the fallback prevents one missing result from failing the catalog.'
-            }
+            {faultConsolePage.a} <strong>{faultConsolePage.timeout}</strong>{' '}
+            {faultConsolePage.is_how_long_storefront_waits_for_a_dependency_a}{' '}
+            <strong>{faultConsolePage.fallback}</strong>{' '}
+            {faultConsolePage.provides_a_useful_honest_response_when_that_dependency_fails}
           </p>
-          <p>
-            {
-              'Changes apply to new customer requests immediately. You do not need to restart Docker. Keep or reapply the same fault to compare the customer experience before and after mitigation.'
-            }
-          </p>
+          <p>{faultConsolePage.changes_apply_to_new_customer_requests_immediately_you_do}</p>
           <button
             disabled={mitigationBusy}
             onClick={refreshMitigations}
@@ -466,7 +475,7 @@ function Console() {
             className="secondary"
             type="button"
           >
-            {'Refresh settings'}
+            {faultConsolePage.refresh_settings}
           </button>
           <div className="mitigation-controls">
             <form
@@ -482,21 +491,21 @@ function Console() {
               id="inventory-settings"
               className="status-card"
             >
-              <h3>{'Inventory · all three categories'}</h3>
+              <h3>{faultConsolePage.inventory_stock_checks}</h3>
               <p>
-                {'With fallback enabled, an unavailable stock check returns'}{' '}
-                <strong>{'Stock unconfirmed'}</strong>
-                {'. It never guesses the stock quantity.'}
+                {faultConsolePage.with_fallback_enabled_an_unavailable_stock_check_returns}{' '}
+                <strong>{faultConsolePage.stock_unconfirmed}</strong>
+                {faultConsolePage.it_never_guesses_the_stock_quantity}
               </p>
               <p id="inventory-current" className="meta" role="status">
                 {active
-                  ? format('Active: {timeout} ms timeout · fallback + breaker {fallback}', {
+                  ? format(faultConsole.active_ms_timeout_fallback, {
                       timeout: active.inventory.timeoutMs,
-                      fallback: active.inventory.fallback ? 'on' : 'off',
+                      fallback: active.inventory.fallback ? faultConsole.on : faultConsole.off,
                     })
-                  : 'Active settings unavailable.'}
+                  : faultConsole.active_settings_unavailable}
               </p>
-              <label htmlFor="inventory-timeout">{'Inventory timeout (ms)'}</label>
+              <label htmlFor="inventory-timeout">{faultConsolePage.inventory_timeout_ms}</label>
               <input
                 id="inventory-timeout"
                 value={draft.inventory.timeoutMs}
@@ -512,15 +521,17 @@ function Console() {
                 <input
                   id="inventory-fallback"
                   checked={draft.inventory.fallback}
-                  onChange={(event) => edit('inventory', 'fallback', event.target.checked)}
+                  onChange={(event) =>
+                    edit('inventory', faultConsolePage.fallback, event.target.checked)
+                  }
                   type="checkbox"
                   disabled={mitigationBusy || !active}
                 />{' '}
-                {' Enable Inventory fallback + circuit breaker'}
+                {faultConsolePage.enable_inventory_fallback}
               </label>
               <div className="actions">
                 <button className="primary" type="submit" disabled={mitigationBusy || !active}>
-                  {'Apply Inventory settings'}
+                  {faultConsolePage.apply_inventory_settings}
                 </button>
                 <button
                   onClick={() =>
@@ -536,13 +547,11 @@ function Console() {
                   type="button"
                   disabled={mitigationBusy || !active}
                 >
-                  {'Use Challenge 1 settings'}
+                  {faultConsolePage.use_challenge_1_settings}
                 </button>
               </div>
               <p className="meta">
-                {
-                  'Challenge 1 uses a 400 ms timeout, honest fallback, and a 5-second circuit breaker for failed product paths.'
-                }
+                {faultConsolePage.challenge_1_uses_a_400_ms_timeout_with_fallback}
               </p>
             </form>
             <form
@@ -558,21 +567,21 @@ function Console() {
               id="shipping-settings"
               className="status-card"
             >
-              <h3>{'Shipping · delivery quotes'}</h3>
+              <h3>{faultConsolePage.shipping_delivery_quotes}</h3>
               <p>
-                {'With fallback enabled, the preview returns available stock and'}{' '}
-                <strong>{'Shipping quote unavailable'}</strong>
-                {'. It never invents a price or delivery date.'}
+                {faultConsolePage.with_fallback_enabled_the_preview_returns_available_stock_and}{' '}
+                <strong>{faultConsolePage.shipping_quote_unavailable}</strong>
+                {faultConsolePage.it_never_invents_a_price_or_delivery_date}
               </p>
               <p id="shipping-current" className="meta" role="status">
                 {active
-                  ? format('Active: {timeout} ms timeout · fallback + breaker {fallback}', {
+                  ? format(faultConsole.active_ms_timeout_fallback, {
                       timeout: active.shipping.timeoutMs,
-                      fallback: active.shipping.fallback ? 'on' : 'off',
+                      fallback: active.shipping.fallback ? faultConsole.on : faultConsole.off,
                     })
-                  : 'Active settings unavailable.'}
+                  : faultConsole.active_settings_unavailable}
               </p>
-              <label htmlFor="shipping-timeout">{'Shipping timeout (ms)'}</label>
+              <label htmlFor="shipping-timeout">{faultConsolePage.shipping_timeout_ms}</label>
               <input
                 id="shipping-timeout"
                 value={draft.shipping.timeoutMs}
@@ -588,15 +597,17 @@ function Console() {
                 <input
                   id="shipping-fallback"
                   checked={draft.shipping.fallback}
-                  onChange={(event) => edit('shipping', 'fallback', event.target.checked)}
+                  onChange={(event) =>
+                    edit('shipping', faultConsolePage.fallback, event.target.checked)
+                  }
                   type="checkbox"
                   disabled={mitigationBusy || !active}
                 />{' '}
-                {' Enable Shipping fallback + circuit breaker'}
+                {faultConsolePage.enable_shipping_fallback}
               </label>
               <div className="actions">
                 <button className="primary" type="submit" disabled={mitigationBusy || !active}>
-                  {'Apply Shipping settings'}
+                  {faultConsolePage.apply_shipping_settings}
                 </button>
                 <button
                   onClick={() =>
@@ -612,13 +623,11 @@ function Console() {
                   type="button"
                   disabled={mitigationBusy || !active}
                 >
-                  {'Use Challenge 2 settings'}
+                  {faultConsolePage.use_challenge_2_settings}
                 </button>
               </div>
               <p className="meta">
-                {
-                  'Challenge 2 enables fallback and a 5-second circuit breaker. Its disconnected Shipping path fails immediately; the timeout remains 3000 ms.'
-                }
+                {faultConsolePage.challenge_2_enables_fallback_with_the_default_3000_ms}
               </p>
             </form>
           </div>
@@ -629,12 +638,10 @@ function Console() {
             type="button"
             disabled={mitigationBusy || !active}
           >
-            {'Restore default settings'}
+            {faultConsolePage.restore_default_settings}
           </button>
           <p className="meta">
-            {
-              'Restores both timeouts to 3000 ms and turns both fallbacks off. Network faults and your answers remain. Settings last until Storefront restarts; restarting reloads its startup configuration.'
-            }
+            {faultConsolePage.restores_both_timeouts_to_3000_ms_and_turns_both}
           </p>
           <p
             id="mitigation-message"
@@ -651,76 +658,67 @@ function Console() {
           aria-labelledby="info-tab"
           hidden={tab !== 'info'}
         >
-          <h2>{'Underlying API commands'}</h2>
-          <p>
-            {
-              'These controls send HTTP requests to Toxiproxy. The Storefront uses the affected paths.'
-            }
-          </p>
+          <h2>{faultConsolePage.underlying_api_commands}</h2>
+          <p>{faultConsolePage.these_controls_send_http_requests_to_toxiproxy_the_storefront}</p>
           <ul>
             <li>
-              <strong>{'Apply delay:'}</strong> <code>{'POST /proxies/{dependency}/toxics'}</code>{' '}
-              {'with a downstream latency toxic. An existing console delay is updated at'}{' '}
-              <code>{'POST /proxies/{dependency}/toxics/workshop-latency'}</code>
-              {'.'}
+              <strong>{faultConsolePage.apply_delay_2}</strong>{' '}
+              <code>{faultConsolePage.post_proxies_toxics}</code>{' '}
+              {faultConsolePage.with_a_downstream_latency_toxic_an_existing_console_delay}{' '}
+              <code>{faultConsolePage.post_proxies_toxics_workshop_latency}</code>
+              {faultConsolePage.text}
             </li>
             <li>
-              <strong>{'Remove delay:'}</strong>{' '}
-              <code>{'DELETE /proxies/{dependency}/toxics/workshop-latency'}</code>
-              {'.'}
+              <strong>{faultConsolePage.remove_delay_2}</strong>{' '}
+              <code>{faultConsolePage.delete_proxies_toxics_workshop_latency}</code>
+              {faultConsolePage.text}
             </li>
             <li>
-              <strong>{'Disconnect / reconnect:'}</strong>{' '}
-              <code>{'POST /proxies/{dependency}'}</code> {'with'}{' '}
-              <code>{'{"enabled":false}'}</code> {'or'} <code>{'{"enabled":true}'}</code>
-              {'.'}
+              <strong>{faultConsolePage.disconnect_reconnect}</strong>{' '}
+              <code>{faultConsolePage.post_proxies}</code> {faultConsolePage.with}{' '}
+              <code>{faultConsolePage.text_2}</code> {faultConsolePage.or}{' '}
+              <code>{faultConsolePage.text_3}</code>
+              {faultConsolePage.text}
             </li>
             <li>
-              <strong>{'Clear all faults:'}</strong> <code>{'POST /reset'}</code>
-              {'. Reconnects both paths and removes all toxics.'}
+              <strong>{faultConsolePage.clear_all_faults_2}</strong>{' '}
+              <code>{faultConsolePage.post_reset}</code>
+              {faultConsolePage.reconnects_both_paths_and_removes_all_toxics}
             </li>
             <li>
-              <strong>{'Refresh:'}</strong> <code>{'GET /proxies'}</code>
-              {'. Reads state without changing it.'}
+              <strong>{faultConsolePage.refresh_2}</strong>{' '}
+              <code>{faultConsolePage.get_proxies}</code>
+              {faultConsolePage.reads_state_without_changing_it}
             </li>
           </ul>
-          <h3>{'Example: 1500 ms Lighting inventory delay'}</h3>
-          <pre>
-            {
-              'POST /proxies/inventory/toxics\nContent-Type: application/json\n\n{"name":"workshop-latency","type":"latency","stream":"downstream","attributes":{"latency":1500,"jitter":0}}'
-            }
-          </pre>
-          <h3>{'Last command sent'}</h3>
-          <pre id="last-command">{command || 'No command sent yet.'}</pre>
-          <h3>{'Optional command for your computer'}</h3>
-          <p>
-            {
-              'The browser controls above work the same on both platforms. This selector changes only the optional command example, not how faults or fallbacks work.'
-            }
-          </p>
-          <label htmlFor="command-platform">{'Command platform'}</label>
+          <h3>{faultConsolePage.example_1500_ms_inventory_delay}</h3>
+          <pre>{faultConsolePage.post_proxies_inventory_toxics_content_type_application_json}</pre>
+          <h3>{faultConsolePage.last_command_sent}</h3>
+          <pre id="last-command">{command || faultConsolePage.no_command_sent_yet}</pre>
+          <h3>{faultConsolePage.optional_command_for_your_computer}</h3>
+          <p>{faultConsolePage.the_browser_controls_above_work_the_same_on_both}</p>
+          <label htmlFor="command-platform">{faultConsolePage.command_platform}</label>
           <select
             id="command-platform"
             value={platform}
             onChange={(event) => setPlatform(event.target.value)}
           >
-            <option value="windows">{'Windows · PowerShell'}</option>
-            <option value="mac">{'Mac · Terminal'}</option>
+            <option value="windows">{faultConsolePage.windows_powershell}</option>
+            <option value="mac">{faultConsolePage.mac_terminal}</option>
           </select>
           <pre id="platform-command">{platformCommand}</pre>
-          <h3>{'Fallback settings API'}</h3>
+          <h3>{faultConsolePage.fallback_settings_api}</h3>
           <p>
-            <code>{'GET /api/mitigations'}</code> {'reads current settings.'}{' '}
-            <code>{'POST /api/mitigations'}</code>{' '}
-            {
-              "applies a dependency's timeout and fallback, or restores defaults. The console forwards these requests to Storefront's internal settings listener."
-            }
+            <code>{faultConsolePage.get_api_mitigations}</code>{' '}
+            {faultConsolePage.reads_current_settings}{' '}
+            <code>{faultConsolePage.post_api_mitigations}</code>{' '}
+            {faultConsolePage.applies_a_dependency_s_timeout_and_fallback_or_restores}
           </p>
           <p className="meta">
-            {'The raw API is at'} <code>{'http://localhost:8478'}</code>
-            {'.'}{' '}
+            {faultConsolePage.the_raw_api_is_at} <code>{faultConsolePage.http_localhost_8478}</code>
+            {faultConsolePage.text}{' '}
             <a href="http://localhost:8088/tools" target="_blank" rel="noopener">
-              {'Windows and Mac commands'}
+              {faultConsolePage.windows_and_mac_commands}
             </a>
           </p>
         </section>

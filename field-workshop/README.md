@@ -6,7 +6,7 @@ A small, runnable commerce system for hands-on Chaos Engineering. The overview c
 
 Start Docker Desktop, then run `npm start` or `bun run dev` from the repository root or the workshop directory. Once ready, the launcher opens the workshop overview, Storefront, Network Faults, Grafana dashboard, and Prometheus in your default browser. Docker builds the dependencies and starts the full stack, including background traffic and Grafana. You can skip a host package install.
 
-Keep the terminal open. Saving a Home or challenge JSON file, a frontend file under `src/`, or a stylesheet under `public/` rebuilds the pages and refreshes open workshop tabs automatically. If an edit has a syntax error, the terminal shows it and the last successful page stays available. For backend changes, restart the command to rebuild the services.
+Keep the terminal open. Saving a page JSON file, a frontend file under `src/`, or a stylesheet under `public/` rebuilds the pages and refreshes open workshop tabs automatically. If an edit has a syntax error, the terminal shows it and the last successful page stays available. For backend changes, restart the command to rebuild the services.
 
 Press **Ctrl+C** to stop the stack. Run `npm run stop` or `bun run stop` to remove its containers.
 
@@ -18,11 +18,11 @@ Edit the file for the page you want to change:
 | --- | --- |
 | Challenge 1–4 (tasks, questions and solutions) | `content/challenge-1.json` through `content/challenge-4.json` |
 | Workshop Home (including the general guide) | `content/home.json` |
-| Storefront | `src/storefront.jsx` |
-| Network Faults | `src/fault-console.jsx` |
-| Optional commands | `src/tools.jsx` |
+| Storefront | `content/storefront.json` |
+| Network Faults | `content/network-faults.json` |
+| Optional commands | `content/tools.json` |
 
-Server responses are written in the corresponding service under `services/`. Home and challenge JSON files supply the active text. The other three JSON files are reference copies of the corresponding pages. After editing the active source, rebuild and restart the workshop with the start launcher. Keep challenge IDs and field keys stable so saved answers still match their questions.
+Each page JSON supplies its visible labels, prompts, browser title and messages. The API sections contain workshop error messages. Terminal development mode refreshes frontend edits on save. With the regular start launcher, rebuild and restart after editing. Keep challenge IDs and field keys stable so saved answers still match their questions.
 
 ## What runs
 

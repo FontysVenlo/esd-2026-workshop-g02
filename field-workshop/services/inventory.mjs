@@ -1,3 +1,4 @@
+import { readPageCopy } from './page-copy.mjs';
 import http from 'node:http';
 import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
@@ -23,9 +24,9 @@ export function createInventoryServer(category = process.env.INVENTORY_CATEGORY 
       );
       return product && inventoryCategory[product.sku] === category
         ? respond(200, { sku: product.sku, quantity: product.quantity, warehouse: 'west' })
-        : respond(404, { error: 'not found' });
+        : respond(404, { error: readPageCopy('storefront').api.not_found });
     }
-    return respond(404, { error: 'not found' });
+    return respond(404, { error: readPageCopy('storefront').api.not_found });
 
     function respond(status, body) {
       if (path === '/stock') metrics.request(path, status, (performance.now() - started) / 1000);

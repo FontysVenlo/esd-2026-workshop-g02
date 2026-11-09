@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { home } from '../src/shared/copy.js';
+import { readPageCopy } from './page-copy.mjs';
 
 const webRoot = new URL('../build/', import.meta.url);
 const liveDirectory = process.env.WORKSHOP_LIVE_DIR;
@@ -53,23 +53,14 @@ function escapeHtml(value) {
 }
 
 export function renderPage(filename) {
-  const page = {
-    'workshop.html':
-      liveDirectory && filename === 'workshop.html' ? JSON.parse(readAsset('home.json')) : home,
-    'index.html': {
-      pageTitle: 'Northstar Supply — Live catalog',
-      javascriptRequired: 'Enable JavaScript to use the interactive product catalog.',
-    },
-    'fault-console.html': {
-      pageTitle: 'Network Faults & Fallbacks — Northstar Supply',
-      javascriptRequired: 'Enable JavaScript to use the interactive product catalog.',
-    },
-    'tools.html': {
-      pageTitle: 'Commands — Northstar Supply',
-      javascriptRequired: 'Enable JavaScript to use the interactive product catalog.',
-    },
+  const name = {
+    'workshop.html': 'home',
+    'index.html': 'storefront',
+    'fault-console.html': 'network-faults',
+    'tools.html': 'tools',
   }[filename];
-  if (!page) throw new Error('Unknown page: ' + filename);
+  if (!name) throw new Error('Unknown page: ' + filename);
+  const page = readPageCopy(name);
   const html = readAsset(filename)
     .toString('utf8')
     .replace(/\{\{(\w+)\}\}/g, (_, key) => {
