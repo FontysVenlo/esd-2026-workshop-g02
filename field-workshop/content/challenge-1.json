@@ -29,7 +29,6 @@
   "why": "The StoreFront uses two workers to process all inventory service requests. Sometimes there is a delay in the availability refresh and other products are unavailable.",
   "reproduce": "Try to add a 1500 ms delay to Lighting inventory to reproduce the issue. See what happens. Can you identify the impact?",
   "assignment": "Assignment: Can you keep chair and desk available while lamp stock is delayed or unavailable?",
-  "ready": "Clear all faults and restore default settings. Start the stack with the launcher. Keep background traffic unchanged; compare fresh 60–90-second windows and changes in rejected requests. Use Storefront for customer results and Grafana for workers, queue, rejections and dependency circuits.",
   "fields": [
     {
       "key": "steadyState",
@@ -39,7 +38,7 @@
     {
       "key": "hypothesis",
       "label": "Hypothesis and fault injection",
-      "prompt": "What will +1500 ms Lighting inventory delay affect? What could be the blast radius? Write your hypothesis and introduce the fault"
+      "prompt": "What will +1500 ms Lighting inventory delay affect? What could be the blast radius? Write your hypothesis and introduce the fault."
     },
     {
       "key": "faultEvidence",
@@ -64,12 +63,11 @@
   ],
   "solution": [
     "Healthy: All products and the catalog return live data quickly. Use your measured timings.",
-    "Slow lamp calls occupy shared workers. Healthy products can queue or fail.",
+    "Slow lamp calls occupy the two shared workers. Healthy products can queue or fail.",
     "The 400 ms timeout releases workers sooner. The breaker pauses failed lamp calls for 5 seconds. The fallback returns unconfirmed stock while chair and desk stay live.",
     "Recovery may briefly increase latency. Remove faults, restore defaults and verify recovery."
   ],
   "text": {
-    "before_you_start": "Before you start",
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",
     "the_customer_problem": "The customer problem",
     "why_this_matters": "More information",

@@ -200,12 +200,9 @@ function FreshStartToast({ status, retry }) {
 }
 function ChallengeInstructions({ challenge: c }) {
   const { w } = useWorkshopCopy();
+  if (!c.tasks?.length) return null;
   return (
     <section className="sidebar-instructions">
-      <details className="challenge-ready">
-        <summary>{w('before_you_start')}</summary>
-        <p>{c.ready}</p>
-      </details>
       {c.tasks?.length > 0 && (
         <>
           <h2>{w('your_five_steps')}</h2>

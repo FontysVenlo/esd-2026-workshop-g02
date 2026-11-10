@@ -90,7 +90,7 @@ export function createStorefrontServer(config = {}) {
 
   async function call(name, sku, policy) {
     const key = name === 'shipping' ? 'shipping' : `${sku}:${name}`;
-    if (!breaker.enter(key, policy.fallback)) {
+    if (!breaker.enter(key, policy.breaker)) {
       throw Object.assign(new Error(`${name} circuit_open`), { outcome: 'circuit_open' });
     }
     const baseUrl =
@@ -106,7 +106,7 @@ export function createStorefrontServer(config = {}) {
       breaker.success(key);
       return result;
     } catch (error) {
-      if (policy.fallback) breaker.failure(key);
+      if (policy.breaker) breaker.failure(key);
       throw error;
     }
   }

@@ -242,3 +242,38 @@ test('opening a new challenge clears network faults and restores default mitigat
   assert.deepEqual(mitigations.snapshot(), defaultMitigations);
   assert.deepEqual(toxiproxyCalls, ['POST /reset', 'POST /reset']);
 });
+
+test('fallback and breaker independently control customer results and repeated dependency calls', async () => {
+  const { storefront, apply } = await fixture();
+  let attempts = 0;
+  for (const breaker of [false, true])
+    for (const fallback of [false, true]) {
+      const applied = await apply({
+        action: 'configure',
+        dependency: 'shipping',
+        timeoutMs: 3000,
+        fallback,
+        breaker,
+      });
+      assert.equal(applied.status, 200);
+      for (let i = 0; i < 2; i++) {
+        const response = await fetch(storefront + '/api/order-preview');
+        assert.equal(response.status, fallback ? 200 : 503);
+        if (fallback) assert.equal((await response.json()).shipping.source, 'unavailable');
+      }
+      attempts += breaker ? 1 : 2;
+      const metrics = await (await fetch(storefront + '/metrics')).text();
+      const failures = metrics.match(
+        /workshop_dependency_calls_total\{service="storefront",dependency="shipping",outcome="failure"\} (\d+)/,
+      );
+      assert.equal(Number(failures?.[1]), attempts);
+    }
+  const invalid = await apply({
+    action: 'configure',
+    dependency: 'shipping',
+    timeoutMs: 3000,
+    fallback: false,
+    breaker: 'yes',
+  });
+  assert.equal(invalid.status, 400);
+});

@@ -24,18 +24,18 @@
     "reconnect": "Reconnect",
     "clear_all_faults": "Clear all faults",
     "change_the_shop_s_response": "Change the shop's response",
-    "mitigation_overview": "A **timeout** is how long Storefront waits for a dependency. A **fallback** provides a replacement when that dependency fails or takes too long. Inventory has a breaker for each product. Shipping has one shared breaker. A short timeout frees a worker. The breaker reduces repeated waiting; the fallback prevents one missing result from failing the catalog.",
+    "mitigation_overview": "A **timeout** bounds the wait for one dependency call. Configure **fallback** and **circuit breaker** independently below.",
     "refresh_settings": "Refresh settings",
     "inventory_stock_checks": "Inventory Service",
     "inventory_fallback_behavior": "****",
     "inventory_timeout_ms": "Inventory timeout (ms)",
-    "enable_inventory_fallback": " Enable Inventory fallback + circuit breaker",
+    "enable_inventory_fallback": " Enable Inventory fallback",
     "apply_inventory_settings": "Apply Inventory settings",
     "use_challenge_1_settings": "Use Challenge 1 settings",
     "shipping_delivery_quotes": "Shipping Service",
     "shipping_fallback_behavior": "****",
     "shipping_timeout_ms": "Shipping timeout (ms)",
-    "enable_shipping_fallback": " Enable Shipping fallback + circuit breaker",
+    "enable_shipping_fallback": " Enable Shipping fallback",
     "apply_shipping_settings": "Apply Shipping settings",
     "restore_default_settings": "Restore default settings",
     "underlying_api_commands": "Underlying API commands",
@@ -58,10 +58,16 @@
     "fallback_settings_api": "Fallback settings API",
     "mitigation_api_help": "`GET /api/mitigations` reads current settings. `POST /api/mitigations` applies a dependency's timeout and fallback, or restores defaults. The console forwards these requests to Storefront's internal settings listener.",
     "the_raw_api_is_at_paragraph": "The raw API is at `http://localhost:8478`. [Windows and Mac commands](http://localhost:8088/tools)",
-    "apply_a_fault_or_mitigation_to_see_the_equivalent": "Apply a fault or mitigation to see the equivalent command here."
+    "apply_a_fault_or_mitigation_to_see_the_equivalent": "Apply a fault or mitigation to see the equivalent command here.",
+    "jitter_ms": "Delay variation ± (ms)",
+    "jitter_help": "Jitter varies the injected delay on each response: 1000 ms delay with 800 ms jitter adds between 200 and 1800 ms. Use 0 for a fixed delay.",
+    "breaker_explanation": "A circuit breaker pauses calls to a failing dependency for five seconds, then allows one probe to check recovery.",
+    "fallback_explanation": "A fallback changes the result shown to customers when a call fails or is skipped, such as unconfirmed stock or an unavailable shipping quote.",
+    "enable_inventory_breaker": " Enable Inventory circuit breaker",
+    "enable_shipping_breaker": " Enable Shipping circuit breaker"
   },
   "faultConsole": {
-    "active_ms_timeout_fallback": "Active: {timeout} ms timeout · fallback + breaker {fallback}",
+    "active_ms_timeout_fallback": "Active: {timeout} ms timeout · fallback {fallback} · breaker {breaker}",
     "on": "on",
     "off": "off",
     "active_settings_unavailable": "Active settings unavailable.",
@@ -71,7 +77,7 @@
     "disconnected": "Disconnected",
     "no_active_faults": "No active faults",
     "toxic_detail": "{name}: {type}{delay} · {stream}",
-    "latency_detail": " ({milliseconds} ms)",
+    "latency_detail": " ({milliseconds} ms ± {jitter} ms)",
     "unknown_value": "?",
     "showing_current_toxiproxy_state": "Showing current Toxiproxy state.",
     "choose_a_whole_number_delay_from_50_to_5000": "Choose a whole-number delay from 50 to 5000 ms.",
@@ -86,13 +92,14 @@
     "choose_a_whole_number_timeout_from_50_to_5000": "Choose a whole-number timeout from 50 to 5000 ms.",
     "applying_settings_to_storefront": "Applying settings to Storefront…",
     "post_api_mitigations_content_type_application_json": "POST /api/mitigations\nContent-Type: application/json\n\n{body}",
-    "defaults_restored_both_timeouts_are_3000_ms_and_both": "Defaults restored: both timeouts are 3000 ms and both fallbacks are off.",
+    "defaults_restored_both_timeouts_are_3000_ms_and_both": "Defaults restored: both timeouts are 3000 ms; fallbacks and circuit breakers are off. Network faults remain unchanged.",
     "settings_applied": "{dependency} settings applied. Storefront reflects that change without a restart.",
     "inventory": "Inventory",
     "shipping": "Shipping",
     "refresh_settings_to_check_the_active_state_before_trying": "{error} Refresh settings to check the active state before trying again.",
     "invoke_restmethod_method_post_uri_contenttype_application_json_body": "Invoke-RestMethod -Method Post -Uri '{url}' -ContentType 'application/json' -Body '{body}'",
-    "curl_command": "curl -f -sS -X POST '{url}' -H 'Content-Type: application/json' --data '{body}'"
+    "curl_command": "curl -f -sS -X POST '{url}' -H 'Content-Type: application/json' --data '{body}'",
+    "invalid_jitter": "Choose a whole-number jitter from 0 up to the base delay."
   },
   "api": {
     "method_not_allowed": "Method not allowed",
@@ -113,6 +120,8 @@
     "choose_mitigation_settings": "Choose mitigation settings",
     "unknown_mitigation_setting": "Unknown mitigation setting",
     "timeout_must_be_a_whole_number_from_50_to_5000_ms": "Timeout must be a whole number from 50 to 5000 ms",
-    "fallback_must_be_true_or_false": "Fallback must be true or false"
+    "fallback_must_be_true_or_false": "Fallback must be true or false",
+    "invalid_jitter": "Choose a whole-number jitter from 0 up to the base delay.",
+    "breaker_must_be_true_or_false": "Breaker must be true or false"
   }
 }

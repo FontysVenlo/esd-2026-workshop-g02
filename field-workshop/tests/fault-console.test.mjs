@@ -107,11 +107,25 @@ test('latency is created, updated, then removed through the real proxy API', asy
   assert.equal(result.state.inventory.toxics[0].attributes.latency, 1500);
   assert.equal(proxies.shipping.toxics.length, 0);
 
-  response = await action({ action: 'set-latency', proxy: 'inventory', latencyMs: 800 });
+  response = await action({
+    action: 'set-latency',
+    proxy: 'inventory',
+    latencyMs: 800,
+    jitterMs: 300,
+  });
   result = await response.json();
   assert.equal(result.command.path, '/proxies/inventory/toxics/workshop-latency');
   assert.equal(proxies.inventory.toxics.length, 1);
   assert.equal(proxies.inventory.toxics[0].attributes.latency, 800);
+  assert.equal(proxies.inventory.toxics[0].attributes.jitter, 300);
+  for (const jitterMs of [-1, 801, 1.5]) {
+    assert.equal(
+      (await action({ action: 'set-latency', proxy: 'inventory', latencyMs: 800, jitterMs }))
+        .status,
+      400,
+    );
+    assert.equal(proxies.inventory.toxics[0].attributes.jitter, 300);
+  }
 
   response = await action({ action: 'remove-latency', proxy: 'inventory' });
   result = await response.json();

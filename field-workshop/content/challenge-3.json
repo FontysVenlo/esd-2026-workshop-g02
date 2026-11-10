@@ -29,7 +29,6 @@
   "why": "The visible victims may be healthy products. Find the cause before choosing a timeout, breaker or fallback.",
   "reproduce": "Ask a partner to seed one incident from docs/facilitator.md. Record your diagnosis before inspecting Network Faults.",
   "assignment": "Which dependency explains the symptoms, and which customer information can you preserve?",
-  "ready": "Clear all faults and restore default settings. Start the stack with the launcher. Keep background traffic unchanged; compare fresh 60–90-second windows and changes in rejected requests. Use Storefront for customer results and Grafana for workers, queue, rejections and dependency circuits. Record the healthy baseline before your partner seeds the hidden fault. Do not clear it afterward. A second person is required.",
   "tasks": [
     {
       "title": "Arrange one hidden incident",
@@ -91,7 +90,6 @@
     "Retest the same fault and traffic. State what improved and what remains missing, then restore all products."
   ],
   "text": {
-    "before_you_start": "Before you start",
     "your_five_steps": "Your tasks",
     "open_fallbacks_timeouts": "Open Fallbacks & timeouts ↗",
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",

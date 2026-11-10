@@ -29,7 +29,6 @@
   "why": "An enabled fallback is not proof of resilience. Show useful results before and after mitigation, including remaining uncertainty.",
   "reproduce": "For the worked example, add 1500 ms to shared Shipping. You can also design a Lighting inventory experiment. Use the same action and traffic in every phase.",
   "assignment": "When is a faster partial catalog more useful than waiting for full results?",
-  "ready": "Clear all faults and restore default settings. Start the stack with the launcher. Keep background traffic unchanged; compare fresh 60–90-second windows and changes in rejected requests. Use Storefront for customer results and Grafana for workers, queue, rejections and dependency circuits.",
   "tasks": [
     {
       "title": "Define a propagation hypothesis",
@@ -91,7 +90,6 @@
     "Distinguish catalog failure from worker pressure. Restore defaults, clear faults and verify live results."
   ],
   "text": {
-    "before_you_start": "Before you start",
     "your_five_steps": "Your tasks",
     "open_fallbacks_timeouts": "Open Fallbacks & timeouts ↗",
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",

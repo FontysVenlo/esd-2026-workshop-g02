@@ -69,7 +69,11 @@ test('each challenge shows its own complete tasks and page-local edits', async (
       const mainStart = html.indexOf('id="challenge-detail"');
       const instructions = html.slice(menuEnd, mainStart);
       assert.ok(menuEnd >= 0 && mainStart > menuEnd);
-      assert.ok(instructions.includes('class="sidebar-instructions"'));
+      assert.equal(
+        instructions.includes('class="sidebar-instructions"'),
+        Boolean(challenge.tasks?.length),
+      );
+      assert.doesNotMatch(instructions, /challenge-ready/);
       for (const task of challenge.tasks ?? []) {
         assert.ok(
           instructions.includes(renderToStaticMarkup(React.createElement('h3', null, task.title))),

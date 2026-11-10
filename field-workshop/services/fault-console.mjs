@@ -66,6 +66,9 @@ export function createFaultConsoleServer(config = {}) {
     let command;
     if (action === 'set-latency') {
       const latencyMs = input?.latencyMs;
+      const jitterMs = input?.jitterMs ?? 0;
+      if (!Number.isInteger(jitterMs) || jitterMs < 0 || jitterMs > latencyMs)
+        throw new Error(readPageCopy('network-faults').api.invalid_jitter);
       if (!Number.isInteger(latencyMs) || latencyMs < 50 || latencyMs > 5000) {
         throw new Error(
           readPageCopy('network-faults').api.latency_must_be_a_whole_number_from_50_to_5000_ms,
@@ -80,7 +83,7 @@ export function createFaultConsoleServer(config = {}) {
           name: toxicName,
           type: 'latency',
           stream: 'downstream',
-          attributes: { latency: latencyMs, jitter: 0 },
+          attributes: { latency: latencyMs, jitter: jitterMs },
         },
       };
     } else if (action === 'remove-latency') {
@@ -203,6 +206,13 @@ export function createFaultConsoleServer(config = {}) {
           )
         )
           return send(400, { error: readPageCopy('network-faults').api.unknown_action });
+        const jitterMs = input?.jitterMs ?? 0;
+        if (
+          input?.action === 'set-latency' &&
+          (!Number.isInteger(jitterMs) || jitterMs < 0 || jitterMs > input.latencyMs)
+        ) {
+          return send(400, { error: readPageCopy('network-faults').api.invalid_jitter });
+        }
         const command = await act(input);
         return send(200, { command, state: await state() });
       } catch (error) {

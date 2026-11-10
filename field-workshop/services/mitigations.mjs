@@ -2,12 +2,17 @@ import { readPageCopy } from './page-copy.mjs';
 import http from 'node:http';
 
 export const defaultMitigations = Object.freeze({
-  inventory: Object.freeze({ timeoutMs: 3000, fallback: false }),
-  shipping: Object.freeze({ timeoutMs: 3000, fallback: false }),
+  inventory: Object.freeze({ timeoutMs: 3000, fallback: false, breaker: false }),
+  shipping: Object.freeze({ timeoutMs: 3000, fallback: false, breaker: false }),
 });
 
 export function createMitigations(initial = defaultMitigations) {
-  let settings = structuredClone(initial);
+  let settings = Object.fromEntries(
+    Object.entries(initial).map(([name, policy]) => [
+      name,
+      { ...policy, breaker: policy.breaker ?? false },
+    ]),
+  );
   return {
     snapshot: () => structuredClone(settings),
     apply(input) {
@@ -20,7 +25,7 @@ export function createMitigations(initial = defaultMitigations) {
           throw new Error(readPageCopy('network-faults').api.choose_inventory_or_shipping);
         if (
           Object.keys(input).some(
-            (key) => !['action', 'dependency', 'timeoutMs', 'fallback'].includes(key),
+            (key) => !['action', 'dependency', 'timeoutMs', 'fallback', 'breaker'].includes(key),
           )
         )
           throw new Error(readPageCopy('network-faults').api.unknown_mitigation_setting);
@@ -30,9 +35,15 @@ export function createMitigations(initial = defaultMitigations) {
           );
         if (typeof input.fallback !== 'boolean')
           throw new Error(readPageCopy('network-faults').api.fallback_must_be_true_or_false);
+        if (input.breaker !== undefined && typeof input.breaker !== 'boolean')
+          throw new Error(readPageCopy('network-faults').api.breaker_must_be_true_or_false);
         settings = {
           ...settings,
-          [input.dependency]: { timeoutMs: input.timeoutMs, fallback: input.fallback },
+          [input.dependency]: {
+            timeoutMs: input.timeoutMs,
+            fallback: input.fallback,
+            breaker: input.breaker ?? settings[input.dependency].breaker,
+          },
         };
       }
       return structuredClone(settings);

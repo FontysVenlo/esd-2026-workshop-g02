@@ -43,6 +43,7 @@ function FaultState({ state }) {
                       toxic.type === 'latency'
                         ? format(faultConsole.latency_detail, {
                             milliseconds: toxic.attributes?.latency ?? faultConsole.unknown_value,
+                            jitter: toxic.attributes?.jitter ?? 0,
                           })
                         : '',
                   })}
@@ -63,14 +64,15 @@ function Console() {
   const [faults, setFaults] = useState(null),
     [proxy, setProxy] = useState('inventory'),
     [latency, setLatency] = useState('1500');
+  const [jitter, setJitter] = useState('0');
   const [busy, setBusy] = useState(false),
     [mitigationBusy, setMitigationBusy] = useState(false);
   const faultLock = useRef(false),
     mitigationLock = useRef(false);
   const [active, setActive] = useState(null);
   const [draft, setDraft] = useState({
-    inventory: { timeoutMs: 3000, fallback: false },
-    shipping: { timeoutMs: 3000, fallback: false },
+    inventory: { timeoutMs: 3000, fallback: false, breaker: false },
+    shipping: { timeoutMs: 3000, fallback: false, breaker: false },
   });
   const [message, setMessage] = useState({ text: '' }),
     [mitigationMessage, setMitigationMessage] = useState({ text: '' });
@@ -155,6 +157,14 @@ function Console() {
   async function perform(action) {
     if (faultLock.current) return;
     const latencyMs = Number(latency);
+    const jitterMs = Number(jitter);
+    if (
+      action === 'set-latency' &&
+      (!Number.isInteger(jitterMs) || jitterMs < 0 || jitterMs > latencyMs)
+    ) {
+      setMessage({ text: faultConsole.invalid_jitter, error: true });
+      return;
+    }
     if (
       action === 'set-latency' &&
       (!Number.isInteger(latencyMs) || latencyMs < 50 || latencyMs > 5000)
@@ -171,7 +181,7 @@ function Console() {
     setBusy(true);
     setMessage({ text: faultConsole.sending_change_to_toxiproxy });
     try {
-      const body = { action, proxy, latencyMs },
+      const body = { action, proxy, latencyMs, jitterMs },
         result = await request('/api/action', body);
       setFaults(result.state);
       setLastRequest({ path: '/api/action', body });
@@ -399,7 +409,20 @@ function Console() {
                 onChange={(event) => setLatency(event.target.value)}
               />
             </label>
+            <label>
+              {faultConsolePage.jitter_ms}
+              <input
+                id="jitter"
+                type="number"
+                min="0"
+                max={latency}
+                step="1"
+                value={jitter}
+                onChange={(event) => setJitter(event.target.value)}
+              />
+            </label>
           </div>
+          <p className="meta">{faultConsolePage.jitter_help}</p>
           <div className="actions">
             <button
               className="action"
@@ -465,6 +488,8 @@ function Console() {
           <p>
             <InlineText text={faultConsolePage.mitigation_overview} />
           </p>
+          <p>{faultConsolePage.breaker_explanation}</p>
+          <p>{faultConsolePage.fallback_explanation}</p>
           <p>{faultConsolePage.changes_apply_to_new_customer_requests_immediately_you_do}</p>
           <button
             disabled={mitigationBusy}
@@ -484,6 +509,7 @@ function Console() {
                   dependency: 'inventory',
                   timeoutMs: Number(draft.inventory.timeoutMs),
                   fallback: draft.inventory.fallback,
+                  breaker: draft.inventory.breaker,
                 });
               }}
               id="inventory-settings"
@@ -498,6 +524,7 @@ function Console() {
                   ? format(faultConsole.active_ms_timeout_fallback, {
                       timeout: active.inventory.timeoutMs,
                       fallback: active.inventory.fallback ? faultConsole.on : faultConsole.off,
+                      breaker: active.inventory.breaker ? faultConsole.on : faultConsole.off,
                     })
                   : faultConsole.active_settings_unavailable}
               </p>
@@ -523,6 +550,16 @@ function Console() {
                 />{' '}
                 {faultConsolePage.enable_inventory_fallback}
               </label>
+              <label className="checkbox-label">
+                <input
+                  id="inventory-breaker"
+                  checked={draft.inventory.breaker}
+                  onChange={(event) => edit('inventory', 'breaker', event.target.checked)}
+                  type="checkbox"
+                  disabled={mitigationBusy || !active}
+                />
+                {faultConsolePage.enable_inventory_breaker}
+              </label>
               <div className="actions">
                 <button className="primary" type="submit" disabled={mitigationBusy || !active}>
                   {faultConsolePage.apply_inventory_settings}
@@ -534,6 +571,7 @@ function Console() {
                       dependency: 'inventory',
                       timeoutMs: 400,
                       fallback: true,
+                      breaker: true,
                     })
                   }
                   id="inventory-preset"
@@ -556,6 +594,7 @@ function Console() {
                   dependency: 'shipping',
                   timeoutMs: Number(draft.shipping.timeoutMs),
                   fallback: draft.shipping.fallback,
+                  breaker: draft.shipping.breaker,
                 });
               }}
               id="shipping-settings"
@@ -570,6 +609,7 @@ function Console() {
                   ? format(faultConsole.active_ms_timeout_fallback, {
                       timeout: active.shipping.timeoutMs,
                       fallback: active.shipping.fallback ? faultConsole.on : faultConsole.off,
+                      breaker: active.shipping.breaker ? faultConsole.on : faultConsole.off,
                     })
                   : faultConsole.active_settings_unavailable}
               </p>
@@ -594,6 +634,16 @@ function Console() {
                   disabled={mitigationBusy || !active}
                 />{' '}
                 {faultConsolePage.enable_shipping_fallback}
+              </label>
+              <label className="checkbox-label">
+                <input
+                  id="shipping-breaker"
+                  checked={draft.shipping.breaker}
+                  onChange={(event) => edit('shipping', 'breaker', event.target.checked)}
+                  type="checkbox"
+                  disabled={mitigationBusy || !active}
+                />
+                {faultConsolePage.enable_shipping_breaker}
               </label>
               <div className="actions">
                 <button className="primary" type="submit" disabled={mitigationBusy || !active}>

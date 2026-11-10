@@ -76,6 +76,7 @@ test('two slow lamp calls cause a healthy product to queue and reject; mitigatio
     dependency: 'inventory',
     timeoutMs: 50,
     fallback: true,
+    breaker: true,
   });
   const degraded = await (await fetch(`${base}/api/product`)).json();
   assert.equal(degraded.inventory.source, 'unconfirmed');
@@ -139,6 +140,7 @@ test('shared Shipping outage preserves stock with fallback and quotes recover af
     dependency: 'shipping',
     timeoutMs: 400,
     fallback: true,
+    breaker: true,
   });
   const response = await fetch(`${base}/api/catalog?preview=true`);
   assert.equal(response.status, 200);

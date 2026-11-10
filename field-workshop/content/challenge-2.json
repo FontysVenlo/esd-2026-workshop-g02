@@ -25,11 +25,10 @@
   },
   "title": "Keep the catalog usable during a Shipping outage",
   "level": "Intermediate",
-  "scenario": "The shared Shipping service is unreachable. All three inventory services still answer, but the delivery preview requires a quote for each product.",
-  "why": "Customers can still browse products and check stock during a carrier outage. Showing an unavailable estimate avoids promising a price or delivery date.",
-  "reproduce": "Disconnect Shipping in Network Faults. Compare “Refresh all availability” and “Preview all deliveries”.",
+  "scenario": "The technical team reports that Shipping is sometimes unreachable. During these outages, the shop cannot retrieve current shipping prices or delivery estimates. All three inventory services still respond, so product availability can still be checked.",
+  "why": "Customers should still be able to browse products and check stock during an outage. Management wants the shop to clearly identify unavailable shipping information so customers can have a better understanding of the situation.",
+  "reproduce": "Disconnect Shipping in Network Faults. Investigate the impact and introduce a fallback.",
   "assignment": "Can customers see live stock for every product while every delivery estimate is unavailable?",
-  "ready": "Clear all faults and restore default settings. Start the stack with the launcher. Keep background traffic unchanged; compare fresh 60–90-second windows and changes in rejected requests. Use Storefront for customer results and Grafana for workers, queue, rejections and dependency circuits.",
   "tasks": [
     {
       "title": "Compare both healthy catalog views",
@@ -95,7 +94,6 @@
     "Reconnecting restores the network path. A successful probe allows live quotes on subsequent previews."
   ],
   "text": {
-    "before_you_start": "Before you start",
     "your_five_steps": "Your tasks",
     "open_fallbacks_timeouts": "Open Fallbacks & timeouts ↗",
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",

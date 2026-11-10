@@ -1,4 +1,4 @@
-// One circuit per product and dependency. Only enabled alongside its fallback.
+// One circuit per product and dependency. Configured independently of the fallback.
 // After an unsuccessful call, fail fast for five seconds, then allow one probe.
 export function createBreaker({ cooldownMs = 5000 } = {}) {
   const circuits = new Map();

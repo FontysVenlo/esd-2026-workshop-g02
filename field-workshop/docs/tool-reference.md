@@ -10,7 +10,7 @@ Fault controls target Lighting inventory and shared Shipping (`inventory` and `s
 
 A fallback is the response the shop uses when a dependency cannot answer. The workshop already implements it; you do not need to write code. Inventory fallback returns **Stock unconfirmed**. Shipping fallback keeps the preview available while reporting **Shipping quote unavailable**. Neither invents stock or delivery information.
 
-In this workshop, enabling a dependency fallback also enables its circuit breaker for the affected dependency. Shipping uses one shared breaker for all quotes. Inventory uses a breaker per product. Each pauses failed calls for five seconds before allowing one probe. A short timeout releases workers sooner; the breaker avoids repeatedly consuming capacity on a known bad path; fallback prevents the missing result from rejecting the whole catalog. A short timeout without fallback still returns an error. The shared queue waits at most 1000 ms and holds at most 12 waiting product operations.
+Fallback and circuit breaker are independently configurable for each dependency. Shipping uses one shared breaker for all quotes. Inventory uses a breaker per product. Each pauses failed calls for five seconds before allowing one probe. A short timeout releases workers sooner; the breaker avoids repeatedly consuming capacity on a known bad path; fallback prevents the missing result from rejecting the whole catalog. A short timeout without fallback still returns an error. The shared queue waits at most 1000 ms and holds at most 12 waiting product operations.
 
 Open **Fallbacks & timeouts**, the second tab in [Network Faults](http://localhost:8089/#mitigations). Use the Challenge 1/2 preset or edit a dependency's timeout and fallback checkbox, then click Apply. Settings affect new requests immediately; no terminal or restart is needed. Use **Restore default settings** to turn both fallbacks off and restore 3000 ms timeouts. Reapply the identical fault to test the behavior.
 
@@ -74,7 +74,7 @@ Participants do not need to type these. The console's **Info & commands** tab ha
 Windows PowerShell, Inventory example:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":true}'
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":true,"breaker":true}'
 ```
 
 Mac Terminal, the same change:
