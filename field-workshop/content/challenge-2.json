@@ -30,11 +30,6 @@
       "instruction": "Reconnect Shipping with fallback still enabled. After the five-second cooldown, refresh to allow a recovery probe. Refresh again and verify three live quotes. Restore default settings and submit your observations."
     }
   ],
-  "done": [
-    "You observed working availability and failed delivery previews during a shared outage.",
-    "With the outage still active, all three products showed live stock and unavailable quotes.",
-    "After reconnecting Shipping, you verified live quotes and restored defaults."
-  ],
   "solution": [
     "Stock checks use the category inventory services. Delivery previews also need shared Shipping.",
     "With fallback off, the unavailable quotes cause the delivery request to fail. With fallback on, all three stocks remain visible and all three quotes are marked unavailable.",
@@ -96,7 +91,6 @@
     "grafana": "Grafana",
     "network_faults": "Network Faults",
     "storefront": "Storefront",
-    "you_are_finished_when": "You are finished when…",
     "your_five_steps": "Your tasks",
     "before_you_start": "Before you start",
     "the_issue_to_reproduce": "The issue to reproduce",

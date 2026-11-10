@@ -30,11 +30,6 @@
       "instruction": "Repeat the same delay. Compare chair/desk results, queue, new rejections and catalog time. Lamp availability should be disabled while stock is unconfirmed."
     }
   ],
-  "done": [
-    "You measured healthy, delayed and mitigated phases under unchanged traffic.",
-    "You observed and explained the impact on chair & desk, then verified that impact shrank while lamp stock remained unconfirmed.",
-    "You documented and explained the impact and mitigation for the whole product catalog."
-  ],
   "solution": [
     "Healthy: All products and the catalog return live data quickly. Use your measured timings.",
     "Slow lamp calls occupy shared workers. Healthy products can queue or fail.",
@@ -96,7 +91,6 @@
     "grafana": "Grafana",
     "network_faults": "Network Faults",
     "storefront": "Storefront",
-    "you_are_finished_when": "You are finished when…",
     "your_five_steps": "Your tasks",
     "before_you_start": "Before you start",
     "the_issue_to_reproduce": "The issue to reproduce",

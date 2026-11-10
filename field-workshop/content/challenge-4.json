@@ -30,11 +30,6 @@
       "instruction": "Repeat the identical fault and traffic. Compare time, useful stock and missing quotes. Explain the trade-off, remove the fault, verify recovery after the cooldown and restore defaults."
     }
   ],
-  "done": [
-    "A teammate can reproduce the fault, traffic, three-phase measurements, mitigation and rollback.",
-    "You compared customer wait time and information available under the same fault before and after mitigation.",
-    "You distinguished timeout, breaker and fallback, described remaining uncertainty/probe spikes, and restored all three products."
-  ],
   "solution": [
     "A valid experiment compares healthy, faulted and mitigated phases under identical fault and traffic, showing wider impact and the remaining trade-off.",
     "Example: delay shared Shipping by 1500 ms. Measure delivery previews with default settings, then repeat with a 400 ms Shipping timeout and fallback enabled.",
@@ -92,7 +87,6 @@
     "grafana": "Grafana",
     "network_faults": "Network Faults",
     "storefront": "Storefront",
-    "you_are_finished_when": "You are finished when…",
     "your_five_steps": "Your tasks",
     "before_you_start": "Before you start",
     "the_issue_to_reproduce": "The issue to reproduce",

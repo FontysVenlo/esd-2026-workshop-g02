@@ -105,7 +105,6 @@ function Home({ progress, reset }) {
       </section>
       <ExperimentGuide />
       <section className="home-section">
-        <div className="eyebrow">{w('your_role')}</div>
         <h2>{w('make_a_working_shop_fail_then_improve_its_response')}</h2>
         {[
           'you_are_the_engineer_responsible_for_a_lamp_shop',
@@ -137,7 +136,6 @@ function Home({ progress, reset }) {
             </li>
           ))}
         </ol>
-        <p className="meta">{w('windows_start_bat_stop_bat_mac_start_command_stop')}</p>
       </section>
       <section className="home-section">
         <div className="eyebrow">{w('workspace')}</div>

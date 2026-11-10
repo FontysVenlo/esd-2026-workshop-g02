@@ -5,7 +5,6 @@
     "order_preview": "Order preview"
   },
   "storefront": {
-    "preview_ready": "Preview ready",
     "shipping_quote_unavailable": " · Shipping quote unavailable",
     "shipping_about_days": " · Shipping €{price} · About {days} days",
     "stock_unconfirmed": "Stock unconfirmed",
@@ -19,7 +18,8 @@
     "refresh_stock": "Refresh all product availability",
     "refresh_preview": "Preview all product deliveries",
     "auto_refresh": "Refresh this view every 2 seconds",
-    "explanation": "Stock and delivery information are checked in real time. If the stock service fails or responds too slowly, stock availability cannot be checked for now. If the delivery service fails, no delivery date can be guaranteed. When updating information fails, the system continues showing the last available results until the services work again.",    "failed": "Whole catalog unavailable · HTTP {status} · {milliseconds} ms",
+    "explanation": "Stock and delivery information are checked in real time. If the stock service fails or responds too slowly, stock availability cannot be checked for now. If the delivery service fails, no delivery date can be guaranteed. When updating information fails, the system continues showing the last available results until the services work again.",
+    "failed": "Whole catalog unavailable · HTTP {status} · {milliseconds} ms",
     "stock_ready": "Availability catalog ready · {milliseconds} ms",
     "preview_ready": "Delivery catalog ready · {milliseconds} ms",
     "limited": "Limited information",
@@ -45,7 +45,6 @@
     "product_name": "Desk Lamp",
     "inventory_warning": "Availability cannot be confirmed.",
     "shipping_warning": "Shipping quote is temporarily unavailable.",
-    "unavailable": "Order information is temporarily unavailable.",
     "method_not_allowed": "Method not allowed",
     "not_found": "Not found",
     "cross_origin_changes_are_not_allowed": "Cross-origin changes are not allowed",
