@@ -40,40 +40,6 @@ function Link({ href, children, ...props }) {
     </a>
   );
 }
-function Help() {
-  const { w, page } = useWorkshopCopy();
-  const glossary = [
-    ['baseline', 'your_measurements_with_normal_service_before_you_inject_a'],
-    ['fault', 'the_problem_you_introduce_in_network_faults_a_slower'],
-    ['timeout', 'how_long_storefront_will_wait_for_a_dependency_a'],
-    ['fallback', 'the_useful_response_storefront_returns_when_a_dependency_cannot'],
-    ['prometheus', 'the_measurement_collector_it_asks_the_services_for_their'],
-    ['grafana', 'the_charts_you_read_during_the_experiment_customer_facing'],
-    ['observation_window', 'the_period_you_measure_in_each_phase_use_comparable'],
-    [
-      'blast_radius_and_abort_condition',
-      'blast_radius_means_which_customer_actions_are_affected_an',
-    ],
-  ];
-  return (
-    <details className="experiment-help">
-      <summary>{w('what_do_baseline_timeout_fallback_and_the_monitoring_tools')}</summary>
-      <dl className="experiment-glossary">
-        {glossary.map(([term, meaning]) => (
-          <React.Fragment key={term}>
-            <dt>{w(term)}</dt>
-            <dd>{w(meaning)}</dd>
-          </React.Fragment>
-        ))}
-      </dl>
-      <details className="command-help">
-        <summary>{w('how_to_restore_default_behavior_after_an_experiment')}</summary>
-        <p>{w('in_network_faults_click_clear_all_faults_in_the')}</p>
-        <p>{w('verify_both_storefront_actions_work_again_and_live_stock')}</p>
-      </details>
-    </details>
-  );
-}
 function ExperimentGuide() {
   const { page } = useWorkshopCopy();
   return (
@@ -114,11 +80,6 @@ function Home({ progress, reset }) {
       'prometheus_inspect_the_measurements',
       'http://localhost:9098',
       'collects_service_metrics_every_five_seconds_and_supplies_grafana',
-    ],
-    [
-      'commands_optional_reference',
-      '/tools',
-      'optional_api_and_terminal_examples_the_workshop_can_be',
     ],
   ];
   return (
@@ -190,7 +151,6 @@ function Home({ progress, reset }) {
           ))}
         </div>
       </section>
-      <Help />
     </section>
   );
 }
@@ -270,14 +230,6 @@ function ChallengeInstructions({ challenge: c }) {
           </li>
         ))}
       </ol>
-      <details className="challenge-done">
-        <summary>{w('you_are_finished_when')}</summary>
-        <ul>
-          {c.done.map((line, i) => (
-            <li key={i}>{line}</li>
-          ))}
-        </ul>
-      </details>
     </section>
   );
 }

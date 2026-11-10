@@ -22,30 +22,29 @@
     "baseline": "Baseline",
     "what_do_baseline_timeout_fallback_and_the_monitoring_tools": "Terms and cleanup · expand to review",
     "optional_api_and_terminal_examples_the_workshop_can_be": "Optional API and terminal examples. The workshop can be completed with the browser controls.",
-    "commands_optional_reference": "Commands · optional reference",
+    "commands_optional_reference": "",
     "collects_service_metrics_every_five_seconds_and_supplies_grafana": "Collects service metrics every five seconds and supplies Grafana. Optional for raw queries; no input needed for the guided challenges.",
-    "prometheus_inspect_the_measurements": "Prometheus · inspect the measurements",
+    "prometheus_inspect_the_measurements": "Prometheus",
     "read_charts_of_response_times_failures_and_fallback_use": "Read charts of response times, failures, and fallback use.",
-    "grafana_see_the_effect": "Grafana · see the effect",
-    "inject_a_fault_then_use_the_fallbacks_timeouts_tab": "Inject a fault, then use the Fallbacks & timeouts tab to enable a mitigation. All controls work on Windows and Mac.",
-    "network_faults_create_the_problem_and_test_a_response": "Network Faults · create the problem and test a response",
-    "click_check_availability_and_order_preview_read_the_result": "Click Check availability and Order preview; read the result and request time.",
-    "storefront_test_as_a_customer": "Storefront · test as a customer",
+    "grafana_see_the_effect": "Grafana",
+    "inject_a_fault_then_use_the_fallbacks_timeouts_tab": "Inject a fault, then use the Fallbacks & timeouts tab to enable a mitigation.",
+    "network_faults_create_the_problem_and_test_a_response": "Network Faults",
+    "click_check_availability_and_order_preview_read_the_result": "Check availability and Order preview from customer perspective.",
+    "storefront_test_as_a_customer": "Storefront",
     "tools": "Tools",
     "workspace": "WORKSPACE",
-    "windows_start_bat_stop_bat_mac_start_command_stop": "Windows: start.bat / stop.bat · Mac: start.command / stop.command. In a source checkout, these files are at the repository root.",
+    "windows_start_bat_stop_bat_mac_start_command_stop": "",
     "use_storefront_network_faults_and_grafana_fill_the_notes": "Use Storefront, Network Faults and Grafana. Submit your notes to unlock the next challenge.",
     "run_it_then_record_it": "Run it, then record it",
-    "open_challenge_1_in_the_sidebar_its_brief_explains": "Open Challenge 1 for its tasks. Expand the general five-step guide here whenever you need it.",
+    "open_challenge_1_in_the_sidebar_its_brief_explains": "Open Challenge 1 for its tasks. Come back here to see the five-step guide whenever you need it.",
     "read_the_customer_problem": "Read the customer problem",
-    "extract_the_zip_start_docker_desktop_then_double_click": "Extract the ZIP, start Docker Desktop, then double-click start.bat (Windows) or start.command (Mac).",
-    "start_the_stack": "Start the stack",
+    "extract_the_zip_start_docker_desktop_then_double_click": "Extract the ZIP, start Docker Desktop, then double-click start.bat (Windows) or start.command (Mac) OR use bun run dev in the repository root.",
+    "start_the_stack": "Start the stack (ZIP or Repo)",
     "quick_start": "Quick start",
     "get_started": "GET STARTED",
-    "the_shop_normally_starts_healthy_in_challenges_1_2": "Start healthy. Add faults yourself in Challenges 1, 2 and 4; ask a partner to seed a hidden fault in Challenge 3. The first time you open Challenges 2, 3 and 4, the shop clears all network faults and restores default timeouts and fallbacks; later visits and submitting notes do not change it.",
-    "you_are_the_engineer_responsible_for_a_lamp_shop": "The lamp uses Lighting inventory, the chair uses Seating inventory, and the desk uses Desks inventory. All three share Shipping and two Storefront workers.",
-    "make_a_working_shop_fail_then_improve_its_response": "Contain one product’s fault before it disrupts the catalog",
-    "your_role": "YOUR ROLE",
+    "the_shop_normally_starts_healthy_in_challenges_1_2": "Start healthy. Add faults yourself in Challenges 1, 2 and 4. Ask a partner to inject a hidden fault in Challenge 3. The first time you open Challenges 2, 3 and 4, the shop clears all network faults and restores default timeouts and fallbacks. Later visits and submitting notes do not change it.",
+    "you_are_the_engineer_responsible_for_a_lamp_shop": "The product categories have different inventory services (Lighting, Seating, Desk). All three share the Shipping service and two Storefront workers.",    "make_a_working_shop_fail_then_improve_its_response": "Contain one product’s fault before it disrupts the catalog",
+    "your_role": "",
     "reset_all_answers": "Reset all answers",
     "continue_with_challenge": "Continue with Challenge {number}",
     "review_your_challenges": "Review your challenges",
@@ -95,17 +94,17 @@
     {
       "id": "challenge-1",
       "title": "1 · A slow lamp blocks healthy products",
-      "description": "Watch shared workers fill, then protect other products with a fallback."
+      "description": "Investigate shared workers and protect other products with a fallback."
     },
     {
       "id": "challenge-2",
-      "title": "2 · Browse during a Shipping outage",
-      "description": "Disconnect shared Shipping. Keep stock visible while quotes are unavailable, then reconnect and verify recovery."
+      "title": "2 · A Shipping outage causes problems in the catalog",
+      "description": "Investigate a shipping dependency fault and recover from it with a timeout and fallback."
     },
     {
       "id": "challenge-3",
       "title": "3 · Find how the incident spreads",
-      "description": "Diagnose a hidden dependency fault from stock, delivery and worker signals."
+      "description": "Diagnose a hidden dependency fault."
     },
     {
       "id": "challenge-4",
@@ -114,7 +113,7 @@
     }
   ],
   "guide": {
-    "title": "How to run an experiment · five steps",
+    "title": "How to run an experiment",
     "description": "Use this process for each challenge. The challenge page contains its own detailed tasks.",
     "steps": [
       {
@@ -126,7 +125,7 @@
         "instruction": "State the expected impact a fault would have. Then apply the fault."
       },
       {
-        "title": "Measure impact.",
+        "title": "Observe & Measure the impact (blast radius).",
         "instruction": "Compare customer results, dependencies, shared workers, queue and rejections over 60 to 90 second."
       },
       {

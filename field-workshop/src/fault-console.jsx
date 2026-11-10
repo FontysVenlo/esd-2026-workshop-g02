@@ -609,26 +609,7 @@ function Console() {
                 <button className="primary" type="submit" disabled={mitigationBusy || !active}>
                   {faultConsolePage.apply_shipping_settings}
                 </button>
-                <button
-                  onClick={() =>
-                    applyMitigation({
-                      action: 'configure',
-                      dependency: 'shipping',
-                      timeoutMs: 3000,
-                      fallback: true,
-                    })
-                  }
-                  id="shipping-preset"
-                  className="secondary"
-                  type="button"
-                  disabled={mitigationBusy || !active}
-                >
-                  {faultConsolePage.use_challenge_2_settings}
-                </button>
               </div>
-              <p className="meta">
-                {faultConsolePage.challenge_2_enables_fallback_with_the_default_3000_ms}
-              </p>
             </form>
           </div>
           <button
