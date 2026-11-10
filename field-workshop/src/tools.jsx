@@ -1,3 +1,4 @@
+import { InlineText } from './shared/inline-text.jsx';
 import page from '../content/tools.json' with { type: 'json' };
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -23,34 +24,19 @@ function Tools() {
         <div className="intro">
           <h1>{toolsPage.optional_command_reference}</h1>
           <p>
-            {toolsPage.the_workshop_can_be_completed_entirely_in_the_browser}{' '}
-            <a href="http://localhost:8089" target="_blank" rel="noopener">
-              {toolsPage.fault_injection}
-            </a>{' '}
-            {toolsPage.to_create_the_problem_and}{' '}
-            <a href="http://localhost:8089/#mitigations" target="_blank" rel="noopener">
-              {toolsPage.fallbacks_timeouts}
-            </a>{' '}
-            {toolsPage.to_change_the_shop_s_response}
+            <InlineText text={toolsPage.browser_workflow} />
           </p>
           <p>
-            {toolsPage.you_do_not_need_to_type_any_of_the}{' '}
-            <strong>{toolsPage.info_commands}</strong>{' '}
-            {toolsPage.tab_also_shows_the_last_request_with_a_windows}
+            <InlineText text={toolsPage.optional_commands_help} />
           </p>
         </div>
         <section>
           <h2>{toolsPage.what_changes_when_i_enable_a_fallback}</h2>
           <p>
-            {toolsPage.inventory_fallback_returns} <strong>{toolsPage.stock_unconfirmed}</strong>{' '}
-            {toolsPage.if_stock_cannot_be_checked_shipping_fallback_keeps_the}{' '}
-            <strong>{toolsPage.shipping_quote_unavailable}</strong>
-            {toolsPage.a_timeout_limits_the_dependency_wait_these_controls_change}
+            <InlineText text={toolsPage.fallback_behavior} />
           </p>
           <p>
-            {toolsPage.restore_defaults_in} <strong>{toolsPage.fallbacks_timeouts}</strong>
-            {toolsPage.then_clear_the_fault_in} <strong>{toolsPage.fault_injection}</strong>
-            {toolsPage.your_answers_remain_saved_runtime_settings_last_until_storefront}
+            <InlineText text={toolsPage.restore_defaults_help} />
           </p>
         </section>
         <section>
@@ -78,19 +64,10 @@ function Tools() {
         <section>
           <h2>{toolsPage.what_happens_underneath}</h2>
           <p>
-            {toolsPage.fault_requests_change_the_real} <strong>{toolsPage.toxiproxy}</strong>{' '}
-            {toolsPage.paths_mitigation_requests_change_the_storefront_s_live_timeout}
+            <InlineText text={toolsPage.implementation_help} />
           </p>
           <p>
-            <a href="/docs/tool-reference.md">{toolsPage.full_technical_reference}</a>{' '}
-            {toolsPage.text}{' '}
-            <a
-              href="http://localhost:3008/d/field-workshop/field-workshop"
-              target="_blank"
-              rel="noopener"
-            >
-              {toolsPage.grafana}
-            </a>
+            <InlineText text={toolsPage.reference_links} />
           </p>
         </section>
       </main>

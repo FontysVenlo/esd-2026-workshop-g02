@@ -206,28 +206,35 @@ function ChallengeInstructions({ challenge: c }) {
         <summary>{w('before_you_start')}</summary>
         <p>{c.ready}</p>
       </details>
-      <h2>{w('your_five_steps')}</h2>
-      <ol className="challenge-steps">
-        {c.tasks.map((task, i) => (
-          <li key={i}>
-            <details>
-              <summary>
-                <h3>{task.title}</h3>
-              </summary>
-              <p>{task.instruction}</p>
-              {i === 3 && c.mitigationHelp && (
-                <div className="mitigation-guide">
-                  <p>{c.mitigationHelp.description}</p>
-                  <p>{c.mitigationHelp.instruction}</p>
-                  <Link className="secondary next-link" href="http://localhost:8089/#mitigations">
-                    {w('open_fallbacks_timeouts')}
-                  </Link>
-                </div>
-              )}
-            </details>
-          </li>
-        ))}
-      </ol>
+      {c.tasks?.length > 0 && (
+        <>
+          <h2>{w('your_five_steps')}</h2>
+          <ol className="challenge-steps">
+            {c.tasks.map((task, i) => (
+              <li key={i}>
+                <details>
+                  <summary>
+                    <h3>{task.title}</h3>
+                  </summary>
+                  <p>{task.instruction}</p>
+                  {i === 3 && c.mitigationHelp && (
+                    <div className="mitigation-guide">
+                      <p>{c.mitigationHelp.description}</p>
+                      <p>{c.mitigationHelp.instruction}</p>
+                      <Link
+                        className="secondary next-link"
+                        href="http://localhost:8089/#mitigations"
+                      >
+                        {w('open_fallbacks_timeouts')}
+                      </Link>
+                    </div>
+                  )}
+                </details>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
     </section>
   );
 }

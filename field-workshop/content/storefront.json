@@ -1,45 +1,47 @@
 {
+  "pageTitle": "Northstar Supply — Live catalog",
+  "javascriptRequired": "Enable JavaScript to use the interactive product catalog.",
   "storefrontPage": {
     "northstar_supply": "Northstar Supply",
     "workshop_overview": "← Workshop overview",
     "order_preview": "Order preview"
   },
-  "storefront": {
-    "shipping_quote_unavailable": " · Shipping quote unavailable",
-    "shipping_about_days": " · Shipping €{price} · About {days} days",
-    "stock_unconfirmed": "Stock unconfirmed",
-    "in_stock": "{quantity} in stock"
-  },
   "catalog": {
-    "individual_result": "{stock} · {milliseconds} ms",
-    "chair": "Task Chair",
-    "desk": "Writing Desk",
+    "brand_suffix": ".",
     "title": "Welcome to the Northstar Supply catalog.",
+    "controls_label": "Catalog view and refresh controls",
     "refresh_stock": "Refresh all product availability",
     "refresh_preview": "Preview all product deliveries",
     "auto_refresh": "Refresh this view every 2 seconds",
-    "explanation": "Stock and delivery information are checked in real time. If the stock service fails or responds too slowly, stock availability cannot be checked for now. If the delivery service fails, no delivery date can be guaranteed. When updating information fails, the system continues showing the last available results until the services work again.",
+    "updating": "Updating catalog…",
     "failed": "Whole catalog unavailable · HTTP {status} · {milliseconds} ms",
-    "stock_ready": "Availability catalog ready · {milliseconds} ms",
+    "unknown_status": "—",
     "preview_ready": "Delivery catalog ready · {milliseconds} ms",
+    "stock_ready": "Availability catalog ready · {milliseconds} ms",
+    "connection_error": "Could not refresh the catalog. No current live result is shown.",
+    "stale_notice": "Showing the last successful catalog. It is not a current confirmation; individual product checks remain available.",
+    "explanation_title": "About availability and delivery",
+    "explanation": "Stock and delivery information are checked in real time. If the stock service fails or responds too slowly, stock availability cannot be checked for now. If the delivery service fails, no delivery date can be guaranteed. When updating information fails, the system continues showing the last available results until the services work again.",
+    "chair": "Task Chair",
+    "desk": "Writing Desk",
+    "price": "€{price}",
+    "stale": "Last known result",
+    "waiting": "Not checked yet",
     "limited": "Limited information",
     "live": "Live information",
-    "available": "Check this product",
     "disabled": "Availability temporarily disabled",
-    "connection_error": "Could not refresh the catalog. No current live result is shown.",
+    "available": "Check this product",
+    "checking": "Checking this product…",
+    "individual_result": "{stock} · {milliseconds} ms",
     "capacity_error": "The shop is busy. Please try again shortly.",
     "catalog_error": "The catalog could not be refreshed. Please try again or check a product individually.",
-    "product_error": "Product information is temporarily unavailable.",
-    "stale": "Last known result",
-    "stale_notice": "Showing the last successful catalog. It is not a current confirmation; individual product checks remain available.",
-    "waiting": "Not checked yet",
-    "checking": "Checking this product…",
-    "controls_label": "Catalog view and refresh controls",
-    "updating": "Updating catalog…",
-    "explanation_title": "About availability and delivery",
-    "price": "€{price}",
-    "brand_suffix": ".",
-    "unknown_status": "—"
+    "product_error": "Product information is temporarily unavailable."
+  },
+  "storefront": {
+    "in_stock": "{quantity} in stock",
+    "stock_unconfirmed": "Stock unconfirmed",
+    "shipping_about_days": " · Shipping €{price} · About {days} days",
+    "shipping_quote_unavailable": " · Shipping quote unavailable"
   },
   "api": {
     "product_name": "Desk Lamp",
@@ -51,7 +53,5 @@
     "json_is_required": "JSON is required",
     "proxy_reset_status": "Toxiproxy returned {status}",
     "reset_failed": "Network faults could not be cleared: {error}"
-  },
-  "pageTitle": "Northstar Supply — Live catalog",
-  "javascriptRequired": "Enable JavaScript to use the interactive product catalog."
+  }
 }

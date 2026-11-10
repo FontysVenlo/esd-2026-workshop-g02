@@ -70,7 +70,7 @@ test('each challenge shows its own complete tasks and page-local edits', async (
       const instructions = html.slice(menuEnd, mainStart);
       assert.ok(menuEnd >= 0 && mainStart > menuEnd);
       assert.ok(instructions.includes('class="sidebar-instructions"'));
-      for (const task of challenge.tasks) {
+      for (const task of challenge.tasks ?? []) {
         assert.ok(
           instructions.includes(renderToStaticMarkup(React.createElement('h3', null, task.title))),
         );
@@ -80,12 +80,16 @@ test('each challenge shows its own complete tasks and page-local edits', async (
           ),
         );
       }
-      assert.ok(html.includes(challenge.text.your_five_steps));
+      if (challenge.id === 'challenge-1') {
+        assert.doesNotMatch(instructions, /class="challenge-steps"/);
+      } else {
+        assert.ok(html.includes(challenge.text.your_five_steps));
+      }
       assert.doesNotMatch(html, /experiment-guide|\{\{/);
-      challenge.tasks[0].instruction = 'Unique edit for ' + challenge.id;
+      if (challenge.tasks) challenge.tasks[0].instruction = 'Unique edit for ' + challenge.id;
       challenge.text.experiment_notes = 'Notes for ' + challenge.id;
       const edited = renderToStaticMarkup(React.createElement(Workshop));
-      assert.ok(edited.includes(challenge.tasks[0].instruction));
+      if (challenge.tasks) assert.ok(edited.includes(challenge.tasks[0].instruction));
       assert.ok(edited.includes(challenge.text.experiment_notes));
     }
     globalThis.location = { hash: '#home' };

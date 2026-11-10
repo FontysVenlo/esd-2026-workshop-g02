@@ -1,3 +1,4 @@
+import { InlineText } from './shared/inline-text.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import page from '../content/network-faults.json' with { type: 'json' };
@@ -462,10 +463,7 @@ function Console() {
         >
           <h2>{faultConsolePage.change_the_shop_s_response}</h2>
           <p>
-            {faultConsolePage.a} <strong>{faultConsolePage.timeout}</strong>{' '}
-            {faultConsolePage.is_how_long_storefront_waits_for_a_dependency_a}{' '}
-            <strong>{faultConsolePage.fallback}</strong>{' '}
-            {faultConsolePage.provides_a_useful_honest_response_when_that_dependency_fails}
+            <InlineText text={faultConsolePage.mitigation_overview} />
           </p>
           <p>{faultConsolePage.changes_apply_to_new_customer_requests_immediately_you_do}</p>
           <button
@@ -493,9 +491,7 @@ function Console() {
             >
               <h3>{faultConsolePage.inventory_stock_checks}</h3>
               <p>
-                {faultConsolePage.with_fallback_enabled_an_unavailable_stock_check_returns}{' '}
-                <strong>{faultConsolePage.stock_unconfirmed}</strong>
-                {faultConsolePage.it_never_guesses_the_stock_quantity}
+                <InlineText text={faultConsolePage.inventory_fallback_behavior} />
               </p>
               <p id="inventory-current" className="meta" role="status">
                 {active
@@ -521,9 +517,7 @@ function Console() {
                 <input
                   id="inventory-fallback"
                   checked={draft.inventory.fallback}
-                  onChange={(event) =>
-                    edit('inventory', faultConsolePage.fallback, event.target.checked)
-                  }
+                  onChange={(event) => edit('inventory', 'fallback', event.target.checked)}
                   type="checkbox"
                   disabled={mitigationBusy || !active}
                 />{' '}
@@ -569,9 +563,7 @@ function Console() {
             >
               <h3>{faultConsolePage.shipping_delivery_quotes}</h3>
               <p>
-                {faultConsolePage.with_fallback_enabled_the_preview_returns_available_stock_and}{' '}
-                <strong>{faultConsolePage.shipping_quote_unavailable}</strong>
-                {faultConsolePage.it_never_invents_a_price_or_delivery_date}
+                <InlineText text={faultConsolePage.shipping_fallback_behavior} />
               </p>
               <p id="shipping-current" className="meta" role="status">
                 {active
@@ -597,9 +589,7 @@ function Console() {
                 <input
                   id="shipping-fallback"
                   checked={draft.shipping.fallback}
-                  onChange={(event) =>
-                    edit('shipping', faultConsolePage.fallback, event.target.checked)
-                  }
+                  onChange={(event) => edit('shipping', 'fallback', event.target.checked)}
                   type="checkbox"
                   disabled={mitigationBusy || !active}
                 />{' '}
@@ -644,33 +634,19 @@ function Console() {
           <p>{faultConsolePage.these_controls_send_http_requests_to_toxiproxy_the_storefront}</p>
           <ul>
             <li>
-              <strong>{faultConsolePage.apply_delay_2}</strong>{' '}
-              <code>{faultConsolePage.post_proxies_toxics}</code>{' '}
-              {faultConsolePage.with_a_downstream_latency_toxic_an_existing_console_delay}{' '}
-              <code>{faultConsolePage.post_proxies_toxics_workshop_latency}</code>
-              {faultConsolePage.text}
+              <InlineText text={faultConsolePage.apply_delay_help} />
             </li>
             <li>
-              <strong>{faultConsolePage.remove_delay_2}</strong>{' '}
-              <code>{faultConsolePage.delete_proxies_toxics_workshop_latency}</code>
-              {faultConsolePage.text}
+              <InlineText text={faultConsolePage.remove_delay_help} />
             </li>
             <li>
-              <strong>{faultConsolePage.disconnect_reconnect}</strong>{' '}
-              <code>{faultConsolePage.post_proxies}</code> {faultConsolePage.with}{' '}
-              <code>{faultConsolePage.text_2}</code> {faultConsolePage.or}{' '}
-              <code>{faultConsolePage.text_3}</code>
-              {faultConsolePage.text}
+              <InlineText text={faultConsolePage.disconnect_reconnect_help} />
             </li>
             <li>
-              <strong>{faultConsolePage.clear_all_faults_2}</strong>{' '}
-              <code>{faultConsolePage.post_reset}</code>
-              {faultConsolePage.reconnects_both_paths_and_removes_all_toxics}
+              <InlineText text={faultConsolePage.clear_faults_help} />
             </li>
             <li>
-              <strong>{faultConsolePage.refresh_2}</strong>{' '}
-              <code>{faultConsolePage.get_proxies}</code>
-              {faultConsolePage.reads_state_without_changing_it}
+              <InlineText text={faultConsolePage.refresh_help} />
             </li>
           </ul>
           <h3>{faultConsolePage.example_1500_ms_inventory_delay}</h3>
@@ -691,17 +667,10 @@ function Console() {
           <pre id="platform-command">{platformCommand}</pre>
           <h3>{faultConsolePage.fallback_settings_api}</h3>
           <p>
-            <code>{faultConsolePage.get_api_mitigations}</code>{' '}
-            {faultConsolePage.reads_current_settings}{' '}
-            <code>{faultConsolePage.post_api_mitigations}</code>{' '}
-            {faultConsolePage.applies_a_dependency_s_timeout_and_fallback_or_restores}
+            <InlineText text={faultConsolePage.mitigation_api_help} />
           </p>
           <p className="meta">
-            {faultConsolePage.the_raw_api_is_at} <code>{faultConsolePage.http_localhost_8478}</code>
-            {faultConsolePage.text}{' '}
-            <a href="http://localhost:8088/tools" target="_blank" rel="noopener">
-              {faultConsolePage.windows_and_mac_commands}
-            </a>
+            <InlineText text={faultConsolePage.the_raw_api_is_at_paragraph} />
           </p>
         </section>
       </main>
