@@ -22,8 +22,7 @@ test('every HTML content reference resolves', () => {
   }
 });
 
-// Render the real route components so moving tasks off their page cannot regress.
-test('each challenge shows its own complete tasks and page-local edits', async () => {
+test('only Challenge 3 shows optional hints; Challenge 4 shows partner round controls', async () => {
   const { readFileSync, unlinkSync } = await import('node:fs');
   const { fileURLToPath, pathToFileURL } = await import('node:url');
   const { build } = await import('esbuild');
@@ -71,29 +70,33 @@ test('each challenge shows its own complete tasks and page-local edits', async (
       assert.ok(menuEnd >= 0 && mainStart > menuEnd);
       assert.equal(
         instructions.includes('class="sidebar-instructions"'),
-        Boolean(challenge.tasks?.length),
+        Boolean(challenge.hints?.length),
       );
       assert.doesNotMatch(instructions, /challenge-ready/);
-      for (const task of challenge.tasks ?? []) {
+      assert.doesNotMatch(instructions, /class="challenge-steps"|Your tasks/);
+      for (const hint of challenge.hints ?? []) {
         assert.ok(
-          instructions.includes(renderToStaticMarkup(React.createElement('h3', null, task.title))),
+          instructions.includes(
+            renderToStaticMarkup(React.createElement('summary', null, hint.title)),
+          ),
         );
         assert.ok(
           instructions.includes(
-            renderToStaticMarkup(React.createElement('p', null, task.instruction)),
+            renderToStaticMarkup(React.createElement('p', null, hint.explanation)),
           ),
         );
       }
-      if (!challenge.tasks?.length) {
-        assert.doesNotMatch(instructions, /class="challenge-steps"/);
-      } else {
-        assert.ok(html.includes(challenge.text.your_five_steps));
+      assert.doesNotMatch(instructions, /<details[^>]*\bopen\b/);
+      if (challenge.competition) {
+        assert.ok(html.includes(challenge.competition.start));
+        assert.ok(html.includes(challenge.competition.stop));
+        assert.ok(html.includes(format(challenge.competition.elapsed, { seconds: 0 })));
       }
       assert.doesNotMatch(html, /experiment-guide|\{\{/);
-      if (challenge.tasks) challenge.tasks[0].instruction = 'Unique edit for ' + challenge.id;
+      if (challenge.hints) challenge.hints[0].explanation = 'Unique edit for ' + challenge.id;
       challenge.text.experiment_notes = 'Notes for ' + challenge.id;
       const edited = renderToStaticMarkup(React.createElement(Workshop));
-      if (challenge.tasks) assert.ok(edited.includes(challenge.tasks[0].instruction));
+      if (challenge.hints) assert.ok(edited.includes(challenge.hints[0].explanation));
       assert.ok(edited.includes(challenge.text.experiment_notes));
     }
     globalThis.location = { hash: '#home' };
@@ -194,6 +197,41 @@ test('storefront shows valid shipping quotes and hides stock counts after failed
     assert.doesNotMatch(stale, /state-failed|stock-unavailable/);
     assert.ok(html.includes(format(page.storefront.in_stock, { quantity: 12 })));
     assert.doesNotMatch(html, /state-failed|stock-unavailable/);
+    const invalid = renderToStaticMarkup(
+      React.createElement(ProductCard, {
+        product,
+        result,
+        stale: false,
+        preview: true,
+        shippingQuote: { source: 'live', etaDays: -2, priceEur: -4.9 },
+      }),
+    );
+    assert.ok(invalid.includes(format(page.storefront.shipping_time, { days: -2 })));
+    assert.ok(invalid.includes(format(page.storefront.shipping_cost, { price: '-4.90' })));
+    const empty = renderToStaticMarkup(
+      React.createElement(ProductCard, {
+        product,
+        result,
+        stale: false,
+        preview: true,
+        shippingQuote: { source: 'live', etaDays: null, priceEur: null },
+      }),
+    );
+    assert.ok(empty.includes(page.storefront.shipping_time_missing));
+    assert.ok(empty.includes(page.storefront.shipping_cost_missing));
+    const rejected = renderToStaticMarkup(
+      React.createElement(ProductCard, {
+        product,
+        result,
+        stale: false,
+        preview: true,
+        shippingQuote: { source: 'rejected', etaDays: null, priceEur: null },
+      }),
+    );
+    assert.ok(rejected.includes(page.storefront.shipping_time_unavailable));
+    assert.ok(rejected.includes(page.storefront.shipping_cost_unavailable));
+    assert.ok(rejected.includes(format(page.storefront.in_stock, { quantity: 12 })));
+    assert.ok(rejected.includes(page.catalog.limited));
   } finally {
     unlinkSync(out);
   }

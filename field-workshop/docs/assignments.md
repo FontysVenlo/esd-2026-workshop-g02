@@ -48,30 +48,16 @@ The primary Shipping provider becomes unreachable, so delivery quotes fail for a
 
 5. **Reconnect and verify recovery.** Reconnect Primary Shipping while keeping your mitigation active. If the breaker is enabled, allow its five-second cooldown and a recovery probe, then refresh again. Verify that normal estimates return, restore defaults and submit.
 
-## 3 — Investigate a spreading incident
+## 3 — When successful requests return bad data
 
-A hidden incident affects the catalog. Use stock checks, delivery previews and Grafana to identify which dependency failed. Which dependency explains the symptoms, and which customer information can you preserve?
+Customers see strange delivery estimates and prices while monitoring reports successful requests. Record the healthy baseline and a hypothesis, then inject **Invalid shipping responses** in Network Faults. Refresh several times and compare HTTP success with **Shipping data quality** in Grafana.
 
-1. **Arrange one hidden incident.** Record a healthy baseline, then ask a partner to seed Assignment 3 without revealing it. Keep traffic fixed and set an abort condition.
+Use the separate **Validate shipping quotes** control to block missing or invalid quotes. It preserves stock and does not invoke a backup carrier. Keep the fault active for validation; compare invalid and blocked quotes over fresh one-minute windows. Optional hints live under the Challenge 3 menu. Remove the fault, restore defaults and verify normal quotes afterward.
 
-2. **Collect the customer symptoms.** Compare availability and delivery catalogs. Record times, status, chair/desk results, workers, queue and new rejections with timestamps. Leave fault controls closed.
+## 4 — Partner incident challenge
 
-3. **Write a supported diagnosis.** Use dependency outcomes, latency and worker charts to predict the fault and how it spreads. Record an alternative explanation before opening controls.
+Take turns introducing one hidden fault: delay, jitter, disconnection, intermittent Shipping errors or invalid shipping responses. Record a healthy baseline and agree on comparable difficulty and what useful customer protection means.
 
-4. **Confirm and contain the mechanism.** Inspect Network Faults with your partner. Keep the original fault. For slow calls, use a short timeout plus fallback/breaker; for a disconnect, preserve honest partial results.
+After the injector says go, start the page timer. The investigator keeps Fault injection/current state closed, states a supported diagnosis and applies protection through Fallbacks & timeouts. Keep the fault active and verify three consecutive refreshes with healthy stock or honest uncertainty for the affected item, and usable or explicitly unavailable quotes without incorrect values. Then stop the timer.
 
-5. **Validate the healthy products and reveal.** Retest under the original fault. Record which customer action improved and which information is still missing. Compare your diagnosis with the reveal. Remove the fault, allow a recovery probe, verify live stock and quotes, then restore defaults.
-
-## 4 — Your containment GameDay
-
-Choose a dependency fault and measure the trade-off between waiting for complete results and returning useful partial information sooner. When is a faster partial catalog more useful than waiting for full results?
-
-1. **Define a propagation hypothesis.** Choose your dependency, fault, customer action, stop condition and measurements. For slow Shipping, predict what a shorter wait will do to preview time and quote availability.
-
-2. **Record a healthy comparison window.** Measure all products, catalog time/status, queue and new rejections over a fixed window. Keep traffic unchanged.
-
-3. **Measure the fault.** Apply your chosen fault. Repeat the same view and count live stocks and quotes. Record catalog time, queue and new rejections.
-
-4. **Choose a mechanism-specific mitigation.** Remove the fault. Choose a short timeout for slow calls and fallback/breaker for the affected dependency. Explain the missing-data response; fallback alone does not free workers.
-
-5. **Repeat exactly and recommend.** Repeat the identical fault and traffic. Compare time, useful stock and missing quotes. Explain the trade-off, remove the fault, verify recovery after the cooldown and restore defaults.
+Record both times, diagnoses, settings and remaining trade-offs. Clear faults and restore defaults between rounds and at the end. Removing the fault does not count as containment. The timer is manual; submissions are not automatically graded.

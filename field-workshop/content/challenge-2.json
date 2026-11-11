@@ -19,8 +19,8 @@
     "challengeTitles": {
       "challenge-1": "One slow product blocks the shop",
       "challenge-2": "Keep the catalog usable during a Shipping outage",
-      "challenge-3": "Investigate a spreading incident",
-      "challenge-4": "Your containment GameDay"
+      "challenge-3": "When successful requests return bad data",
+      "challenge-4": "Partner incident challenge"
     }
   },
   "title": "Keep the catalog usable during a Shipping outage",

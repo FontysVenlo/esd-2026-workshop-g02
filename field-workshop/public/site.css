@@ -1700,6 +1700,29 @@ a:focus-visible {
 .sidebar-instructions h2 {
   font-size: 1.1rem;
 }
+.challenge-hint {
+  padding: 0.7rem 0;
+  border-bottom: 1px solid #dce5dd;
+  font-size: 0.85rem;
+}
+.challenge-hint p {
+  line-height: 1.6;
+}
+.competition-round {
+  padding: 1.25rem;
+  margin: 1.25rem 0;
+  border: 1px solid #dce5dd;
+  border-radius: 0.75rem;
+  background: white;
+}
+.competition-round output {
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.response-fault-controls,
+.validation-controls {
+  margin: 1.5rem 0;
+}
 .sidebar-instructions summary {
   cursor: pointer;
   font-weight: 600;

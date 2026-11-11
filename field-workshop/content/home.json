@@ -17,8 +17,8 @@
     "challengeTitles": {
       "challenge-1": "One slow product blocks the shop",
       "challenge-2": "Keep the catalog usable during a Shipping outage",
-      "challenge-3": "Investigate a spreading incident",
-      "challenge-4": "Your containment GameDay"
+      "challenge-3": "When successful requests return bad data",
+      "challenge-4": "Partner incident challenge"
     }
   },
   "text": {
@@ -38,7 +38,7 @@
     "reset_all_answers": "Reset all answers",
     "make_a_working_shop_fail_then_improve_its_response": "Contain one product’s fault before it disrupts the catalog",
     "you_are_the_engineer_responsible_for_a_lamp_shop": "The product categories have different inventory services (Lighting, Seating, Desk). All three share the Shipping service and two Storefront workers.",
-    "the_shop_normally_starts_healthy_in_challenges_1_2": "Start healthy. Add faults yourself in Challenges 1, 2 and 4. Ask a partner to inject a hidden fault in Challenge 3. The first time you open Challenges 2, 3 and 4, the shop clears all network faults and restores default timeouts and fallbacks. Later visits and submitting notes do not change it.",
+    "the_shop_normally_starts_healthy_in_challenges_1_2": "Start healthy and inject faults yourself in Challenges 1–3. In Challenge 4 a partner introduces a hidden fault, then you swap roles. New response-fault and validation controls become available from Challenge 3. Opening a later challenge for the first time clears faults and restores default protections; later visits preserve your experiment.",
     "get_started": "GET STARTED",
     "quick_start": "Quick start",
     "start_the_stack": "Start the stack (ZIP or Repo)",
@@ -69,7 +69,7 @@
   },
   "guide": {
     "title": "How to run an experiment",
-    "description": "Use this process for each challenge. The challenge page contains its own detailed tasks.",
+    "description": "Use this process for each challenge. Record your evidence in the challenge notes; optional hints are available in Challenge 3.",
     "steps": [
       {
         "title": "Steady State",

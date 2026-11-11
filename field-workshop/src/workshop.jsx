@@ -199,39 +199,61 @@ function FreshStartToast({ status, retry }) {
   );
 }
 function ChallengeInstructions({ challenge: c }) {
-  const { w } = useWorkshopCopy();
-  if (!c.tasks?.length) return null;
+  if (!c.hints?.length) return null;
   return (
     <section className="sidebar-instructions">
-      {c.tasks?.length > 0 && (
-        <>
-          <h2>{w('your_five_steps')}</h2>
-          <ol className="challenge-steps">
-            {c.tasks.map((task, i) => (
-              <li key={i}>
-                <details>
-                  <summary>
-                    <h3>{task.title}</h3>
-                  </summary>
-                  <p>{task.instruction}</p>
-                  {i === 3 && c.mitigationHelp && (
-                    <div className="mitigation-guide">
-                      <p>{c.mitigationHelp.description}</p>
-                      <p>{c.mitigationHelp.instruction}</p>
-                      <Link
-                        className="secondary next-link"
-                        href="http://localhost:8089/#mitigations"
-                      >
-                        {w('open_fallbacks_timeouts')}
-                      </Link>
-                    </div>
-                  )}
-                </details>
-              </li>
-            ))}
-          </ol>
-        </>
-      )}
+      <h2>{c.text.hints_title}</h2>
+      <p className="meta">{c.text.hints_description}</p>
+      {c.hints.map((hint, i) => (
+        <details className="challenge-hint" key={i}>
+          <summary>{hint.title}</summary>
+          <p>{hint.explanation}</p>
+        </details>
+      ))}
+    </section>
+  );
+}
+function Competition({ copy }) {
+  const [started, setStarted] = useState(null);
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    if (started === null) return;
+    const timer = setInterval(
+      () => setSeconds(Math.floor((performance.now() - started) / 1000)),
+      250,
+    );
+    return () => clearInterval(timer);
+  }, [started]);
+  return (
+    <section className="competition-round">
+      <h2>{copy.title}</h2>
+      <p>{copy.rules}</p>
+      <output>{format(copy.elapsed, { seconds })}</output>
+      <div className="actions">
+        <button
+          type="button"
+          className="primary"
+          disabled={started !== null}
+          onClick={() => {
+            setSeconds(0);
+            setStarted(performance.now());
+          }}
+        >
+          {copy.start}
+        </button>
+        <button
+          type="button"
+          className="secondary"
+          disabled={started === null}
+          onClick={() => {
+            setSeconds(Math.floor((performance.now() - started) / 1000));
+            setStarted(null);
+          }}
+        >
+          {copy.stop}
+        </button>
+      </div>
+      <p className="meta">{copy.record}</p>
     </section>
   );
 }
@@ -274,6 +296,7 @@ function Challenge({ challenge: c, progress, update, submit }) {
           ))}
         </div>
       </section>
+      {c.competition && <Competition copy={c.competition} />}
       <div className={`challenge-columns${submission ? ' has-solution' : ''}`}>
         <section className="notes-panel">
           <div className="eyebrow">{w('your_work')}</div>
@@ -407,6 +430,16 @@ function Workshop() {
     document.title = page.pageTitle;
   }, [page]);
   useEffect(() => {
+    if (!current) return;
+    // Console and workshop use different ports, so share the current challenge
+    // through the server rather than relying on cross-origin localStorage.
+    fetch('/api/workshop/challenge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ challenge: current.number }),
+    }).catch(() => {});
+  }, [current?.id]);
+  useEffect(() => {
     setFreshStart(null);
     if (!current || !needsFreshStart(progress, index)) return;
     // Record a successful reset even if the participant has already moved on,
@@ -417,7 +450,7 @@ function Workshop() {
     fetch('/api/workshop/reset', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: '{}',
+      body: JSON.stringify({ challenge: current.number }),
       cache: 'no-store',
       signal: AbortSignal.timeout(8000),
     })

@@ -54,6 +54,7 @@ export function createStorefrontServer(config = {}) {
     inventoryFallback: config.inventoryFallback ?? process.env.INVENTORY_FALLBACK === 'true',
     shippingFallback: config.shippingFallback ?? process.env.SHIPPING_FALLBACK === 'true',
     toxiproxyApi: config.toxiproxyApi ?? process.env.TOXIPROXY_API ?? 'http://localhost:8474',
+    shippingControlUrl: config.shippingControlUrl ?? process.env.SHIPPING_CONTROL_URL,
   };
   for (const timeout of [settings.inventoryTimeoutMs, settings.shippingTimeoutMs]) {
     if (!Number.isFinite(timeout) || timeout < 1)
@@ -130,10 +131,29 @@ export function createStorefrontServer(config = {}) {
     }
   }
 
+  function quoteResult(data, source, validate) {
+    const valid =
+      data !== null &&
+      typeof data === 'object' &&
+      Number.isFinite(data.priceEur) &&
+      data.priceEur >= 0 &&
+      Number.isInteger(data.etaDays) &&
+      data.etaDays > 0;
+    metrics.quote(source === 'backup' ? 'backup' : 'primary', valid, !valid && validate);
+    if (!valid && validate)
+      return {
+        priceEur: null,
+        etaDays: null,
+        source: 'rejected',
+        warning: readPageCopy('storefront').api.invalid_quote_warning,
+      };
+    return { ...data, source };
+  }
+
   async function shipping(policy, sku) {
     try {
       const data = await call('shipping', sku, policy);
-      return { ...data, source: 'live' };
+      return quoteResult(data, 'live', policy.validate);
     } catch (error) {
       if (!policy.fallback) throw error;
       metrics.fallback('shipping');
@@ -144,7 +164,7 @@ export function createStorefrontServer(config = {}) {
           '/quote?sku=' + sku,
           policy.timeoutMs,
         );
-        return { ...quote, source: 'backup' };
+        return quoteResult(quote, 'backup', policy.validate);
       } catch {
         // Both providers are unavailable. Preserve stock and mark the quote missing.
       }
@@ -192,6 +212,8 @@ export function createStorefrontServer(config = {}) {
     const url = new URL(req.url, 'http://localhost');
     const route = url.pathname;
     if (req.method === 'POST' && route === '/api/workshop/reset') return resetEnvironment();
+    if (req.method === 'POST' && route === '/api/workshop/challenge')
+      return resetEnvironment(false);
     if (req.method !== 'GET')
       return send(405, { error: readPageCopy('storefront').api.method_not_allowed });
     if (route === '/health') return send(200, { status: 'ok' });
@@ -303,13 +325,30 @@ export function createStorefrontServer(config = {}) {
 
     // Called by the workshop page when a newly unlocked challenge is opened, so
     // each challenge starts with no network faults and default mitigations.
-    async function resetEnvironment() {
+    async function resetEnvironment(reset = true) {
       if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`)
         return send(403, {
           error: readPageCopy('storefront').api.cross_origin_changes_are_not_allowed,
         });
       if (!req.headers['content-type']?.startsWith('application/json'))
         return send(415, { error: readPageCopy('storefront').api.json_is_required });
+      let challenge;
+      try {
+        let raw = '';
+        for await (const chunk of req) {
+          raw += chunk;
+          if (raw.length > 1024)
+            return send(413, { error: readPageCopy('storefront').api.invalid_challenge });
+        }
+        challenge = JSON.parse(raw || '{}').challenge ?? 1;
+        if (!Number.isInteger(challenge) || challenge < 1 || challenge > 4) throw new Error();
+      } catch {
+        return send(400, { error: readPageCopy('storefront').api.invalid_challenge });
+      }
+      if (!reset) {
+        mitigations.startChallenge(challenge);
+        return send(200, { challenge });
+      }
       try {
         const response = await fetch(new URL('/reset', settings.toxiproxyApi), {
           method: 'POST',
@@ -319,12 +358,22 @@ export function createStorefrontServer(config = {}) {
           throw new Error(
             format(readPageCopy('storefront').api.proxy_reset_status, { status: response.status }),
           );
+        if (settings.shippingControlUrl) {
+          const cleared = await fetch(new URL('/fault', settings.shippingControlUrl), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: 'none' }),
+            signal: AbortSignal.timeout(3000),
+          });
+          if (!cleared.ok) throw new Error(readPageCopy('storefront').api.shipping_reset_failed);
+        }
       } catch (error) {
         return send(502, {
           error: format(readPageCopy('storefront').api.reset_failed, { error: error.message }),
         });
       }
       const restored = mitigations.apply({ action: 'reset' });
+      mitigations.startChallenge(challenge);
       breaker.reset();
       previousPolicy = JSON.stringify(restored);
       console.log(

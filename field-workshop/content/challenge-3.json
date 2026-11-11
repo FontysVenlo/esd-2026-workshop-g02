@@ -1,7 +1,7 @@
 {
   "id": "challenge-3",
   "number": 3,
-  "pageTitle": "Challenge 3 · Investigate a spreading incident",
+  "pageTitle": "Challenge 3 · When successful requests return bad data",
   "navigation": {
     "northstar_supply": "Northstar Supply",
     "workshop": "/ Workshop",
@@ -19,79 +19,55 @@
     "challengeTitles": {
       "challenge-1": "One slow product blocks the shop",
       "challenge-2": "Keep the catalog usable during a Shipping outage",
-      "challenge-3": "Investigate a spreading incident",
-      "challenge-4": "Your containment GameDay"
+      "challenge-3": "When successful requests return bad data",
+      "challenge-4": "Partner incident challenge"
     }
   },
-  "title": "Investigate a spreading incident",
-  "level": "Advanced",
-  "scenario": "A hidden incident affects the catalog. Use stock checks, delivery previews and Grafana to identify which dependency failed.",
-  "why": "The visible victims may be healthy products. Find the cause before choosing a timeout, breaker or fallback.",
-  "reproduce": "Ask a partner to seed one incident from docs/facilitator.md. Record your diagnosis before inspecting Network Faults.",
-  "assignment": "Which dependency explains the symptoms, and which customer information can you preserve?",
-  "tasks": [
-    {
-      "title": "Arrange one hidden incident",
-      "instruction": "Record a healthy baseline, then ask a partner to seed Assignment 3 without revealing it. Keep traffic fixed and set an abort condition."
-    },
-    {
-      "title": "Collect the customer symptoms",
-      "instruction": "Compare availability and delivery catalogs. Record times, status, chair/desk results, workers, queue and new rejections with timestamps. Leave fault controls closed."
-    },
-    {
-      "title": "Write a supported diagnosis",
-      "instruction": "Use dependency outcomes, latency and worker charts to predict the fault and how it spreads. Record an alternative explanation before opening controls."
-    },
-    {
-      "title": "Confirm and contain the mechanism",
-      "instruction": "Inspect Network Faults with your partner. Keep the original fault. For slow calls, use a short timeout plus fallback/breaker; for a disconnect, preserve honest partial results."
-    },
-    {
-      "title": "Validate the healthy products and reveal",
-      "instruction": "Retest under the original fault. Record which customer action improved and which information is still missing. Compare your diagnosis with the reveal. Remove the fault, allow a recovery probe, verify live stock and quotes, then restore defaults."
-    }
-  ],
+  "title": "When successful requests return bad data",
+  "level": "Investigation",
+  "scenario": "Customers report strange or missing delivery estimates and shipping prices. Monitoring still shows successful requests. Find out whether the shop can trust the information it receives.",
+  "why": "A fast HTTP 200 response can still contain unusable data. Protect customers from incorrect delivery promises while keeping stock visible.",
+  "reproduce": "Record healthy stock and shipping first, then predict the impact. In Network Faults, apply Invalid shipping responses under Shipping response faults. Refresh shipping several times and investigate. The fault stays active until you remove it.",
+  "assignment": "Can you prevent incorrect quotes from reaching customers without hiding healthy stock?",
   "fields": [
     {
       "key": "symptom",
-      "label": "Customer symptom and time window",
-      "prompt": "Which customer view failed or slowed, and when?"
+      "label": "Healthy baseline and prediction",
+      "prompt": "Record normal stock, delivery days and shipping price. Predict what an unusable response could affect."
     },
     {
       "key": "signals",
-      "label": "Grafana evidence",
-      "prompt": "Which dependency and Grafana signals changed? Name the panels."
+      "label": "Storefront and Grafana evidence",
+      "prompt": "Record examples from several refreshes. Compare HTTP outcomes with invalid and rejected quotes."
     },
     {
       "key": "diagnosis",
-      "label": "Hypothesis and uncertainty",
-      "prompt": "What is the likely fault? What else could explain it?"
+      "label": "Diagnosis and uncertainty",
+      "prompt": "What explains successful requests with incorrect customer information? Name an alternative explanation."
     },
     {
       "key": "mitigation",
-      "label": "Mitigation and reason",
-      "prompt": "What did you change, and why? Explain timeout, breaker and fallback separately."
+      "label": "Protection and reason",
+      "prompt": "Which control did you apply? Explain why timeout, fallback or breaker alone does not validate successful responses."
     },
     {
       "key": "validation",
-      "label": "Validation under the same incident",
-      "prompt": "Compare before and after under the same fault. Include all products and catalog time/status; record queue size and new rejections from Grafana over the same window."
+      "label": "Validation under the same fault",
+      "prompt": "Keep the fault active. Record whether incorrect values are blocked, stock remains live and rejected quotes increase."
     },
     {
       "key": "conclusion",
       "label": "Conclusion and cleanup",
-      "prompt": "What did the reveal confirm? What trade-off remains? Confirm cleanup."
+      "prompt": "What did customers regain, what is still unavailable, and what must the carrier fix? Remove the fault and verify normal quotes return."
     }
   ],
   "solution": [
-    "Slow Lighting inventory can delay both catalog views and occupy workers, causing healthy chair/desk requests to wait or fail.",
-    "A shared Shipping disconnect breaks delivery previews across products. Stock checks still work. Shipping fallback obtains backup quotes with longer delivery times at the same price.",
-    "A timeout bounds waiting; the breaker pauses repeated failures; fallback preserves partial results. Choose from the evidence.",
-    "Retest the same fault and traffic. State what improved and what remains missing, then restore all products."
+    "Primary Shipping returns HTTP 200 but cycles through negative delivery days, empty fields, a negative price and a valid quote. Stock remains healthy.",
+    "HTTP success stays high while Shipping data quality records invalid quotes. A successful request is not proof that its contents are usable.",
+    "Enable Validate shipping quotes and apply validation. Missing fields, negative prices and non-positive or non-integer delivery days are rejected. The shop shows unavailable quote information while retaining stock.",
+    "Validation is independent of fallback and breaker. It does not repair the carrier or automatically request a backup quote. Keep the fault active to verify protection, then remove it and restore defaults."
   ],
   "text": {
-    "your_five_steps": "Your tasks",
-    "open_fallbacks_timeouts": "Open Fallbacks & timeouts ↗",
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",
     "the_customer_problem": "The customer problem",
     "why_this_matters": "Why this matters",
@@ -139,10 +115,26 @@
     "reset_all_answers_this_clears_every_draft_and_submitted": "Reset all answers? This clears every draft and submitted answer in this browser and locks Challenges 2–4 again. Download your notes first if needed. Network faults and fallbacks & timeouts stay as they are for now; they are cleared and restored to defaults when you next open Challenge 2.",
     "all_answers_reset_challenge_1_is_available": "All answers reset. Challenge 1 is available.",
     "challenge_unlocked": "Challenge {number} unlocked.",
-    "all_four_challenges_submitted": "All four challenges submitted."
+    "all_four_challenges_submitted": "All four challenges submitted.",
+    "hints_title": "Need a hint?",
+    "hints_description": "Open one at a time if you get stuck."
   },
   "validation": {
     "locked": "This challenge is locked.",
     "required": "Please fill in: {label}"
-  }
+  },
+  "hints": [
+    {
+      "title": "Hint 1 · Compare the symptoms",
+      "explanation": "Refresh shipping several times. Compare stock, delivery days and shipping price. Does the HTTP status explain everything customers see?"
+    },
+    {
+      "title": "Hint 2 · Look beyond HTTP success",
+      "explanation": "Compare Dependency outcomes with Shipping data quality in Grafana. Invalid quotes are measured even when protection is off. Rates use a one-minute window."
+    },
+    {
+      "title": "Hint 3 · Choose the right protection",
+      "explanation": "Timeout limits waiting and breaker reacts to failed calls. Neither checks the contents of a successful response. Look for a separate quote-validation control. It blocks invalid data without switching carriers."
+    }
+  ]
 }

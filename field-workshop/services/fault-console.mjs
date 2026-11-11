@@ -12,6 +12,27 @@ export function createFaultConsoleServer(config = {}) {
   const api = config.toxiproxyApi ?? process.env.TOXIPROXY_API ?? 'http://localhost:8474';
   const mitigationApi =
     config.mitigationApi ?? process.env.STOREFRONT_ADMIN_URL ?? 'http://storefront:8081';
+  const shippingControlUrl = config.shippingControlUrl ?? process.env.SHIPPING_CONTROL_URL;
+
+  async function shippingFault(method = 'GET', body) {
+    if (!shippingControlUrl) return { mode: 'none' };
+    const response = await fetch(new URL('/fault', shippingControlUrl), {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) throw new Error(readPageCopy('network-faults').api.response_fault_failed);
+    return response.json();
+  }
+
+  async function workshop() {
+    const response = await fetch(new URL('/challenge', mitigationApi), {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) throw new Error(readPageCopy('network-faults').api.cannot_read_challenge);
+    return response.json();
+  }
 
   async function callToxiproxy(method, path, body) {
     const response = await fetch(new URL(path, api), {
@@ -57,6 +78,7 @@ export function createFaultConsoleServer(config = {}) {
     if (action === 'reset') {
       const command = { method: 'POST', path: '/reset' };
       await callToxiproxy(command.method, command.path);
+      await shippingFault('POST', { mode: 'none' });
       return command;
     }
     const proxy = input?.proxy;
@@ -117,7 +139,12 @@ export function createFaultConsoleServer(config = {}) {
     }
     if (req.method === 'GET' && serveContentAsset(route, res)) return;
     if (req.method === 'GET' && route === '/health') return send(200, { status: 'ok' });
-    if (route === '/api/mitigations' && ['GET', 'POST'].includes(req.method)) {
+    if (
+      ['/api/mitigations', '/api/workshop', '/api/response-fault'].includes(route) &&
+      ['GET', 'POST'].includes(req.method)
+    ) {
+      if (route === '/api/workshop' && req.method !== 'GET')
+        return send(405, { error: readPageCopy('network-faults').api.method_not_allowed });
       if (req.method === 'POST') {
         if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`)
           return send(403, {
@@ -141,6 +168,19 @@ export function createFaultConsoleServer(config = {}) {
             return send(400, { error: readPageCopy('network-faults').api.invalid_json });
           }
         }
+        if (route === '/api/workshop') return send(200, await workshop());
+        const input = body ? JSON.parse(body) : null;
+        if (route === '/api/response-fault') {
+          if (input && !['none', 'invalid-quotes', 'intermittent-errors'].includes(input.mode))
+            return send(400, { error: readPageCopy('network-faults').api.invalid_response_fault });
+          if (input && input.mode !== 'none' && (await workshop()).challenge < 3)
+            return send(403, { error: readPageCopy('network-faults').api.advanced_locked });
+          if (input && !shippingControlUrl)
+            return send(503, { error: readPageCopy('network-faults').api.response_fault_failed });
+          return send(200, await shippingFault(req.method, input));
+        }
+        if (input?.action === 'validate-shipping' && (await workshop()).challenge < 3)
+          return send(403, { error: readPageCopy('network-faults').api.advanced_locked });
         const response = await fetch(new URL('/settings', mitigationApi), {
           method: req.method,
           headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },

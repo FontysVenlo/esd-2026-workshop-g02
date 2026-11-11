@@ -35,6 +35,8 @@ export class Metrics {
     this.dependencyDurations = new Map();
     this.fallbacks = new Map();
     this.productDurations = new Map();
+    this.quotes = new Map();
+    this.rejectedQuotes = new Map();
   }
 
   request(route, status, seconds) {
@@ -56,6 +58,16 @@ export class Metrics {
     observe(this.productDurations, { service: this.service, sku }, seconds);
   }
 
+  quote(provider, valid, rejected) {
+    for (const outcome of ['valid', 'invalid'])
+      add(
+        this.quotes,
+        { service: this.service, provider, outcome },
+        outcome === (valid ? 'valid' : 'invalid') ? 1 : 0,
+      );
+    add(this.rejectedQuotes, { service: this.service, provider }, rejected ? 1 : 0);
+  }
+
   render() {
     const lines = [];
     const counter = (name, help, entries) => {
@@ -75,6 +87,16 @@ export class Metrics {
       }
     };
     counter('workshop_http_requests_total', 'Completed application HTTP requests.', this.requests);
+    counter(
+      'workshop_shipping_quotes_total',
+      'Quote data quality, independent of HTTP status and validation enforcement.',
+      this.quotes,
+    );
+    counter(
+      'workshop_rejected_quotes_total',
+      'Invalid quotes blocked by response validation.',
+      this.rejectedQuotes,
+    );
     histogram(
       'workshop_http_request_duration_seconds',
       'Application HTTP request duration.',

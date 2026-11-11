@@ -96,7 +96,9 @@ function ProductCard({
       );
   }, [result]);
   const unconfirmed = result?.inventory.source !== 'live';
-  const limited = Boolean(result && (unconfirmed || result.shipping?.source === 'unavailable'));
+  const limited = Boolean(
+    result && (unconfirmed || ['unavailable', 'rejected'].includes(shippingQuote?.source)),
+  );
   async function inspect(preview) {
     if (busy) return;
     controller.current = new AbortController();
@@ -130,14 +132,18 @@ function ProductCard({
       <>
         <span className="shipping-line">
           {live
-            ? format(storefront.shipping_time, { days: quote.etaDays })
+            ? quote.etaDays == null
+              ? storefront.shipping_time_missing
+              : format(storefront.shipping_time, { days: quote.etaDays })
             : quote || staleQuote
               ? storefront.shipping_time_unavailable
               : storefront.shipping_time_not_checked}
         </span>
         <span className="shipping-line">
           {live
-            ? format(storefront.shipping_cost, { price: quote.priceEur.toFixed(2) })
+            ? typeof quote.priceEur !== 'number'
+              ? storefront.shipping_cost_missing
+              : format(storefront.shipping_cost, { price: quote.priceEur.toFixed(2) })
             : quote || staleQuote
               ? storefront.shipping_cost_unavailable
               : storefront.shipping_cost_not_checked}

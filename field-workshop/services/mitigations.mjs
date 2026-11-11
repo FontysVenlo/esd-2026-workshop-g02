@@ -3,23 +3,39 @@ import http from 'node:http';
 
 export const defaultMitigations = Object.freeze({
   inventory: Object.freeze({ timeoutMs: 3000, fallback: false, breaker: false }),
-  shipping: Object.freeze({ timeoutMs: 3000, fallback: false, breaker: false }),
+  shipping: Object.freeze({ timeoutMs: 3000, fallback: false, breaker: false, validate: false }),
 });
 
 export function createMitigations(initial = defaultMitigations) {
   let settings = Object.fromEntries(
     Object.entries(initial).map(([name, policy]) => [
       name,
-      { ...policy, breaker: policy.breaker ?? false },
+      {
+        ...policy,
+        breaker: policy.breaker ?? false,
+        ...(name === 'shipping' ? { validate: policy.validate ?? false } : {}),
+      },
     ]),
   );
+  let challenge = 1;
   return {
+    challenge: () => challenge,
+    startChallenge(number) {
+      challenge = number;
+    },
     snapshot: () => structuredClone(settings),
     apply(input) {
       if (!input || typeof input !== 'object' || Array.isArray(input))
         throw new Error(readPageCopy('network-faults').api.choose_mitigation_settings);
       if (input.action === 'reset' && Object.keys(input).length === 1) {
         settings = structuredClone(defaultMitigations);
+      } else if (input.action === 'validate-shipping') {
+        if (
+          typeof input.enabled !== 'boolean' ||
+          Object.keys(input).some((key) => !['action', 'enabled'].includes(key))
+        )
+          throw new Error(readPageCopy('network-faults').api.invalid_validation_setting);
+        settings = { ...settings, shipping: { ...settings.shipping, validate: input.enabled } };
       } else {
         if (input.action !== 'configure' || !['inventory', 'shipping'].includes(input.dependency))
           throw new Error(readPageCopy('network-faults').api.choose_inventory_or_shipping);
@@ -40,6 +56,7 @@ export function createMitigations(initial = defaultMitigations) {
         settings = {
           ...settings,
           [input.dependency]: {
+            ...settings[input.dependency],
             timeoutMs: input.timeoutMs,
             fallback: input.fallback,
             breaker: input.breaker ?? settings[input.dependency].breaker,
@@ -59,6 +76,8 @@ export function createMitigationServer(mitigations) {
       res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify(body));
     };
+    if (req.url === '/challenge' && req.method === 'GET')
+      return send(200, { challenge: mitigations.challenge() });
     if (req.url !== '/settings')
       return send(404, { error: readPageCopy('network-faults').api.not_found });
     if (req.method === 'GET') return send(200, mitigations.snapshot());

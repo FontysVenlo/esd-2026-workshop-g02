@@ -1,7 +1,7 @@
 {
   "id": "challenge-4",
   "number": 4,
-  "pageTitle": "Challenge 4 · Your containment GameDay",
+  "pageTitle": "Challenge 4 · Partner incident challenge",
   "navigation": {
     "northstar_supply": "Northstar Supply",
     "workshop": "/ Workshop",
@@ -19,79 +19,56 @@
     "challengeTitles": {
       "challenge-1": "One slow product blocks the shop",
       "challenge-2": "Keep the catalog usable during a Shipping outage",
-      "challenge-3": "Investigate a spreading incident",
-      "challenge-4": "Your containment GameDay"
+      "challenge-3": "When successful requests return bad data",
+      "challenge-4": "Partner incident challenge"
     }
   },
-  "title": "Your containment GameDay",
-  "level": "Capstone",
-  "scenario": "Choose a dependency fault and measure the trade-off between waiting for complete results and returning useful partial information sooner.",
-  "why": "An enabled fallback is not proof of resilience. Show useful results before and after mitigation, including remaining uncertainty.",
-  "reproduce": "For the worked example, add 1500 ms to shared Shipping. You can also design a Lighting inventory experiment. Use the same action and traffic in every phase.",
-  "assignment": "When is a faster partial catalog more useful than waiting for full results?",
-  "tasks": [
-    {
-      "title": "Define a propagation hypothesis",
-      "instruction": "Choose your dependency, fault, customer action, stop condition and measurements. For slow Shipping, predict what a shorter wait will do to preview time and quote availability."
-    },
-    {
-      "title": "Record a healthy comparison window",
-      "instruction": "Measure all products, catalog time/status, queue and new rejections over a fixed window. Keep traffic unchanged."
-    },
-    {
-      "title": "Measure the fault",
-      "instruction": "Apply your chosen fault. Repeat the same view and count live stocks and quotes. Record catalog time, queue and new rejections."
-    },
-    {
-      "title": "Choose a mechanism-specific mitigation",
-      "instruction": "Remove the fault. Choose a short timeout for slow calls and fallback/breaker for the affected dependency. Explain the missing-data response; fallback alone does not free workers."
-    },
-    {
-      "title": "Repeat exactly and recommend",
-      "instruction": "Repeat the identical fault and traffic. Compare time, useful stock and missing quotes. Explain the trade-off, remove the fault, verify recovery after the cooldown and restore defaults."
-    }
-  ],
+  "title": "Partner incident challenge",
+  "level": "Partner competition",
+  "scenario": "Your partner introduces one hidden fault. Diagnose it and protect customers as quickly as you can, then swap roles and compare times.",
+  "why": "The fastest useful response comes from evidence. A disappearing error or one lucky refresh is not proof of recovery.",
+  "reproduce": "Start healthy. Your partner chooses one fault in Network Faults: delay, jitter, disconnect, intermittent Shipping errors or invalid shipping responses. Keep the fault controls and current-state display hidden from the investigator; use the Fallbacks & timeouts tab for protection.",
+  "assignment": "Who can identify the cause and demonstrate stable customer protection faster?",
   "fields": [
     {
       "key": "plan",
-      "label": "Experiment plan",
-      "prompt": "Name the view, dependency, fault/magnitude, expected impact and abort condition."
+      "label": "Round setup and rules",
+      "prompt": "Name the investigator and injector for each round. Agree on comparable fault difficulty and the customer result that counts as containment."
     },
     {
       "key": "steadyState",
-      "label": "Steady state and hypothesis",
-      "prompt": "Record the baseline and prediction. Include all products and catalog time/status; record queue size and new rejections from Grafana over the same window."
+      "label": "Healthy baseline and prediction",
+      "prompt": "Record healthy stock and shipping. Predict which failures could spread through the shared workers."
     },
     {
       "key": "faultEvidence",
-      "label": "Fault result",
-      "prompt": "Record the fault settings and dependency signals. Include all products and catalog time/status; record queue size and new rejections from Grafana over the same window."
+      "label": "Both rounds: diagnosis and time",
+      "prompt": "For each round, record the hidden fault after the reveal, diagnosis, elapsed seconds and supporting customer/Grafana evidence."
     },
     {
       "key": "mitigation",
-      "label": "Mitigation and reason",
-      "prompt": "Which settings did you change, and why? Explain timeout, breaker and fallback separately."
+      "label": "Mitigations and reasons",
+      "prompt": "Record settings for both rounds. Explain what each timeout, fallback, breaker or validation change contributed."
     },
     {
       "key": "validation",
-      "label": "Identical-fault validation",
-      "prompt": "Repeat the same fault and compare results. Include all products and catalog time/status; record queue size and new rejections from Grafana over the same window."
+      "label": "Stable customer protection",
+      "prompt": "Record three consecutive refreshes while each fault remained active. What stayed usable, and what uncertainty remained?"
     },
     {
       "key": "conclusion",
-      "label": "Conclusion, trade-off, and rollback",
-      "prompt": "What improved? What risk remains? Describe rollback."
+      "label": "Comparison and cleanup",
+      "prompt": "Compare times fairly, explain a better approach and confirm faults were cleared, defaults restored and normal results verified."
     }
   ],
   "solution": [
-    "A valid experiment compares healthy, faulted and mitigated phases under identical fault and traffic, showing wider impact and the remaining trade-off.",
-    "Example: delay shared Shipping by 1500 ms. Measure delivery previews with default settings, then repeat with a 400 ms Shipping timeout and fallback enabled.",
-    "A shorter timeout can free workers sooner. During the delay, quotes can switch to the slower-delivery backup carrier at the same price. Compare carrier, delivery days, response time and rejections.",
-    "Distinguish catalog failure from worker pressure. Restore defaults, clear faults and verify live results."
+    "A valid round identifies the fault from customer symptoms and Grafana, keeps it active, and demonstrates stable protection over three consecutive refreshes.",
+    "Slow calls need bounded waiting. A short timeout plus fallback can contain the impact; a breaker additionally skips repeated failing calls during cooldown.",
+    "Disconnected or intermittently failing Shipping can use backup quotes through fallback. A breaker reduces primary attempts but cannot supply replacement data.",
+    "Invalid successful quotes require response validation. Valid quotes remain visible; invalid quotes are blocked without automatically switching to the backup.",
+    "Record both rounds and explain the remaining trade-offs. Comparable fault difficulty matters more than declaring the shortest time the best design. Clear all faults and restore defaults afterward."
   ],
   "text": {
-    "your_five_steps": "Your tasks",
-    "open_fallbacks_timeouts": "Open Fallbacks & timeouts ↗",
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",
     "the_customer_problem": "The customer problem",
     "why_this_matters": "Why this matters",
@@ -144,5 +121,13 @@
   "validation": {
     "locked": "This challenge is locked.",
     "required": "Please fill in: {label}"
+  },
+  "competition": {
+    "title": "Timed partner round",
+    "rules": "After your partner applies one fault and says go, start the timer. Keep the fault active. Stop only after stating your diagnosis and completing three consecutive refreshes with healthy stock or explicitly unconfirmed affected stock, and usable or explicitly unavailable shipping information with no incorrect values. Swap roles with a fault of comparable difficulty. Clearing the fault does not count as containment.",
+    "elapsed": "Elapsed: {seconds} seconds",
+    "start": "Start new round",
+    "stop": "Stop timer",
+    "record": "Record both times, faults, diagnoses and settings in the notes below. Agree on useful customer results before each round. Between rounds clear all faults and restore defaults. The timer is manual; it does not grade results."
   }
 }

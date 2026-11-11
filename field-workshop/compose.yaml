@@ -83,6 +83,7 @@ services:
       SHIPPING_FALLBACK: ${SHIPPING_FALLBACK:-false}
       TOXIPROXY_API: http://toxiproxy:8474
       MITIGATION_PORT: 8081
+      SHIPPING_CONTROL_URL: http://shipping:8080
     expose: ["8081"]
     depends_on:
       shipping-backup:
@@ -106,6 +107,7 @@ services:
       PORT: 8080
       TOXIPROXY_API: http://toxiproxy:8474
       STOREFRONT_ADMIN_URL: http://storefront:8081
+      SHIPPING_CONTROL_URL: http://shipping:8080
     depends_on:
       proxy-init:
         condition: service_completed_successfully

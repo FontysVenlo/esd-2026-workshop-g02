@@ -128,6 +128,9 @@ function Console() {
     [proxy, setProxy] = useState('inventory'),
     [latency, setLatency] = useState('1500');
   const [jitter, setJitter] = useState('0');
+  const [advanced, setAdvanced] = useState(false);
+  const [responseMode, setResponseMode] = useState('none');
+  const [responseDraft, setResponseDraft] = useState('invalid-quotes');
   const [busy, setBusy] = useState(false),
     [mitigationBusy, setMitigationBusy] = useState(false);
   const faultLock = useRef(false),
@@ -135,7 +138,7 @@ function Console() {
   const [active, setActive] = useState(null);
   const [draft, setDraft] = useState({
     inventory: { timeoutMs: 3000, fallback: false, breaker: false },
-    shipping: { timeoutMs: 3000, fallback: false, breaker: false },
+    shipping: { timeoutMs: 3000, fallback: false, breaker: false, validate: false },
   });
   const [message, setMessage] = useState({ text: '' }),
     [mitigationMessage, setMitigationMessage] = useState({ text: '' });
@@ -181,6 +184,12 @@ function Console() {
   useEffect(() => {
     async function sync() {
       if (document.hidden) return;
+      try {
+        const stage = await request('/api/workshop');
+        setAdvanced(stage.challenge >= 3);
+        if (stage.challenge >= 3 && !faultLock.current)
+          setResponseMode((await request('/api/response-fault')).mode);
+      } catch {}
       if (!faultLock.current) {
         try {
           setFaults(await request('/api/state'));
@@ -195,6 +204,7 @@ function Console() {
       } catch {}
     }
     const timer = setInterval(sync, 3000);
+    sync();
     document.addEventListener('visibilitychange', sync);
     window.addEventListener('focus', sync);
     return () => {
@@ -242,6 +252,7 @@ function Console() {
       const body = { action, proxy, latencyMs, jitterMs },
         result = await request('/api/action', body);
       setFaults(result.state);
+      if (action === 'reset') setResponseMode('none');
       setLastRequest({ path: '/api/action', body });
       setCommand(
         format(result.command.body ? faultConsole.request_with_body : faultConsole.request_line, {
@@ -269,6 +280,34 @@ function Console() {
   }
   function edit(name, key, value) {
     setDraft((previous) => ({ ...previous, [name]: { ...previous[name], [key]: value } }));
+  }
+  async function applyResponseFault(mode) {
+    if (faultLock.current) return;
+    faultLock.current = true;
+    setBusy(true);
+    try {
+      const body = { mode };
+      const result = await request('/api/response-fault', body);
+      setResponseMode(result.mode);
+      setLastRequest({ path: '/api/response-fault', body });
+      setCommand(
+        format(faultConsole.request_with_body, {
+          method: 'POST',
+          path: '/api/response-fault',
+          body: JSON.stringify(body, null, 2),
+        }),
+      );
+      setMessage({
+        text: format(faultConsole.response_fault_applied, {
+          fault: faultConsolePage.response_modes[result.mode],
+        }),
+      });
+    } catch (error) {
+      setMessage({ text: error.message, error: true });
+    } finally {
+      faultLock.current = false;
+      setBusy(false);
+    }
   }
   async function refreshMitigations() {
     if (mitigationLock.current) return;
@@ -321,10 +360,16 @@ function Console() {
         text:
           input.action === 'reset'
             ? faultConsole.defaults_restored_both_timeouts_are_3000_ms_and_both
-            : format(faultConsole.settings_applied, {
-                dependency:
-                  input.dependency === 'inventory' ? faultConsole.inventory : faultConsole.shipping,
-              }),
+            : input.action === 'validate-shipping'
+              ? format(faultConsole.validation_applied, {
+                  state: settings.shipping.validate ? faultConsole.on : faultConsole.off,
+                })
+              : format(faultConsole.settings_applied, {
+                  dependency:
+                    input.dependency === 'inventory'
+                      ? faultConsole.inventory
+                      : faultConsole.shipping,
+                }),
       });
     } catch (error) {
       setMitigationMessage({
@@ -519,6 +564,47 @@ function Console() {
               {faultConsolePage.reconnect}
             </button>
           </div>
+          {advanced && (
+            <section className="response-fault-controls">
+              <h2>{faultConsolePage.response_fault_title}</h2>
+              <p>{faultConsolePage.response_fault_description}</p>
+              <p className="meta">
+                {format(faultConsole.response_fault_active, {
+                  fault: faultConsolePage.response_modes[responseMode],
+                })}
+              </p>
+              <label htmlFor="response-fault">{faultConsolePage.response_fault_label}</label>
+              <select
+                id="response-fault"
+                value={responseDraft}
+                onChange={(event) => setResponseDraft(event.target.value)}
+              >
+                {['invalid-quotes', 'intermittent-errors'].map((mode) => (
+                  <option key={mode} value={mode}>
+                    {faultConsolePage.response_modes[mode]}
+                  </option>
+                ))}
+              </select>
+              <div className="actions">
+                <button
+                  type="button"
+                  className="action"
+                  disabled={busy}
+                  onClick={() => applyResponseFault(responseDraft)}
+                >
+                  {faultConsolePage.apply_response_fault}
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={busy}
+                  onClick={() => applyResponseFault('none')}
+                >
+                  {faultConsolePage.remove_response_fault}
+                </button>
+              </div>
+            </section>
+          )}
           <button
             disabled={busy}
             onClick={() => perform('reset')}
@@ -755,6 +841,44 @@ function Console() {
               </div>
             </form>
           </div>
+          {advanced && (
+            <section className="status-card validation-controls">
+              <h3>{faultConsolePage.validation_title}</h3>
+              <div className="control-label-row">
+                <label className="checkbox-label">
+                  <input
+                    id="shipping-validation"
+                    type="checkbox"
+                    checked={Boolean(draft.shipping.validate)}
+                    disabled={mitigationBusy || !active}
+                    onChange={(event) => edit('shipping', 'validate', event.target.checked)}
+                  />
+                  {faultConsolePage.enable_validation}
+                </label>
+                <ControlInfo
+                  id="shipping-validation-help"
+                  label={faultConsolePage.enable_validation}
+                >
+                  {faultConsolePage.validation_help}
+                </ControlInfo>
+              </div>
+              <p className="meta">
+                {format(faultConsole.validation_active, {
+                  state: active?.shipping.validate ? faultConsole.on : faultConsole.off,
+                })}
+              </p>
+              <button
+                type="button"
+                className="primary"
+                disabled={mitigationBusy || !active}
+                onClick={() =>
+                  applyMitigation({ action: 'validate-shipping', enabled: draft.shipping.validate })
+                }
+              >
+                {faultConsolePage.apply_validation}
+              </button>
+            </section>
+          )}
           <button
             onClick={() => applyMitigation({ action: 'reset' })}
             id="reset-mitigations"
@@ -784,6 +908,11 @@ function Console() {
         >
           <h2>{faultConsolePage.protection_help_title}</h2>
           <ul>
+            {advanced && (
+              <li>
+                <InlineText text={faultConsolePage.validation_summary} />
+              </li>
+            )}
             <li>
               <InlineText text={faultConsolePage.timeout_summary} />
             </li>

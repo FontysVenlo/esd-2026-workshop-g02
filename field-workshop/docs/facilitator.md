@@ -1,6 +1,6 @@
 # Facilitator notes
 
-Keep this file away from participants until after Assignment 3. At <http://localhost:8088>, participants submit notes, see an example solution beside their inputs, and unlock the next challenge. There is no correctness evaluation. Records are stored in each participant's browser, so ask them to download the JSON experiment record for review. The incident seed is an actual Toxiproxy state change, not hidden application state.
+Use this file to prepare and review the experiments. At <http://localhost:8088>, participants submit notes, see an example solution beside their inputs, and unlock the next challenge. There is no correctness evaluation. Records are stored in each participant's browser, so ask them to download the JSON experiment record for review. Network faults change Toxiproxy paths; response faults change the real primary Shipping service responses.
 
 ## Before participants arrive
 
@@ -17,28 +17,17 @@ Generate `northstar-workshop.zip` with `package-workshop.ps1` and distribute it 
 
 Numbers depend on the host and browser. Ask teams to compare same-route, same-fault windows, not a single sample. Grafana's one-minute rates need a fresh observation window after each change.
 
-## Seed Assignment 3
+## Challenge 3 — Invalid successful responses
 
-First restore clean proxy/configuration state: click **Clear all faults** in Fault injection and **Restore default settings** in Fallbacks & timeouts. Choose exactly one scenario. Tell participants only that there is a controlled incident. Participants can enable mitigations in the second tab without a terminal or container restart.
+No partner seed is needed. The participant records a baseline, then introduces **Invalid shipping responses**. The primary returns HTTP 200 while cycling per product through negative delivery days, empty fields, a negative price and a valid quote. The backup remains healthy.
 
-Seed only after the participant has opened Challenge 3 and recorded a baseline. The first time Challenges 2, 3 and 4 are opened in a browser, the workshop page clears all faults and restores default settings, which would remove an incident seeded earlier.
+Response-fault and quote-validation controls unlock when Challenge 3 or 4 is opened. **Shipping data quality** counts invalid quotes regardless of validation; blocked quotes increase only when enforcement is enabled. Validation marks an invalid quote unavailable without activating fallback or breaker. Healthy stock remains visible. Normal transport-failure fallbacks still behave as in Challenge 2.
 
-On Windows or Mac, the facilitator can seed scenario A in [Network Faults](http://localhost:8089) by choosing **Lighting inventory**, entering **1500 ms**, and clicking **Apply delay**. For scenario B, choose **Shipping** and click **Disconnect**. Keep the load profile running and use **Clear all faults** afterward. The PowerShell commands below are an alternative for scenario A if you want the toxic named `incident` rather than `workshop-latency`.
+## Challenge 4 — Partner competition
 
-**A — slow Inventory.** Using PowerShell, set `$proxyApi='http://localhost:8478'`, then:
+Open Challenge 4 before seeding: its first opening clears faults and restores protections. Seed one fault only after the investigator records a healthy baseline. Use delay, jitter or disconnect on Lighting/Shipping, or invalid quotes/intermittent errors on primary Shipping. Intermittent errors fail alternating calls per product, so keep background traffic fixed.
 
-```powershell
-$fault = @{ name='incident'; type='latency'; stream='downstream'; attributes=@{latency=1500; jitter=0} } | ConvertTo-Json -Depth 4
-Invoke-RestMethod -Method Post -Uri "$proxyApi/proxies/inventory/toxics" -ContentType 'application/json' -Body $fault -UserAgent 'field-workshop/1.0'
-```
-
-**B — unavailable Shipping.** With the same `$proxyApi`:
-
-```powershell
-Invoke-RestMethod -Method Post -Uri "$proxyApi/proxies/shipping" -ContentType 'application/json' -Body '{"enabled":false}' -UserAgent 'field-workshop/1.0'
-```
-
-Do not announce the selected scenario before teams submit their diagnosis. The scenarios are deterministic and fully local. A team can inspect Toxiproxy after stating its data-backed hypothesis.
+The injector says go after applying the fault. The investigator starts the manual timer and uses Storefront, Grafana and the mitigation tab. Keep fault controls/current state hidden by agreement; this is a local workshop, not a role-based examination system. Require a diagnosis and three consecutive acceptable refreshes while the fault remains active. Clear faults and restore defaults between rounds, swap roles and compare faults of similar difficulty. A shorter time alone does not prove a better design.
 
 ## Cleanup and safety
 

@@ -43,7 +43,7 @@
     "apply_delay_help": "**Apply delay:** `POST /proxies/{dependency}/toxics` with a downstream latency toxic. An existing console delay is updated at `POST /proxies/{dependency}/toxics/workshop-latency`.",
     "remove_delay_help": "**Remove delay:** `DELETE /proxies/{dependency}/toxics/workshop-latency`.",
     "disconnect_reconnect_help": "**Disconnect / reconnect:** `POST /proxies/{dependency}` with `{\"enabled\":false}` or `{\"enabled\":true}`.",
-    "clear_faults_help": "**Clear all faults:** `POST /reset`. Reconnects both paths and removes all toxics.",
+    "clear_faults_help": "**Clear all faults:** Reconnects service paths, removes delays and jitter, and clears Shipping response faults. Mitigation settings stay unchanged.",
     "refresh_help": "**Refresh:** `GET /proxies`. Reads state without changing it.",
     "example_1500_ms_inventory_delay": "Example: 1500 ms Lighting inventory delay",
     "post_proxies_inventory_toxics_content_type_application_json": "POST /proxies/inventory/toxics\nContent-Type: application/json\n\n{\"name\":\"workshop-latency\",\"type\":\"latency\",\"stream\":\"downstream\",\"attributes\":{\"latency\":1500,\"jitter\":0}}",
@@ -77,7 +77,22 @@
     "protection_help_title": "How the protections work",
     "timeout_summary": "**Timeout:** How long will this request wait? Stop waiting after the chosen time so the worker can handle another request.",
     "fallback_summary": "**Fallback:** What can we return after failure? Show unconfirmed stock or get a real quote from the backup carrier.",
-    "breaker_summary": "**Breaker:** Should we try the failing service again yet? Skip it for five seconds, then make one test call to check recovery."
+    "breaker_summary": "**Breaker:** Should we try the failing service again yet? Skip it for five seconds, then make one test call to check recovery.",
+    "response_fault_title": "Shipping response faults",
+    "response_fault_description": "Changes the primary carrier’s responses for all products. These controls are available from Challenge 3. Delay and connection faults remain independent.",
+    "response_fault_label": "Response fault",
+    "response_modes": {
+      "none": "No response fault",
+      "invalid-quotes": "Invalid shipping responses",
+      "intermittent-errors": "Intermittent Shipping errors (50%)"
+    },
+    "apply_response_fault": "Apply response fault",
+    "remove_response_fault": "Remove response fault",
+    "validation_title": "Response validation",
+    "enable_validation": "Validate shipping quotes",
+    "apply_validation": "Apply validation",
+    "validation_help": "Reject quotes with missing fields, a negative price or delivery days that are not positive whole numbers. Keep stock visible and mark the quote unavailable. This does not activate fallback or the breaker.",
+    "validation_summary": "**Validation:** Can we trust this successful response? Block invalid quotes before showing them to customers, independently of fallback and breaker."
   },
   "faultConsole": {
     "active_ms_timeout_fallback": "Active: {timeout} ms timeout · fallback {fallback} · breaker {breaker}",
@@ -103,7 +118,7 @@
     "choose_a_whole_number_timeout_from_50_to_5000": "Choose a whole-number timeout from 50 to 5000 ms.",
     "applying_settings_to_storefront": "Applying settings to Storefront…",
     "post_api_mitigations_content_type_application_json": "POST /api/mitigations\nContent-Type: application/json\n\n{body}",
-    "defaults_restored_both_timeouts_are_3000_ms_and_both": "Defaults restored: both timeouts are 3000 ms; fallbacks and circuit breakers are off. Network faults remain unchanged.",
+    "defaults_restored_both_timeouts_are_3000_ms_and_both": "Defaults restored: timeouts are 3000 ms; fallbacks, breakers and quote validation are off. Faults remain unchanged.",
     "settings_applied": "{dependency} settings applied. Storefront reflects that change without a restart.",
     "inventory": "Inventory",
     "shipping": "Shipping",
@@ -117,7 +132,11 @@
       "disconnect": "Change applied. {service} disconnected.",
       "reconnect": "Change applied. {service} reconnected.",
       "reset": "Change applied. All network faults cleared and service connections restored."
-    }
+    },
+    "response_fault_active": "Active response fault: {fault}",
+    "response_fault_applied": "Change applied. Primary Shipping: {fault}.",
+    "validation_active": "Active validation: {state}",
+    "validation_applied": "Shipping quote validation {state}."
   },
   "api": {
     "method_not_allowed": "Method not allowed",
@@ -140,6 +159,11 @@
     "timeout_must_be_a_whole_number_from_50_to_5000_ms": "Timeout must be a whole number from 50 to 5000 ms",
     "fallback_must_be_true_or_false": "Fallback must be true or false",
     "invalid_jitter": "Choose a whole-number jitter from 0 up to the base delay.",
-    "breaker_must_be_true_or_false": "Breaker must be true or false"
+    "breaker_must_be_true_or_false": "Breaker must be true or false",
+    "invalid_validation_setting": "Validation must be on or off.",
+    "response_fault_failed": "Cannot change or read Shipping response faults.",
+    "cannot_read_challenge": "Cannot read the current workshop challenge.",
+    "invalid_response_fault": "Choose an available Shipping response fault.",
+    "advanced_locked": "Open Challenge 3 or 4 to use response faults and validation."
   }
 }
