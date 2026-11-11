@@ -12,7 +12,7 @@ Generate `northstar-workshop.zip` with `package-workshop.ps1` and distribute it 
 - Healthy: all product and catalog views succeed quickly. The load profile supplies five requests per second: three lamp requests plus one each for chair and desk.
 - Inventory +1500 ms: repeated lamp calls can occupy both workers. Healthy products then queue or are rejected after a 1000 ms queue wait (queue bound: 12); catalog aggregation also waits for every product. Observe a full window, not a single refresh.
 - Inventory timeout 400 ms plus fallback: workers are released sooner. Failed product/dependency circuits pause calls for five seconds, then permit one probe. Lamp stock is unconfirmed and its availability action is disabled; chair and desk can stay live. A probe can cause a brief spike.
-- Shipping disconnected: stock remains live. With fallback off the delivery preview fails. With fallback on it returns all three stocks with unavailable quotes. Reconnect and verify all three quotes after recovery.
+- Shipping disconnected: stock remains live. With fallback off the delivery preview fails. With fallback on it obtains real quotes from backup Shipping: €4.90 and 5 days instead of the primary carrier’s €4.90 and 3 days. Reconnect and verify all three primary quotes after recovery.
 - The deliberately coupled baseline makes the dependency risk visible. Discuss alternatives such as independently rendering product cards, bulkheads, or partial aggregation as well as timeout/breaker/fallback. Do not present a circuit breaker as a fallback alone.
 
 Numbers depend on the host and browser. Ask teams to compare same-route, same-fault windows, not a single sample. Grafana's one-minute rates need a fresh observation window after each change.

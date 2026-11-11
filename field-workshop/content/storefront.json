@@ -21,7 +21,7 @@
     "connection_error": "Could not refresh the catalog. No current live result is shown.",
     "stale_notice": "Showing the last successful catalog. It is not a current confirmation; individual product checks remain available.",
     "explanation_title": "About availability and delivery",
-    "explanation": "Stock and delivery information are checked in real time. If the stock service fails or responds too slowly, stock availability cannot be checked for now. If the delivery service fails, no delivery date can be guaranteed. When updating information fails, the system continues showing the last available results until the services work again.",
+    "explanation": "Stock and delivery information are checked live. If current information cannot be confirmed, it is marked unavailable. Delivery time and shipping cost are shown when a current quote is available.",
     "chair": "Task Chair",
     "desk": "Writing Desk",
     "price": "€{price}",
@@ -40,8 +40,13 @@
   "storefront": {
     "in_stock": "{quantity} in stock",
     "stock_unconfirmed": "Stock unconfirmed",
-    "shipping_about_days": " · Shipping €{price} · About {days} days",
-    "shipping_quote_unavailable": " · Shipping quote unavailable"
+    "shipping_time": "Shipping time: About {days} days",
+    "shipping_cost": "Shipping cost: €{price}",
+    "shipping_time_unavailable": "Shipping time: Currently unavailable",
+    "shipping_cost_unavailable": "Shipping cost: Currently unavailable",
+    "shipping_time_not_checked": "Shipping time: Not checked yet",
+    "shipping_cost_not_checked": "Shipping cost: Not checked yet",
+    "last_delivery_check": "From the last delivery check"
   },
   "api": {
     "product_name": "Desk Lamp",

@@ -4,8 +4,9 @@ import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
 import { Metrics } from './metrics.mjs';
 
-export function createShippingServer() {
-  const metrics = new Metrics('shipping');
+export function createShippingServer(provider = process.env.SHIPPING_PROVIDER ?? 'primary') {
+  if (!['primary', 'backup'].includes(provider)) throw new Error('Unknown shipping provider');
+  const metrics = new Metrics(provider === 'backup' ? 'shipping-backup' : 'shipping');
   return http.createServer((req, res) => {
     const started = performance.now();
     const path = new URL(req.url, 'http://localhost').pathname;
@@ -14,7 +15,12 @@ export function createShippingServer() {
       res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4' });
       return res.end(metrics.render());
     }
-    if (path === '/quote') return respond(200, { method: 'standard', priceEur: 4.9, etaDays: 3 });
+    if (path === '/quote')
+      return respond(200, {
+        method: 'standard',
+        priceEur: 4.9,
+        etaDays: provider === 'backup' ? 5 : 3,
+      });
     return respond(404, { error: readPageCopy('storefront').api.not_found });
 
     function respond(status, body) {

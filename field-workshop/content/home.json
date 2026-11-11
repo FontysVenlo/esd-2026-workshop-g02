@@ -29,7 +29,7 @@
     "grafana_see_the_effect": "Grafana",
     "read_charts_of_response_times_failures_and_fallback_use": "Read charts of response times, failures, and fallback use.",
     "prometheus_inspect_the_measurements": "Prometheus",
-    "collects_service_metrics_every_five_seconds_and_supplies_grafana": "Collects service metrics every five seconds and supplies Grafana. Optional for raw queries; no input needed for the guided challenges.",
+    "collects_service_metrics_every_five_seconds_and_supplies_grafana": "Collects service metrics every two seconds and supplies Grafana. Optional for raw queries; no input needed for the guided challenges.",
     "welcome": "WELCOME",
     "northstar_supply": "Northstar Supply",
     "investigate_a_small_storefront_through_four_reliability_challenges_measure": "Follow the Chaos Engineering process. Compare the same incident before and after containment. Could you find and mitigate the fault?",
@@ -102,7 +102,7 @@
     {
       "id": "challenge-2",
       "title": "2 · A Shipping outage causes problems in the catalog",
-      "description": "Investigate a shipping dependency fault and recover from it with a timeout and fallback."
+      "description": "Restore delivery quotes using a backup carrier with the same price and a longer delivery time."
     },
     {
       "id": "challenge-3",

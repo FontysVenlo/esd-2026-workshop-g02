@@ -1,5 +1,5 @@
 import { InlineText } from './shared/inline-text.jsx';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import page from '../content/network-faults.json' with { type: 'json' };
 import { format } from '/copy.mjs';
@@ -18,6 +18,69 @@ async function request(path, body) {
   if (!response.ok)
     throw new Error(data.error ?? format(faultConsole.request_failed, { status: response.status }));
   return data;
+}
+function ControlInfo({ id, label, children }) {
+  const [open, setOpen] = useState(false);
+  const button = useRef(null);
+  const tooltip = useRef(null);
+  const [position, setPosition] = useState({ left: 12, top: 12 });
+  useLayoutEffect(() => {
+    if (!open) return;
+    function reposition() {
+      const anchor = button.current.getBoundingClientRect();
+      const box = tooltip.current.getBoundingClientRect();
+      const margin = 12;
+      const width = document.documentElement.clientWidth;
+      const height = window.innerHeight;
+      const preferredTop = anchor.bottom + 6;
+      const top =
+        preferredTop + box.height <= height - margin ? preferredTop : anchor.top - box.height - 6;
+      setPosition({
+        left: Math.max(margin, Math.min(anchor.left, width - box.width - margin)),
+        top: Math.max(margin, Math.min(top, height - box.height - margin)),
+      });
+    }
+    reposition();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [open, children]);
+  return (
+    <span
+      className="control-info"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        ref={button}
+        type="button"
+        className="control-info-button"
+        aria-label={format(faultConsolePage.control_info_label, { control: label })}
+        aria-describedby={id}
+        aria-expanded={open}
+        onFocus={() => setOpen(true)}
+        onClick={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') setOpen(false);
+        }}
+      >
+        {faultConsolePage.control_info_symbol}
+      </button>
+      <span
+        ref={tooltip}
+        style={position}
+        id={id}
+        role="tooltip"
+        className={open ? 'control-tooltip is-open' : 'control-tooltip'}
+      >
+        {children}
+      </span>
+    </span>
+  );
 }
 function FaultState({ state }) {
   if (!state) return <p>{faultConsole.current_state_is_unavailable}</p>;
@@ -193,10 +256,10 @@ function Console() {
         }),
       );
       setMessage({
-        text: format(faultConsole.change_applied_open_info_commands_to_inspect_it, {
-          method: result.command.method,
-          tab: faultConsolePage.info_commands,
-          path: result.command.path,
+        text: format(faultConsole.action_applied[action], {
+          service: proxy === 'inventory' ? faultConsolePage.inventory : faultConsolePage.shipping,
+          milliseconds: latencyMs,
+          jitter: jitterMs,
         }),
       });
     } catch (error) {
@@ -528,7 +591,15 @@ function Console() {
                     })
                   : faultConsole.active_settings_unavailable}
               </p>
-              <label htmlFor="inventory-timeout">{faultConsolePage.inventory_timeout_ms}</label>
+              <div className="control-label-row">
+                <label htmlFor="inventory-timeout">{faultConsolePage.inventory_timeout_ms}</label>
+                <ControlInfo
+                  id="inventory-timeout-help"
+                  label={faultConsolePage.inventory_timeout_ms}
+                >
+                  {faultConsolePage.control_help.inventory_timeout}
+                </ControlInfo>
+              </div>
               <input
                 id="inventory-timeout"
                 value={draft.inventory.timeoutMs}
@@ -540,26 +611,42 @@ function Console() {
                 required
                 disabled={mitigationBusy || !active}
               />
-              <label className="checkbox-label">
-                <input
-                  id="inventory-fallback"
-                  checked={draft.inventory.fallback}
-                  onChange={(event) => edit('inventory', 'fallback', event.target.checked)}
-                  type="checkbox"
-                  disabled={mitigationBusy || !active}
-                />{' '}
-                {faultConsolePage.enable_inventory_fallback}
-              </label>
-              <label className="checkbox-label">
-                <input
-                  id="inventory-breaker"
-                  checked={draft.inventory.breaker}
-                  onChange={(event) => edit('inventory', 'breaker', event.target.checked)}
-                  type="checkbox"
-                  disabled={mitigationBusy || !active}
-                />
-                {faultConsolePage.enable_inventory_breaker}
-              </label>
+              <div className="control-label-row">
+                <label className="checkbox-label">
+                  <input
+                    id="inventory-fallback"
+                    checked={draft.inventory.fallback}
+                    onChange={(event) => edit('inventory', 'fallback', event.target.checked)}
+                    type="checkbox"
+                    disabled={mitigationBusy || !active}
+                  />{' '}
+                  {faultConsolePage.enable_inventory_fallback}
+                </label>
+                <ControlInfo
+                  id="inventory-fallback-help"
+                  label={faultConsolePage.enable_inventory_fallback}
+                >
+                  {faultConsolePage.control_help.inventory_fallback}
+                </ControlInfo>
+              </div>
+              <div className="control-label-row">
+                <label className="checkbox-label">
+                  <input
+                    id="inventory-breaker"
+                    checked={draft.inventory.breaker}
+                    onChange={(event) => edit('inventory', 'breaker', event.target.checked)}
+                    type="checkbox"
+                    disabled={mitigationBusy || !active}
+                  />
+                  {faultConsolePage.enable_inventory_breaker}
+                </label>
+                <ControlInfo
+                  id="inventory-breaker-help"
+                  label={faultConsolePage.enable_inventory_breaker}
+                >
+                  {faultConsolePage.control_help.inventory_breaker}
+                </ControlInfo>
+              </div>
               <div className="actions">
                 <button className="primary" type="submit" disabled={mitigationBusy || !active}>
                   {faultConsolePage.apply_inventory_settings}
@@ -601,9 +688,6 @@ function Console() {
               className="status-card"
             >
               <h3>{faultConsolePage.shipping_delivery_quotes}</h3>
-              <p>
-                <InlineText text={faultConsolePage.shipping_fallback_behavior} />
-              </p>
               <p id="shipping-current" className="meta" role="status">
                 {active
                   ? format(faultConsole.active_ms_timeout_fallback, {
@@ -613,7 +697,15 @@ function Console() {
                     })
                   : faultConsole.active_settings_unavailable}
               </p>
-              <label htmlFor="shipping-timeout">{faultConsolePage.shipping_timeout_ms}</label>
+              <div className="control-label-row">
+                <label htmlFor="shipping-timeout">{faultConsolePage.shipping_timeout_ms}</label>
+                <ControlInfo
+                  id="shipping-timeout-help"
+                  label={faultConsolePage.shipping_timeout_ms}
+                >
+                  {faultConsolePage.control_help.shipping_timeout}
+                </ControlInfo>
+              </div>
               <input
                 id="shipping-timeout"
                 value={draft.shipping.timeoutMs}
@@ -625,26 +717,42 @@ function Console() {
                 required
                 disabled={mitigationBusy || !active}
               />
-              <label className="checkbox-label">
-                <input
-                  id="shipping-fallback"
-                  checked={draft.shipping.fallback}
-                  onChange={(event) => edit('shipping', 'fallback', event.target.checked)}
-                  type="checkbox"
-                  disabled={mitigationBusy || !active}
-                />{' '}
-                {faultConsolePage.enable_shipping_fallback}
-              </label>
-              <label className="checkbox-label">
-                <input
-                  id="shipping-breaker"
-                  checked={draft.shipping.breaker}
-                  onChange={(event) => edit('shipping', 'breaker', event.target.checked)}
-                  type="checkbox"
-                  disabled={mitigationBusy || !active}
-                />
-                {faultConsolePage.enable_shipping_breaker}
-              </label>
+              <div className="control-label-row">
+                <label className="checkbox-label">
+                  <input
+                    id="shipping-fallback"
+                    checked={draft.shipping.fallback}
+                    onChange={(event) => edit('shipping', 'fallback', event.target.checked)}
+                    type="checkbox"
+                    disabled={mitigationBusy || !active}
+                  />{' '}
+                  {faultConsolePage.enable_shipping_fallback}
+                </label>
+                <ControlInfo
+                  id="shipping-fallback-help"
+                  label={faultConsolePage.enable_shipping_fallback}
+                >
+                  {faultConsolePage.control_help.shipping_fallback}
+                </ControlInfo>
+              </div>
+              <div className="control-label-row">
+                <label className="checkbox-label">
+                  <input
+                    id="shipping-breaker"
+                    checked={draft.shipping.breaker}
+                    onChange={(event) => edit('shipping', 'breaker', event.target.checked)}
+                    type="checkbox"
+                    disabled={mitigationBusy || !active}
+                  />
+                  {faultConsolePage.enable_shipping_breaker}
+                </label>
+                <ControlInfo
+                  id="shipping-breaker-help"
+                  label={faultConsolePage.enable_shipping_breaker}
+                >
+                  {faultConsolePage.control_help.shipping_breaker}
+                </ControlInfo>
+              </div>
               <div className="actions">
                 <button className="primary" type="submit" disabled={mitigationBusy || !active}>
                   {faultConsolePage.apply_shipping_settings}
@@ -679,6 +787,18 @@ function Console() {
           aria-labelledby="info-tab"
           hidden={tab !== 'info'}
         >
+          <h2>{faultConsolePage.protection_help_title}</h2>
+          <ul>
+            <li>
+              <InlineText text={faultConsolePage.timeout_summary} />
+            </li>
+            <li>
+              <InlineText text={faultConsolePage.fallback_summary} />
+            </li>
+            <li>
+              <InlineText text={faultConsolePage.breaker_summary} />
+            </li>
+          </ul>
           <h2>{faultConsolePage.underlying_api_commands}</h2>
           <p>{faultConsolePage.info_tab_for_your_info}</p>
           <p>{faultConsolePage.these_controls_send_http_requests_to_toxiproxy_the_storefront}</p>

@@ -85,7 +85,7 @@
   ],
   "solution": [
     "Slow Lighting inventory can delay both catalog views and occupy workers, causing healthy chair/desk requests to wait or fail.",
-    "A shared Shipping disconnect breaks delivery previews across products. Stock checks still work. Shipping fallback keeps stock visible with every quote unavailable.",
+    "A shared Shipping disconnect breaks delivery previews across products. Stock checks still work. Shipping fallback obtains backup quotes with longer delivery times at the same price.",
     "A timeout bounds waiting; the breaker pauses repeated failures; fallback preserves partial results. Choose from the evidence.",
     "Retest the same fault and traffic. State what improved and what remains missing, then restore all products."
   ],

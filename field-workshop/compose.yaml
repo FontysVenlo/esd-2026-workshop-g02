@@ -44,11 +44,20 @@ services:
     expose: ["8080"]
     healthcheck: *app-healthcheck
 
+  shipping-backup:
+    build: .
+    command: ["node", "services/shipping.mjs"]
+    environment:
+      PORT: 8080
+      SHIPPING_PROVIDER: backup
+    expose: ["8080"]
+    healthcheck: *app-healthcheck
+
   toxiproxy:
     image: ghcr.io/shopify/toxiproxy:2.12.0
     ports:
       - "127.0.0.1:8478:8474"
-    expose: ["8666", "8667", "8668", "8670"]
+    expose: ["8666", "8667", "8668", "8670", "8671"]
 
   proxy-init:
     build: .
@@ -65,6 +74,7 @@ services:
       PORT: 8080
       LIGHTING_INVENTORY_URL: http://toxiproxy:8666
       SHIPPING_URL: http://toxiproxy:8667
+      BACKUP_SHIPPING_URL: http://toxiproxy:8671
       DESKS_INVENTORY_URL: http://toxiproxy:8670
       SEATING_INVENTORY_URL: http://toxiproxy:8668
       INVENTORY_TIMEOUT_MS: ${INVENTORY_TIMEOUT_MS:-3000}
@@ -75,6 +85,8 @@ services:
       MITIGATION_PORT: 8081
     expose: ["8081"]
     depends_on:
+      shipping-backup:
+        condition: service_healthy
       lighting-inventory:
         condition: service_healthy
       seating-inventory:
@@ -134,6 +146,7 @@ services:
   grafana:
     image: grafana/grafana:11.2.0
     environment:
+      GF_DASHBOARDS_MIN_REFRESH_INTERVAL: 2s
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
       GF_AUTH_DISABLE_LOGIN_FORM: "true"

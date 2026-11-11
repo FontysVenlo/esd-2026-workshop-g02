@@ -86,7 +86,7 @@
   "solution": [
     "A valid experiment compares healthy, faulted and mitigated phases under identical fault and traffic, showing wider impact and the remaining trade-off.",
     "Example: delay shared Shipping by 1500 ms. Measure delivery previews with default settings, then repeat with a 400 ms Shipping timeout and fallback enabled.",
-    "A shorter timeout can free workers sooner. During the delay, all three quotes may be unavailable while stock remains visible. Count usable quotes alongside response time and rejections.",
+    "A shorter timeout can free workers sooner. During the delay, quotes can switch to the slower-delivery backup carrier at the same price. Compare carrier, delivery days, response time and rejections.",
     "Distinguish catalog failure from worker pressure. Restore defaults, clear faults and verify live results."
   ],
   "text": {

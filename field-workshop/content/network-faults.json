@@ -16,7 +16,7 @@
     "apply_a_fault": "Apply a fault",
     "dependency": "Dependency",
     "inventory": "Lighting inventory",
-    "shipping": "Shipping (all products)",
+    "shipping": "Primary Shipping (all products)",
     "response_delay_ms": "Response delay (ms)",
     "apply_delay": "Apply delay",
     "remove_delay": "Remove delay",
@@ -24,7 +24,7 @@
     "reconnect": "Reconnect",
     "clear_all_faults": "Clear all faults",
     "change_the_shop_s_response": "Change the shop's response",
-    "mitigation_overview": "A **timeout** bounds the wait for one dependency call. Configure **fallback** and **circuit breaker** independently below.",
+    "mitigation_overview": "A **timeout** limits waiting, a **fallback** returns an alternative result, and a **breaker** pauses repeated attempts.",
     "refresh_settings": "Refresh settings",
     "inventory_stock_checks": "Inventory Service",
     "inventory_fallback_behavior": "****",
@@ -33,7 +33,6 @@
     "apply_inventory_settings": "Apply Inventory settings",
     "use_challenge_1_settings": "Use Challenge 1 settings",
     "shipping_delivery_quotes": "Shipping Service",
-    "shipping_fallback_behavior": "****",
     "shipping_timeout_ms": "Shipping timeout (ms)",
     "enable_shipping_fallback": " Enable Shipping fallback",
     "apply_shipping_settings": "Apply Shipping settings",
@@ -61,10 +60,24 @@
     "apply_a_fault_or_mitigation_to_see_the_equivalent": "Apply a fault or mitigation to see the equivalent command here.",
     "jitter_ms": "Delay variation ± (ms)",
     "jitter_help": "Jitter varies the injected delay on each response: 1000 ms delay with 800 ms jitter adds between 200 and 1800 ms. Use 0 for a fixed delay.",
-    "breaker_explanation": "A circuit breaker pauses calls to a failing dependency for five seconds, then allows one probe to check recovery.",
-    "fallback_explanation": "A fallback changes the result shown to customers when a call fails or is skipped, such as unconfirmed stock or an unavailable shipping quote.",
+    "breaker_explanation": "After a call fails, a breaker skips that dependency for five seconds, then tries once to see whether it has recovered.",
+    "fallback_explanation": "A fallback returns an alternative after a failed call: unconfirmed stock or a backup delivery quote. Further requests still try the original service unless the breaker pauses them.",
     "enable_inventory_breaker": " Enable Inventory circuit breaker",
-    "enable_shipping_breaker": " Enable Shipping circuit breaker"
+    "enable_shipping_breaker": " Enable Shipping circuit breaker",
+    "control_info_symbol": "i",
+    "control_info_label": "Explain {control}",
+    "control_help": {
+      "inventory_timeout": "How long should a stock check wait? After this time, stop waiting and release the worker. A short limit may also cut off a slow valid response.",
+      "inventory_fallback": "If stock cannot be checked, show “Stock unconfirmed” so the catalog can still load. Each new request still tries Inventory unless the breaker pauses it.",
+      "inventory_breaker": "After a failed stock check, skip that product’s Inventory calls for five seconds, then try once again. This keeps repeated slow calls from occupying workers; fallback decides what customers see instead.",
+      "shipping_timeout": "How long should each carrier call wait? After this time, stop waiting. If fallback is enabled, then try the backup carrier with its own time limit.",
+      "shipping_fallback": "If the primary carrier fails, ask the backup for a real quote with longer delivery. Each new request still tries the primary unless the breaker pauses it.",
+      "shipping_breaker": "After the primary fails, skip it for five seconds, then try once again. With fallback enabled, requests go straight to the backup during that pause, avoiding another wait for the primary."
+    },
+    "protection_help_title": "How the protections work",
+    "timeout_summary": "**Timeout:** How long will this request wait? Stop waiting after the chosen time so the worker can handle another request.",
+    "fallback_summary": "**Fallback:** What can we return after failure? Show unconfirmed stock or get a real quote from the backup carrier.",
+    "breaker_summary": "**Breaker:** Should we try the failing service again yet? Skip it for five seconds, then make one test call to check recovery."
   },
   "faultConsole": {
     "active_ms_timeout_fallback": "Active: {timeout} ms timeout · fallback {fallback} · breaker {breaker}",
@@ -85,7 +98,6 @@
     "sending_change_to_toxiproxy": "Sending change to Toxiproxy…",
     "request_with_body": "{method} {path}\nContent-Type: application/json\n\n{body}",
     "request_line": "{method} {path}",
-    "change_applied_open_info_commands_to_inspect_it": "Change applied. {method} {path}. Open “{tab}” to inspect it.",
     "refresh_the_state_before_trying_again": "{error} Refresh the state before trying again.",
     "reading_active_storefront_settings": "Reading active Storefront settings…",
     "refresh_settings_to_try_again": "{error} Refresh settings to try again.",
@@ -99,7 +111,14 @@
     "refresh_settings_to_check_the_active_state_before_trying": "{error} Refresh settings to check the active state before trying again.",
     "invoke_restmethod_method_post_uri_contenttype_application_json_body": "Invoke-RestMethod -Method Post -Uri '{url}' -ContentType 'application/json' -Body '{body}'",
     "curl_command": "curl -f -sS -X POST '{url}' -H 'Content-Type: application/json' --data '{body}'",
-    "invalid_jitter": "Choose a whole-number jitter from 0 up to the base delay."
+    "invalid_jitter": "Choose a whole-number jitter from 0 up to the base delay.",
+    "action_applied": {
+      "set-latency": "Change applied. {milliseconds} ms delay with ±{jitter} ms jitter applied to {service}.",
+      "remove-latency": "Change applied. Delay and jitter removed from {service}.",
+      "disconnect": "Change applied. {service} disconnected.",
+      "reconnect": "Change applied. {service} reconnected.",
+      "reset": "Change applied. All network faults cleared and service connections restored."
+    }
   },
   "api": {
     "method_not_allowed": "Method not allowed",

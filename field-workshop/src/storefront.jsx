@@ -20,6 +20,7 @@ function usePolling(path, interval, enabled = true) {
     error: null,
     pending: true,
     milliseconds: null,
+    quotes: {},
   });
   const [revision, setRevision] = useState(0);
   useEffect(() => {
@@ -37,16 +38,24 @@ function usePolling(path, interval, enabled = true) {
         const data = await response.json();
         if (!response.ok) throw Object.assign(new Error(data.error), { status: response.status });
         if (!stopped)
-          setState({
+          setState((previous) => ({
             data,
             error: null,
             pending: false,
             milliseconds: Math.round(performance.now() - started),
-          });
+            quotes: path.endsWith('preview=true')
+              ? Object.fromEntries(data.products.map((item) => [item.product.sku, item.shipping]))
+              : previous.quotes,
+          }));
       } catch (error) {
         if (!stopped)
           setState((previous) => ({
             ...previous,
+            quotes: path.endsWith('preview=true')
+              ? Object.fromEntries(
+                  products.map((product) => [product.sku, { source: 'unavailable' }]),
+                )
+              : previous.quotes,
             error,
             pending: false,
             milliseconds: Math.round(performance.now() - started),
@@ -67,7 +76,14 @@ function usePolling(path, interval, enabled = true) {
   return [state, () => setRevision((value) => value + 1)];
 }
 
-function ProductCard({ product, result, stale }) {
+function ProductCard({
+  product,
+  result,
+  stale,
+  preview = false,
+  shippingQuote = result?.shipping,
+  shippingStale = stale,
+}) {
   const [check, setCheck] = useState(null);
   const [busy, setBusy] = useState(false);
   const controller = useRef(null);
@@ -79,6 +95,7 @@ function ProductCard({ product, result, stale }) {
       );
   }, [result]);
   const unconfirmed = result?.inventory.source !== 'live';
+  const limited = Boolean(result && (unconfirmed || result.shipping?.source === 'unavailable'));
   async function inspect(preview) {
     if (busy) return;
     controller.current = new AbortController();
@@ -105,15 +122,30 @@ function ProductCard({ product, result, stale }) {
     value?.inventory.source === 'live'
       ? format(storefront.in_stock, { quantity: value.inventory.quantity })
       : storefront.stock_unconfirmed;
-  const shipping = (value) =>
-    value.shipping.source === 'live'
-      ? format(storefront.shipping_about_days, {
-          price: value.shipping.priceEur.toFixed(2),
-          days: value.shipping.etaDays,
-        })
-      : storefront.shipping_quote_unavailable;
+  const shipping = (value, staleQuote = false) => {
+    const quote = value?.shipping;
+    const live = !staleQuote && ['live', 'backup'].includes(quote?.source);
+    return (
+      <>
+        <span className="shipping-line">
+          {live
+            ? format(storefront.shipping_time, { days: quote.etaDays })
+            : quote || staleQuote
+              ? storefront.shipping_time_unavailable
+              : storefront.shipping_time_not_checked}
+        </span>
+        <span className="shipping-line">
+          {live
+            ? format(storefront.shipping_cost, { price: quote.priceEur.toFixed(2) })
+            : quote || staleQuote
+              ? storefront.shipping_cost_unavailable
+              : storefront.shipping_cost_not_checked}
+        </span>
+      </>
+    );
+  };
   return (
-    <article className={`react-product ${stale ? 'stale' : result?.degraded ? 'degraded' : ''}`}>
+    <article className={`react-product ${stale ? 'stale' : limited ? 'degraded' : ''}`}>
       <div className="product-photo">
         <img src={product.image} alt={product.name} width="1254" height="1254" decoding="async" />
       </div>
@@ -124,19 +156,20 @@ function ProductCard({ product, result, stale }) {
         </div>
         <p className="meta">{product.sku}</p>
         <div
-          className={`product-state ${stale ? 'state-stale' : result?.degraded ? 'state-limited' : 'state-live'}`}
+          className={`product-state ${stale ? 'state-stale' : limited ? 'state-limited' : 'state-live'}`}
         >
           {stale
             ? catalog.stale
             : !result
               ? catalog.waiting
-              : result.degraded
+              : limited
                 ? catalog.limited
                 : catalog.live}
         </div>
         <div className="product-readings">
           <p>{result ? stock(result) : catalog.waiting}</p>
-          <p>{result?.shipping ? shipping(result) : catalog.stock_only}</p>
+          <p>{shipping({ shipping: shippingQuote }, shippingStale)}</p>
+          {!preview && shippingQuote && <p className="meta">{storefront.last_delivery_check}</p>}
         </div>
         <div className="product-buttons">
           <button
@@ -256,6 +289,9 @@ function Storefront() {
               product={product}
               result={state.data?.products.find((result) => result.product.sku === product.sku)}
               stale={stale}
+              preview={preview}
+              shippingQuote={state.quotes[product.sku] ?? null}
+              shippingStale={preview && stale}
             />
           ))}
         </div>

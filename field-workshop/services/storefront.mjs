@@ -44,6 +44,8 @@ export function createStorefrontServer(config = {}) {
         config.inventoryUrl ??
         'http://localhost:8670',
     },
+    backupShippingUrl:
+      config.backupShippingUrl ?? process.env.BACKUP_SHIPPING_URL ?? 'http://localhost:8671',
     shippingUrl: config.shippingUrl ?? process.env.SHIPPING_URL ?? 'http://localhost:8667',
     inventoryTimeoutMs: Number(
       config.inventoryTimeoutMs ?? process.env.INVENTORY_TIMEOUT_MS ?? 3000,
@@ -135,6 +137,17 @@ export function createStorefrontServer(config = {}) {
     } catch (error) {
       if (!policy.fallback) throw error;
       metrics.fallback('shipping');
+      try {
+        const quote = await dependency(
+          'shipping-backup',
+          settings.backupShippingUrl,
+          '/quote?sku=' + sku,
+          policy.timeoutMs,
+        );
+        return { ...quote, source: 'backup' };
+      } catch {
+        // Both providers are unavailable. Preserve stock and mark the quote missing.
+      }
       return {
         method: null,
         priceEur: null,

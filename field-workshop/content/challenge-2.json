@@ -25,36 +25,10 @@
   },
   "title": "Keep the catalog usable during a Shipping outage",
   "level": "Intermediate",
-  "scenario": "The technical team reports that Shipping is sometimes unreachable. During these outages, the shop cannot retrieve current shipping prices or delivery estimates. All three inventory services still respond, so product availability can still be checked.",
-  "why": "Customers should still be able to browse products and check stock during an outage. Management wants the shop to clearly identify unavailable shipping information so customers can have a better understanding of the situation.",
-  "reproduce": "Disconnect Shipping in Network Faults. Investigate the impact and introduce a fallback.",
-  "assignment": "Can customers see live stock for every product while every delivery estimate is unavailable?",
-  "tasks": [
-    {
-      "title": "Compare both healthy catalog views",
-      "instruction": "Refresh availability and preview deliveries. Record all products, timings and queue state. Set an abort condition and predict which view Shipping affects."
-    },
-    {
-      "title": "Disconnect shared Shipping",
-      "instruction": "Disconnect Shipping and repeat both views. Record catalog failure, working availability and Shipping errors. Check whether the queue actually fills."
-    },
-    {
-      "title": "Identify the coupling",
-      "instruction": "Check Shipping failures and queue size in Grafana. Compare stock-only results with delivery previews for the lamp, chair and desk."
-    },
-    {
-      "title": "Enable fallback during the outage",
-      "instruction": "Leave Shipping disconnected and apply Challenge 2 settings. Preview all deliveries again. Record the stock and quote status for each product and watch fallback activity."
-    },
-    {
-      "title": "Reconnect and verify recovery",
-      "instruction": "Reconnect Shipping with fallback still enabled. After the five-second cooldown, refresh to allow a recovery probe. Refresh again and verify three live quotes. Restore default settings and submit your observations."
-    }
-  ],
-  "mitigationHelp": {
-    "description": "Shipping fallback returns an unavailable quote. The shared breaker limits repeated calls during the outage.",
-    "instruction": "Apply Challenge 2 settings while Shipping is disconnected."
-  },
+  "scenario": "A team of technicians found that the shipping service is sometimes unavailable. They are currently investigation the cause of the outage. For now, management wants a quick fix until the main cause is solved.",
+  "why": "Customers have already reported missing shipping information in tge last weeks. Customers need a usable delivery option to plan their purchase. Otherwise they cant buy the products, which would lead to a monetary loss. .",
+  "reproduce": "Disconnect Primary Shipping in Network Faults. Compare availability and delivery previews before and after applying a mitigation. You should not solve the cause but try to handle it better in case of future service unavailability.",
+  "assignment": "Can you restore delivery information during a primary Shipping outage?",
   "fields": [
     {
       "key": "steadyState",
@@ -63,39 +37,37 @@
     },
     {
       "key": "hypothesis",
-      "label": "Hypothesis, blast radius, and abort condition",
-      "prompt": "What could be the impact of an unavailable shipping service? Which functions will fail?"
+      "label": "Hypothesis and fault injection",
+      "prompt": "What could be the impact of an unavailable shipping service? Which functions will fail? Record your hypothesis and disconnect the shipping service."
     },
     {
       "key": "faultEvidence",
-      "label": "Outage evidence",
-      "prompt": "Disconnect shared Shipping. Compare availability and delivery for all products. Record catalog status, queue size and new rejections."
+      "label": "Fault evidence",
+      "prompt": "Investigate delivery information for all products. Record status, queue size and new rejections."
     },
     {
       "key": "mitigation",
       "label": "Mitigation and reason",
-      "prompt": "Why allow an unavailable quote? Explain timeout, breaker and fallback separately."
+      "prompt": "What did you configure, and how does it restore a usable delivery option? Distinguish fallback, timeout and breaker."
     },
     {
       "key": "validation",
       "label": "Same-outage validation",
-      "prompt": "Record results under the same outage. Include all products and catalog time/status; record queue size and new rejections from Grafana over the same window."
+      "prompt": "With Primary Shipping still disconnected, compare quotes for all three products: carrier, shipping price, delivery time and catalog response time."
     },
     {
       "key": "conclusion",
       "label": "Blast-radius conclusion and cleanup",
-      "prompt": "Did the impact shrink? What is still missing? Confirm cleanup."
+      "prompt": "What did the customer regain, what trade-off remains, and how did you verify primary-carrier recovery?"
     }
   ],
   "solution": [
-    "Stock checks use the category inventory services. Delivery previews also need shared Shipping.",
-    "With fallback off, the unavailable quotes cause the delivery request to fail. With fallback on, all three stocks remain visible and all three quotes are marked unavailable.",
-    "The shared breaker pauses repeated Shipping calls for five seconds before allowing one probe. A fast disconnect can leave the worker queue empty.",
-    "Reconnecting restores the network path. A successful probe allows live quotes on subsequent previews."
+    "The primary outage makes delivery requests fail while stock services remain healthy.",
+    "Shipping fallback calls a separate carrier and returns real quotes for all three products: €4.90 and 5 days, compared with €4.90 and 3 days normally.",
+    "The breaker can pause primary calls for five seconds while backup quotes continue. The timeout bounds each provider call.",
+    "Reconnect Primary Shipping, allow a probe if needed, and refresh to verify normal delivery estimates return. If both providers fail, the shop explicitly marks quotes unavailable."
   ],
   "text": {
-    "your_five_steps": "Your tasks",
-    "open_fallbacks_timeouts": "Open Fallbacks & timeouts ↗",
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",
     "the_customer_problem": "The customer problem",
     "why_this_matters": "Why this matters",

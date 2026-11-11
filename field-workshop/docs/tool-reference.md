@@ -6,7 +6,7 @@ These are real tool/API operations. The [Network Faults console](http://localhos
 
 The Storefront now has three products, two shared workers and a complete-catalog response. `/api/catalog` checks all stock; `/api/catalog?preview=true` also requests quotes. `/api/product?sku=CHAIR-02` and `?sku=DESK-03` check the healthy comparison products individually. `/api/system` reports real worker occupancy, queued requests, cumulative rejections and product/dependency circuits without consuming a worker.
 
-Fault controls target Lighting inventory and shared Shipping (`inventory` and `shipping`). The inventory proxy points to Lighting inventory. Independent seating-inventory and desks-inventory proxies point to the other two stock services. All three products use shared Shipping. Do not fault the healthy comparison branches. The standard load profile sends five requests per second and is needed to demonstrate sustained shared-capacity pressure.
+Fault controls target Lighting inventory and shared Shipping (`inventory` and `shipping`). The inventory proxy points to Lighting inventory. Independent seating-inventory and desks-inventory proxies point to the other two stock services. All three products use shared Primary Shipping. With Shipping fallback enabled, failed primary requests use the separate shipping-backup provider. Do not fault the healthy comparison branches. The standard load profile sends five requests per second and is needed to demonstrate sustained shared-capacity pressure.
 
 A fallback is the response the shop uses when a dependency cannot answer. The workshop already implements it; you do not need to write code. Inventory fallback returns **Stock unconfirmed**. Shipping fallback keeps the preview available while reporting **Shipping quote unavailable**. Neither invents stock or delivery information.
 
@@ -16,7 +16,7 @@ Open **Fallbacks & timeouts**, the second tab in [Network Faults](http://localho
 
 ## What is Prometheus for?
 
-Prometheus collects the services' counters and timing measurements every five seconds and stores them as time series. Grafana queries those measurements and presents charts. You can complete the guided experiments using Grafana; opening Prometheus is optional for inspecting raw measurements or writing queries. It does not inject faults or enable fallbacks.
+Prometheus collects the services' counters and timing measurements every two seconds and stores them as time series. Grafana queries those measurements and presents charts. You can complete the guided experiments using Grafana; opening Prometheus is optional for inspecting raw measurements or writing queries. It does not inject faults or enable fallbacks.
 
 ## Start and observe
 
@@ -98,6 +98,6 @@ sum by (dependency) (rate(workshop_fallbacks_total[1m]))
 
 Use Storefront for customer results and Grafana for internal monitoring. The main view shows **Shared workers and queue**, **Rejected since restart**, **Product p95 latency**, **Dependency p95 latency**, **Dependency outcomes**, and **Fallback activity**. Expand **More diagnostics** for circuit state, retry delays, rejection rates and additional request metrics. Compare fresh, equal one-minute windows rather than lifetime totals.
 
-**Open product dependency circuits** counts paused/probing paths. **Dependency circuit state** identifies each product/dependency: 0 closed, 1 paused, 2 probing. **Dependency retry delay** shows remaining cooldown at each scrape. Metrics are sampled every five seconds, so brief queue peaks or recovery probes can be missed; retry delay is not a live countdown. Closed paths explicitly return to zero.
+**Open product dependency circuits** counts paused/probing paths. **Dependency circuit state** identifies each product/dependency: 0 closed, 1 paused, 2 probing. **Dependency retry delay** shows remaining cooldown at each scrape. Metrics are sampled every two seconds, so brief queue peaks or recovery probes can be missed; retry delay is not a live countdown. Closed paths explicitly return to zero.
 
-**Product p95 latency** includes queue time; dependency latency measures the admitted backend call. A fast Shipping failure can break the catalog without queue pressure. After cleanup, allow in-flight requests and one breaker cooldown to finish.
+**Product p95 latency** includes queue time; dependency latency measures the admitted backend call. A fast Primary Shipping failure can break delivery previews without queue pressure. Shipping fallback obtains a real backup quote with the same price and longer delivery. After cleanup, allow in-flight requests and one breaker cooldown to finish.

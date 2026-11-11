@@ -26,11 +26,11 @@ Each page JSON supplies its visible labels, prompts, browser title and messages.
 
 ## What runs
 
-Storefront shows customer results; internal worker, queue, rejection and circuit monitoring lives in Grafana. The dashboard includes current counts, history, per-product dependency state and sampled retry delays. Prometheus scrapes every five seconds, so it can miss brief transitions. Rejection totals reset on Storefront restart; compare fresh equal windows using the rejection rate or estimated one-minute increase.
+Storefront shows customer results; internal worker, queue, rejection and circuit monitoring lives in Grafana. The dashboard includes current counts, history, per-product dependency state and sampled retry delays. Prometheus scrapes every two seconds, so it can miss brief transitions. Rejection totals reset on Storefront restart; compare fresh equal windows using the rejection rate or estimated one-minute increase.
 
 `Browser → Storefront → Toxiproxy → Inventory / Shipping`
 
-The Storefront cannot contact either dependency directly. Toxiproxy routes stock checks to three separate inventory services: Lighting (lamp), Seating (chair), and Desks (desk). Shipping is shared, through one proxy for all three products. All products share two Storefront workers, with a bounded queue (12 waiting operations, 1000 ms queue deadline). The complete catalog requires every product result unless fallback is enabled. Prometheus scrapes real application metrics every five seconds; Grafana is provisioned with a local dashboard. No CDN or cloud account is used.
+The Storefront cannot contact either dependency directly. Toxiproxy routes stock checks to three separate inventory services: Lighting (lamp), Seating (chair), and Desks (desk). Primary Shipping is shared by all three products; a separate backup carrier provides slower delivery at the same shipping price. Both carriers have separate Toxiproxy routes. All products share two Storefront workers, with a bounded queue (12 waiting operations, 1000 ms queue deadline). The complete catalog requires every product result unless fallback is enabled. Prometheus scrapes real application metrics every two seconds; Grafana is provisioned with a local dashboard. No CDN or cloud account is used.
 
 | Tool | Local address | What you use it for |
 | --- | --- | --- |
@@ -83,3 +83,5 @@ docker compose config --quiet
 ```
 
 `pnpm test` builds the frontend first, then runs Node tests using the standard library and temporary loopback servers. For direct Node testing, run `node build.mjs` before `node --test tests/*.test.mjs`. Build output is also required before starting the services directly with Node. Docker is needed for the complete Toxiproxy/Prometheus/Grafana path.
+
+Grafana’s refresh menu offers 2 seconds, 5 seconds and slower intervals. The dashboard opens at 5 seconds; select 2 seconds when you want faster updates. Prometheus collects measurements every 2 seconds. One-minute rate charts still use a rolling minute of data.

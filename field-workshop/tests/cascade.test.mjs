@@ -1,3 +1,4 @@
+import { createShippingServer } from '../services/shipping.mjs';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { afterEach, test } from 'node:test';
@@ -111,8 +112,8 @@ test('two slow lamp calls cause a healthy product to queue and reject; mitigatio
   for (const resolve of pending.splice(0)) resolve();
 });
 
-test('shared Shipping outage preserves stock with fallback and quotes recover after reconnect', async () => {
-  let offline = true;
+test('primary Shipping outage fails over to equal-price longer delivery and recovers', async () => {
+  let offline = false;
   const shipping = await serve(
     dependency(async (_req, res) => {
       if (offline) {
@@ -121,17 +122,24 @@ test('shared Shipping outage preserves stock with fallback and quotes recover af
       }
     }),
   );
+  const backup = await serve(createShippingServer('backup'));
   const healthy = await serve(dependency(async () => {}));
   const mitigations = createMitigations();
   const base = await serve(
     createStorefrontServer({
       inventoryUrl: healthy,
       shippingUrl: shipping,
+      backupShippingUrl: backup,
       healthyInventoryUrl: healthy,
       mitigations,
       breaker: { cooldownMs: 20 },
     }),
   );
+  const baseline = await (await fetch(`${base}/api/catalog?preview=true`)).json();
+  assert.ok(
+    baseline.products.every((p) => p.shipping.priceEur === 4.9 && p.shipping.etaDays === 3),
+  );
+  offline = true;
   assert.equal((await fetch(`${base}/api/catalog?preview=true`)).status, 503);
   assert.equal((await fetch(`${base}/api/catalog`)).status, 200);
   assert.equal((await fetch(`${base}/api/order-preview?sku=CHAIR-02`)).status, 503);
@@ -148,9 +156,10 @@ test('shared Shipping outage preserves stock with fallback and quotes recover af
   assert.equal(catalog.products.length, 3);
   assert.deepEqual(
     catalog.products.map((result) => result.shipping.source),
-    ['unavailable', 'unavailable', 'unavailable'],
+    ['backup', 'backup', 'backup'],
   );
-  assert.equal(catalog.products[0].shipping.priceEur, null);
+  assert.ok(catalog.products.every((p) => p.shipping.priceEur === 4.9 && p.shipping.etaDays === 5));
+  assert.ok(catalog.products.every((p) => p.degraded));
   assert.ok(catalog.products.every((result) => result.inventory.source === 'live'));
   assert.deepEqual(
     catalog.circuits.map((c) => c.key),

@@ -1,5 +1,6 @@
 global:
-  scrape_interval: 5s
+  scrape_interval: 2s
+  scrape_timeout: 2s
 
 scrape_configs:
   - job_name: storefront
@@ -17,3 +18,6 @@ scrape_configs:
   - job_name: shipping
     static_configs:
       - targets: ["shipping:8080"]
+  - job_name: shipping-backup
+    static_configs:
+      - targets: ["shipping-backup:8080"]

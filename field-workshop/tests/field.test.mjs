@@ -144,10 +144,12 @@ test('proxy initialization creates only fixed local service routes and is idempo
     'inventory',
     'seating-inventory',
     'shipping',
+    'shipping-backup',
   ]);
   assert.equal(created['seating-inventory'].upstream, 'seating-inventory:8080');
   assert.equal(created.inventory.upstream, 'lighting-inventory:8080');
   assert.equal(created.shipping.upstream, 'shipping:8080');
+  assert.equal(created['shipping-backup'].upstream, 'shipping-backup:8080');
   assert.equal(created.inventory.listen, '[::]:8666');
 });
 

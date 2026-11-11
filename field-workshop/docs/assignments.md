@@ -36,17 +36,17 @@ Timeouts bound dependency waiting; a circuit breaker pauses a failed product/dep
 
 ## 2 — Keep the catalog usable during a Shipping outage
 
-The shared Shipping service is unreachable. All three inventory services still answer, but the delivery preview requires a quote for each product. Can customers see live stock for every product while every delivery estimate is unavailable?
+The primary Shipping provider becomes unreachable, so delivery quotes fail for all three products. A backup carrier can deliver the same products at the same shipping price, but needs 5 days instead of 3.
 
-1. **Compare both healthy catalog views.** Refresh availability and preview deliveries. Record all products, timings and queue state. Set an abort condition and predict which view Shipping affects.
+1. **Compare both healthy catalog views.** Record stock and delivery quotes for all three products, including the shipping price and estimated days. Record catalog time and queue state.
 
-2. **Disconnect shared Shipping.** Disconnect Shipping and repeat both views. Record catalog failure, working availability and Shipping errors. Check whether the queue actually fills.
+2. **Disconnect Primary Shipping.** Disconnect Primary Shipping and repeat both views. Record working stock checks, failed delivery quotes, customer-visible errors and worker pressure.
 
-3. **Identify the coupling.** Check Shipping failures and queue size in Grafana. Compare stock-only results with delivery previews for the lamp, chair and desk.
+3. **Identify the coupling.** Use Shipping failures in Grafana and the Storefront results to identify which customer action requires a carrier. Describe what customers can no longer do.
 
-4. **Enable fallback during the outage.** Leave Shipping disconnected and apply Challenge 2 settings. Preview all deliveries again. Record the stock and quote status for each product and watch fallback activity.
+4. **Enable fallback during the outage.** Keep Primary Shipping disconnected and choose a mitigation in Fallbacks & timeouts. Retest all three products and record the carrier, quote price, estimated days and catalog response time.
 
-5. **Reconnect and verify recovery.** Reconnect Shipping with fallback still enabled. After the five-second cooldown, refresh to allow a recovery probe. Refresh again and verify three live quotes. Restore default settings and submit your observations.
+5. **Reconnect and verify recovery.** Reconnect Primary Shipping while keeping your mitigation active. If the breaker is enabled, allow its five-second cooldown and a recovery probe, then refresh again. Verify that normal estimates return, restore defaults and submit.
 
 ## 3 — Investigate a spreading incident
 

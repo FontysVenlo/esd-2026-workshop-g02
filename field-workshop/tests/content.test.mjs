@@ -84,7 +84,7 @@ test('each challenge shows its own complete tasks and page-local edits', async (
           ),
         );
       }
-      if (challenge.id === 'challenge-1') {
+      if (!challenge.tasks?.length) {
         assert.doesNotMatch(instructions, /class="challenge-steps"/);
       } else {
         assert.ok(html.includes(challenge.text.your_five_steps));
@@ -109,5 +109,74 @@ test('each challenge shows its own complete tasks and page-local edits', async (
     } catch (error) {
       if (error.code !== 'ENOENT') throw error;
     }
+  }
+});
+
+test('backup shipping displays price and longer delivery without implementation details', async () => {
+  const { readFileSync, unlinkSync } = await import('node:fs');
+  const { fileURLToPath, pathToFileURL } = await import('node:url');
+  const { build } = await import('esbuild');
+  const React = await import('react');
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  const page = JSON.parse(
+    readFileSync(new URL('../content/storefront.json', import.meta.url), 'utf8'),
+  );
+  const source = readFileSync(new URL('../src/storefront.jsx', import.meta.url), 'utf8')
+    .replace("'/copy.mjs'", "'./shared/copy.js'")
+    .replace(
+      "createRoot(document.getElementById('storefront-root')).render(<Storefront />);",
+      'export {ProductCard};',
+    );
+  const out = fileURLToPath(new URL('../build/shipping-display-test.mjs', import.meta.url));
+  try {
+    await build({
+      stdin: {
+        contents: source,
+        loader: 'jsx',
+        resolveDir: fileURLToPath(new URL('../src/', import.meta.url)),
+      },
+      outfile: out,
+      bundle: true,
+      format: 'esm',
+      platform: 'node',
+      packages: 'external',
+    });
+    const { ProductCard } = await import(pathToFileURL(out));
+    const product = {
+      sku: 'LAMP-01',
+      name: page.api.product_name,
+      price: 29.9,
+      image: '/images/lamp.png',
+    };
+    const result = {
+      inventory: { source: 'live', quantity: 12 },
+      shipping: { source: 'backup', priceEur: 4.9, etaDays: 5 },
+      degraded: true,
+    };
+    const html = renderToStaticMarkup(
+      React.createElement(ProductCard, { product, result, stale: false, preview: true }),
+    );
+    assert.ok(html.includes(format(page.storefront.shipping_time, { days: 5 })));
+    assert.ok(html.includes(format(page.storefront.shipping_cost, { price: '4.90' })));
+    assert.doesNotMatch(html, /Backup carrier|backup provider|circuit breaker/i);
+    assert.ok(html.includes(page.catalog.live));
+    const stale = renderToStaticMarkup(
+      React.createElement(ProductCard, { product, result, stale: true, preview: true }),
+    );
+    assert.ok(stale.includes(page.storefront.shipping_time_unavailable));
+    assert.doesNotMatch(stale, /Backup carrier|backup provider|circuit breaker/i);
+    const availability = renderToStaticMarkup(
+      React.createElement(ProductCard, { product, result, stale: false, preview: false }),
+    );
+    assert.ok(availability.includes(format(page.storefront.shipping_time, { days: 5 })));
+    assert.ok(availability.includes(format(page.storefront.shipping_cost, { price: '4.90' })));
+    assert.ok(availability.includes(page.storefront.last_delivery_check));
+    const missingDelivery = renderToStaticMarkup(
+      React.createElement(ProductCard, { product, stale: false, preview: true }),
+    );
+    assert.ok(missingDelivery.includes(page.storefront.shipping_time_not_checked));
+    assert.ok(missingDelivery.includes(page.storefront.shipping_cost_not_checked));
+  } finally {
+    unlinkSync(out);
   }
 });
