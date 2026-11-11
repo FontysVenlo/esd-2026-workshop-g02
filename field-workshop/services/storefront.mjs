@@ -55,6 +55,7 @@ export function createStorefrontServer(config = {}) {
     shippingFallback: config.shippingFallback ?? process.env.SHIPPING_FALLBACK === 'true',
     toxiproxyApi: config.toxiproxyApi ?? process.env.TOXIPROXY_API ?? 'http://localhost:8474',
     shippingControlUrl: config.shippingControlUrl ?? process.env.SHIPPING_CONTROL_URL,
+    inventoryControlUrl: config.inventoryControlUrl ?? process.env.INVENTORY_CONTROL_URL,
   };
   for (const timeout of [settings.inventoryTimeoutMs, settings.shippingTimeoutMs]) {
     if (!Number.isFinite(timeout) || timeout < 1)
@@ -117,7 +118,20 @@ export function createStorefrontServer(config = {}) {
   async function stock(policy, sku) {
     try {
       const data = await call('inventory', sku, policy);
-      return { available: data.quantity > 0, quantity: data.quantity, source: 'live' };
+      const valid = Number.isInteger(data?.quantity) && data.quantity >= 0;
+      metrics.inventoryResponse(
+        inventoryCategory[sku] + '-inventory',
+        valid,
+        !valid && policy.validate,
+      );
+      if (!valid && policy.validate)
+        return {
+          available: null,
+          quantity: null,
+          source: 'rejected',
+          warning: readPageCopy('storefront').api.invalid_stock_warning,
+        };
+      return { available: data?.quantity > 0, quantity: data?.quantity ?? null, source: 'live' };
     } catch (error) {
       if (!policy.fallback) throw error;
       metrics.fallback(inventoryCategory[sku] + '-inventory');
@@ -212,8 +226,6 @@ export function createStorefrontServer(config = {}) {
     const url = new URL(req.url, 'http://localhost');
     const route = url.pathname;
     if (req.method === 'POST' && route === '/api/workshop/reset') return resetEnvironment();
-    if (req.method === 'POST' && route === '/api/workshop/challenge')
-      return resetEnvironment(false);
     if (req.method !== 'GET')
       return send(405, { error: readPageCopy('storefront').api.method_not_allowed });
     if (route === '/health') return send(200, { status: 'ok' });
@@ -325,30 +337,13 @@ export function createStorefrontServer(config = {}) {
 
     // Called by the workshop page when a newly unlocked challenge is opened, so
     // each challenge starts with no network faults and default mitigations.
-    async function resetEnvironment(reset = true) {
+    async function resetEnvironment() {
       if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`)
         return send(403, {
           error: readPageCopy('storefront').api.cross_origin_changes_are_not_allowed,
         });
       if (!req.headers['content-type']?.startsWith('application/json'))
         return send(415, { error: readPageCopy('storefront').api.json_is_required });
-      let challenge;
-      try {
-        let raw = '';
-        for await (const chunk of req) {
-          raw += chunk;
-          if (raw.length > 1024)
-            return send(413, { error: readPageCopy('storefront').api.invalid_challenge });
-        }
-        challenge = JSON.parse(raw || '{}').challenge ?? 1;
-        if (!Number.isInteger(challenge) || challenge < 1 || challenge > 4) throw new Error();
-      } catch {
-        return send(400, { error: readPageCopy('storefront').api.invalid_challenge });
-      }
-      if (!reset) {
-        mitigations.startChallenge(challenge);
-        return send(200, { challenge });
-      }
       try {
         const response = await fetch(new URL('/reset', settings.toxiproxyApi), {
           method: 'POST',
@@ -358,8 +353,10 @@ export function createStorefrontServer(config = {}) {
           throw new Error(
             format(readPageCopy('storefront').api.proxy_reset_status, { status: response.status }),
           );
-        if (settings.shippingControlUrl) {
-          const cleared = await fetch(new URL('/fault', settings.shippingControlUrl), {
+        for (const controlUrl of [settings.shippingControlUrl, settings.inventoryControlUrl].filter(
+          Boolean,
+        )) {
+          const cleared = await fetch(new URL('/fault', controlUrl), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ mode: 'none' }),
@@ -373,7 +370,6 @@ export function createStorefrontServer(config = {}) {
         });
       }
       const restored = mitigations.apply({ action: 'reset' });
-      mitigations.startChallenge(challenge);
       breaker.reset();
       previousPolicy = JSON.stringify(restored);
       console.log(

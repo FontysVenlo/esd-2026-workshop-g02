@@ -92,8 +92,13 @@ function FaultState({ state }) {
           <span className={`badge${state[name].enabled ? '' : ' off'}`}>
             {state[name].enabled ? faultConsole.connected : faultConsole.disconnected}
           </span>
+          {state[name].responseFault && state[name].responseFault !== 'none' && (
+            <p>{faultConsolePage.response_modes[state[name].responseFault]}</p>
+          )}
           {!state[name].toxics.length ? (
-            <p>{faultConsole.no_active_faults}</p>
+            (!state[name].responseFault || state[name].responseFault === 'none') && (
+              <p>{faultConsole.no_active_faults}</p>
+            )
           ) : (
             <ul className="faults">
               {state[name].toxics.map((toxic) => (
@@ -128,16 +133,14 @@ function Console() {
     [proxy, setProxy] = useState('inventory'),
     [latency, setLatency] = useState('1500');
   const [jitter, setJitter] = useState('0');
-  const [advanced, setAdvanced] = useState(false);
-  const [responseMode, setResponseMode] = useState('none');
-  const [responseDraft, setResponseDraft] = useState('invalid-quotes');
+  const [responseDraft, setResponseDraft] = useState('invalid-data');
   const [busy, setBusy] = useState(false),
     [mitigationBusy, setMitigationBusy] = useState(false);
   const faultLock = useRef(false),
     mitigationLock = useRef(false);
   const [active, setActive] = useState(null);
   const [draft, setDraft] = useState({
-    inventory: { timeoutMs: 3000, fallback: false, breaker: false },
+    inventory: { timeoutMs: 3000, fallback: false, breaker: false, validate: false },
     shipping: { timeoutMs: 3000, fallback: false, breaker: false, validate: false },
   });
   const [message, setMessage] = useState({ text: '' }),
@@ -184,12 +187,6 @@ function Console() {
   useEffect(() => {
     async function sync() {
       if (document.hidden) return;
-      try {
-        const stage = await request('/api/workshop');
-        setAdvanced(stage.challenge >= 3);
-        if (stage.challenge >= 3 && !faultLock.current)
-          setResponseMode((await request('/api/response-fault')).mode);
-      } catch {}
       if (!faultLock.current) {
         try {
           setFaults(await request('/api/state'));
@@ -252,7 +249,6 @@ function Console() {
       const body = { action, proxy, latencyMs, jitterMs },
         result = await request('/api/action', body);
       setFaults(result.state);
-      if (action === 'reset') setResponseMode('none');
       setLastRequest({ path: '/api/action', body });
       setCommand(
         format(result.command.body ? faultConsole.request_with_body : faultConsole.request_line, {
@@ -286,9 +282,13 @@ function Console() {
     faultLock.current = true;
     setBusy(true);
     try {
-      const body = { mode };
+      const body = { proxy, mode };
       const result = await request('/api/response-fault', body);
-      setResponseMode(result.mode);
+      setFaults((previous) =>
+        previous
+          ? { ...previous, [proxy]: { ...previous[proxy], responseFault: result.mode } }
+          : previous,
+      );
       setLastRequest({ path: '/api/response-fault', body });
       setCommand(
         format(faultConsole.request_with_body, {
@@ -300,6 +300,7 @@ function Console() {
       setMessage({
         text: format(faultConsole.response_fault_applied, {
           fault: faultConsolePage.response_modes[result.mode],
+          service: proxy === 'inventory' ? faultConsolePage.inventory : faultConsolePage.shipping,
         }),
       });
     } catch (error) {
@@ -360,16 +361,10 @@ function Console() {
         text:
           input.action === 'reset'
             ? faultConsole.defaults_restored_both_timeouts_are_3000_ms_and_both
-            : input.action === 'validate-shipping'
-              ? format(faultConsole.validation_applied, {
-                  state: settings.shipping.validate ? faultConsole.on : faultConsole.off,
-                })
-              : format(faultConsole.settings_applied, {
-                  dependency:
-                    input.dependency === 'inventory'
-                      ? faultConsole.inventory
-                      : faultConsole.shipping,
-                }),
+            : format(faultConsole.settings_applied, {
+                dependency:
+                  input.dependency === 'inventory' ? faultConsole.inventory : faultConsole.shipping,
+              }),
       });
     } catch (error) {
       setMitigationMessage({
@@ -525,6 +520,20 @@ function Console() {
               />
             </label>
           </div>
+          <div className="response-fault-choice">
+            <label htmlFor="response-fault">{faultConsolePage.response_fault_label}</label>
+            <select
+              id="response-fault"
+              value={responseDraft}
+              onChange={(event) => setResponseDraft(event.target.value)}
+            >
+              {['invalid-data', 'intermittent-errors'].map((mode) => (
+                <option key={mode} value={mode}>
+                  {faultConsolePage.response_modes[mode]}
+                </option>
+              ))}
+            </select>
+          </div>
           <p className="meta">{faultConsolePage.jitter_help}</p>
           <div className="actions">
             <button
@@ -563,48 +572,23 @@ function Console() {
             >
               {faultConsolePage.reconnect}
             </button>
+            <button
+              type="button"
+              className="action"
+              disabled={busy}
+              onClick={() => applyResponseFault(responseDraft)}
+            >
+              {faultConsolePage.apply_response_fault}
+            </button>
+            <button
+              type="button"
+              className="action secondary"
+              disabled={busy}
+              onClick={() => applyResponseFault('none')}
+            >
+              {faultConsolePage.remove_response_fault}
+            </button>
           </div>
-          {advanced && (
-            <section className="response-fault-controls">
-              <h2>{faultConsolePage.response_fault_title}</h2>
-              <p>{faultConsolePage.response_fault_description}</p>
-              <p className="meta">
-                {format(faultConsole.response_fault_active, {
-                  fault: faultConsolePage.response_modes[responseMode],
-                })}
-              </p>
-              <label htmlFor="response-fault">{faultConsolePage.response_fault_label}</label>
-              <select
-                id="response-fault"
-                value={responseDraft}
-                onChange={(event) => setResponseDraft(event.target.value)}
-              >
-                {['invalid-quotes', 'intermittent-errors'].map((mode) => (
-                  <option key={mode} value={mode}>
-                    {faultConsolePage.response_modes[mode]}
-                  </option>
-                ))}
-              </select>
-              <div className="actions">
-                <button
-                  type="button"
-                  className="action"
-                  disabled={busy}
-                  onClick={() => applyResponseFault(responseDraft)}
-                >
-                  {faultConsolePage.apply_response_fault}
-                </button>
-                <button
-                  type="button"
-                  className="secondary"
-                  disabled={busy}
-                  onClick={() => applyResponseFault('none')}
-                >
-                  {faultConsolePage.remove_response_fault}
-                </button>
-              </div>
-            </section>
-          )}
           <button
             disabled={busy}
             onClick={() => perform('reset')}
@@ -654,6 +638,7 @@ function Console() {
                   timeoutMs: Number(draft.inventory.timeoutMs),
                   fallback: draft.inventory.fallback,
                   breaker: draft.inventory.breaker,
+                  validate: draft.inventory.validate,
                 });
               }}
               id="inventory-settings"
@@ -669,6 +654,7 @@ function Console() {
                       timeout: active.inventory.timeoutMs,
                       fallback: active.inventory.fallback ? faultConsole.on : faultConsole.off,
                       breaker: active.inventory.breaker ? faultConsole.on : faultConsole.off,
+                      validate: active.inventory.validate ? faultConsole.on : faultConsole.off,
                     })
                   : faultConsole.active_settings_unavailable}
               </p>
@@ -728,6 +714,24 @@ function Console() {
                   {faultConsolePage.control_help.inventory_breaker}
                 </ControlInfo>
               </div>
+              <div className="control-label-row">
+                <label className="checkbox-label">
+                  <input
+                    id="inventory-validation"
+                    type="checkbox"
+                    checked={Boolean(draft.inventory.validate)}
+                    disabled={mitigationBusy || !active}
+                    onChange={(event) => edit('inventory', 'validate', event.target.checked)}
+                  />
+                  {faultConsolePage.check_response_data}
+                </label>
+                <ControlInfo
+                  id="inventory-validation-help"
+                  label={faultConsolePage.check_response_data}
+                >
+                  {faultConsolePage.control_help.inventory_validation}
+                </ControlInfo>
+              </div>
               <div className="actions">
                 <button className="primary" type="submit" disabled={mitigationBusy || !active}>
                   {faultConsolePage.apply_inventory_settings}
@@ -763,6 +767,7 @@ function Console() {
                   timeoutMs: Number(draft.shipping.timeoutMs),
                   fallback: draft.shipping.fallback,
                   breaker: draft.shipping.breaker,
+                  validate: draft.shipping.validate,
                 });
               }}
               id="shipping-settings"
@@ -775,6 +780,7 @@ function Console() {
                       timeout: active.shipping.timeoutMs,
                       fallback: active.shipping.fallback ? faultConsole.on : faultConsole.off,
                       breaker: active.shipping.breaker ? faultConsole.on : faultConsole.off,
+                      validate: active.shipping.validate ? faultConsole.on : faultConsole.off,
                     })
                   : faultConsole.active_settings_unavailable}
               </p>
@@ -834,16 +840,6 @@ function Console() {
                   {faultConsolePage.control_help.shipping_breaker}
                 </ControlInfo>
               </div>
-              <div className="actions">
-                <button className="primary" type="submit" disabled={mitigationBusy || !active}>
-                  {faultConsolePage.apply_shipping_settings}
-                </button>
-              </div>
-            </form>
-          </div>
-          {advanced && (
-            <section className="status-card validation-controls">
-              <h3>{faultConsolePage.validation_title}</h3>
               <div className="control-label-row">
                 <label className="checkbox-label">
                   <input
@@ -853,32 +849,22 @@ function Console() {
                     disabled={mitigationBusy || !active}
                     onChange={(event) => edit('shipping', 'validate', event.target.checked)}
                   />
-                  {faultConsolePage.enable_validation}
+                  {faultConsolePage.check_response_data}
                 </label>
                 <ControlInfo
                   id="shipping-validation-help"
-                  label={faultConsolePage.enable_validation}
+                  label={faultConsolePage.check_response_data}
                 >
-                  {faultConsolePage.validation_help}
+                  {faultConsolePage.control_help.shipping_validation}
                 </ControlInfo>
               </div>
-              <p className="meta">
-                {format(faultConsole.validation_active, {
-                  state: active?.shipping.validate ? faultConsole.on : faultConsole.off,
-                })}
-              </p>
-              <button
-                type="button"
-                className="primary"
-                disabled={mitigationBusy || !active}
-                onClick={() =>
-                  applyMitigation({ action: 'validate-shipping', enabled: draft.shipping.validate })
-                }
-              >
-                {faultConsolePage.apply_validation}
-              </button>
-            </section>
-          )}
+              <div className="actions">
+                <button className="primary" type="submit" disabled={mitigationBusy || !active}>
+                  {faultConsolePage.apply_shipping_settings}
+                </button>
+              </div>
+            </form>
+          </div>
           <button
             onClick={() => applyMitigation({ action: 'reset' })}
             id="reset-mitigations"
@@ -908,11 +894,9 @@ function Console() {
         >
           <h2>{faultConsolePage.protection_help_title}</h2>
           <ul>
-            {advanced && (
-              <li>
-                <InlineText text={faultConsolePage.validation_summary} />
-              </li>
-            )}
+            <li>
+              <InlineText text={faultConsolePage.validation_summary} />
+            </li>
             <li>
               <InlineText text={faultConsolePage.timeout_summary} />
             </li>

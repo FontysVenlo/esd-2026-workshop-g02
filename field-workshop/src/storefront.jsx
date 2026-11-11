@@ -92,7 +92,7 @@ function ProductCard({
   useEffect(() => {
     if (result?.inventory.source === 'live')
       setCheck((previous) =>
-        previous?.data?.inventory.source === 'unconfirmed' ? null : previous,
+        previous?.data?.inventory && previous.data.inventory.source !== 'live' ? null : previous,
       );
   }, [result]);
   const unconfirmed = result?.inventory.source !== 'live';
@@ -123,7 +123,9 @@ function ProductCard({
   }
   const stock = (value) =>
     value?.inventory.source === 'live'
-      ? format(storefront.in_stock, { quantity: value.inventory.quantity })
+      ? value.inventory.quantity == null
+        ? storefront.stock_missing
+        : format(storefront.in_stock, { quantity: value.inventory.quantity })
       : storefront.stock_unconfirmed;
   const shipping = (value, staleQuote = false) => {
     const quote = value?.shipping;
@@ -188,7 +190,9 @@ function ProductCard({
           <button
             className="primary"
             disabled={
-              busy || (result && unconfirmed) || check?.data?.inventory.source === 'unconfirmed'
+              busy ||
+              (result && unconfirmed) ||
+              (check?.data?.inventory && check.data.inventory.source !== 'live')
             }
             onClick={() => inspect(false)}
           >

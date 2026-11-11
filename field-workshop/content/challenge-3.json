@@ -25,47 +25,47 @@
   },
   "title": "When successful requests return bad data",
   "level": "Investigation",
-  "scenario": "Customers report strange or missing delivery estimates and shipping prices. Monitoring still shows successful requests. Find out whether the shop can trust the information it receives.",
-  "why": "A fast HTTP 200 response can still contain unusable data. Protect customers from incorrect delivery promises while keeping stock visible.",
-  "reproduce": "Record healthy stock and shipping first, then predict the impact. In Network Faults, apply Invalid shipping responses under Shipping response faults. Refresh shipping several times and investigate. The fault stays active until you remove it.",
-  "assignment": "Can you prevent incorrect quotes from reaching customers without hiding healthy stock?",
+  "scenario": "Customers sometimes see strange delivery days or shipping prices. Sometimes the values are missing. The graphs still say the requests worked. Find out why.",
+  "why": "Getting a reply does not mean the reply is right. Stop the shop from showing impossible values, while keeping stock information available.",
+  "reproduce": "First record normal stock, delivery days and shipping price. Predict what might go wrong. In Network Faults, choose Primary Shipping and Wrong or missing values, then click Apply response fault. Refresh shipping a few times. Leave the fault on while you try a fix.",
+  "assignment": "Can you hide wrong shipping information while keeping stock visible?",
   "fields": [
     {
       "key": "symptom",
-      "label": "Healthy baseline and prediction",
-      "prompt": "Record normal stock, delivery days and shipping price. Predict what an unusable response could affect."
+      "label": "Normal results and prediction",
+      "prompt": "Record stock, delivery days and shipping price before the fault. What do you expect to change?"
     },
     {
       "key": "signals",
-      "label": "Storefront and Grafana evidence",
-      "prompt": "Record examples from several refreshes. Compare HTTP outcomes with invalid and rejected quotes."
+      "label": "What you saw",
+      "prompt": "Record strange numbers or blanks from a few refreshes. What do the request and response-check graphs show?"
     },
     {
       "key": "diagnosis",
-      "label": "Diagnosis and uncertainty",
-      "prompt": "What explains successful requests with incorrect customer information? Name an alternative explanation."
+      "label": "Your explanation",
+      "prompt": "Why can a request work but the information still be wrong? What else could explain it?"
     },
     {
       "key": "mitigation",
-      "label": "Protection and reason",
-      "prompt": "Which control did you apply? Explain why timeout, fallback or breaker alone does not validate successful responses."
+      "label": "Your change and why it helps",
+      "prompt": "Which setting did you change? Why would waiting less or pausing requests not fix wrong values?"
     },
     {
       "key": "validation",
-      "label": "Validation under the same fault",
-      "prompt": "Keep the fault active. Record whether incorrect values are blocked, stock remains live and rejected quotes increase."
+      "label": "Check the result",
+      "prompt": "Leave the fault on. Are wrong values hidden? Does stock still appear? Does Grafana show blocked values?"
     },
     {
       "key": "conclusion",
-      "label": "Conclusion and cleanup",
-      "prompt": "What did customers regain, what is still unavailable, and what must the carrier fix? Remove the fault and verify normal quotes return."
+      "label": "Finish and reset",
+      "prompt": "What improved? What is still missing? Remove the fault, restore defaults and check normal shipping returns."
     }
   ],
   "solution": [
-    "Primary Shipping returns HTTP 200 but cycles through negative delivery days, empty fields, a negative price and a valid quote. Stock remains healthy.",
-    "HTTP success stays high while Shipping data quality records invalid quotes. A successful request is not proof that its contents are usable.",
-    "Enable Validate shipping quotes and apply validation. Missing fields, negative prices and non-positive or non-integer delivery days are rejected. The shop shows unavailable quote information while retaining stock.",
-    "Validation is independent of fallback and breaker. It does not repair the carrier or automatically request a backup quote. Keep the fault active to verify protection, then remove it and restore defaults."
+    "The main delivery company replies, but sometimes sends negative delivery days, a negative price or empty fields. Other replies are normal. Stock still works.",
+    "The requests count as successful because a reply arrived. Response checks in Grafana separately shows wrong or missing values.",
+    "Under Shipping, select Check response data and click Apply Shipping settings. Wrong shipping information becomes unavailable. Normal shipping values and stock still appear.",
+    "The checker hides bad values. It does not fix the delivery company or call the backup. Remove the response fault and restore defaults to finish."
   ],
   "text": {
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",
@@ -125,16 +125,16 @@
   },
   "hints": [
     {
-      "title": "Hint 1 · Compare the symptoms",
-      "explanation": "Refresh shipping several times. Compare stock, delivery days and shipping price. Does the HTTP status explain everything customers see?"
+      "title": "Hint 1 · Look at the shop",
+      "explanation": "Refresh shipping a few times. Are the stock count, delivery days and price sensible? Write down any strange numbers or blanks."
     },
     {
-      "title": "Hint 2 · Look beyond HTTP success",
-      "explanation": "Compare Dependency outcomes with Shipping data quality in Grafana. Invalid quotes are measured even when protection is off. Rates use a one-minute window."
+      "title": "Hint 2 · Compare the graphs",
+      "explanation": "A successful request only means that a reply arrived. It can still contain wrong values. Look at Response checks in Grafana. The graph takes about a minute to show a new pattern clearly."
     },
     {
-      "title": "Hint 3 · Choose the right protection",
-      "explanation": "Timeout limits waiting and breaker reacts to failed calls. Neither checks the contents of a successful response. Look for a separate quote-validation control. It blocks invalid data without switching carriers."
+      "title": "Hint 3 · Try a response check",
+      "explanation": "A timeout stops waiting. A breaker pauses failed requests. Neither checks the values in a reply. Under Shipping, select Check response data and click Apply Shipping settings. Wrong values should disappear; stock should stay visible."
     }
   ]
 }

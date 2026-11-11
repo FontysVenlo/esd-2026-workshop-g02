@@ -59,18 +59,18 @@ For a **slow primary carrier**, a shorter timeout such as 400 ms reaches the bac
 
 **Use response validation, independently of fallback.** The primary returns HTTP 200 but cycles through negative delivery days, empty fields, a negative price and a normal quote. Timeout and breaker do not detect bad contents in a successful call. Validation blocks the whole invalid quote; it does not request backup Shipping.
 
-1. Open Challenge 3 to unlock response faults and validation. Record healthy stock, shipping and a prediction before injecting anything.
-2. In Network Faults → **Shipping response faults**, choose **Invalid shipping responses** and apply it. Click **Refresh shipping info** several times. Record incorrect or missing values while stock stays live.
-3. Compare **Dependency outcomes** with **Shipping data quality** in Grafana. Invalid quotes rise despite HTTP success. Optional hints are under the Challenge 3 menu.
-4. Keep the fault active. In Fallbacks & timeouts → **Response validation**, enable **Validate shipping quotes** and click **Apply validation**. Incorrect values should become unavailable; valid quotes and stock remain visible. Blocked quotes now rise too. Compare fresh one-minute windows.
+1. Open Challenge 3. All fault and protection controls are available at any time. Record healthy stock, shipping and a prediction before injecting anything.
+2. In Network Faults, choose **Primary Shipping** and **Wrong or missing values**, then click **Apply response fault**. Click **Refresh shipping info** several times. Record incorrect or missing values while stock stays live.
+3. Compare **Dependency outcomes** with **Response checks** in Grafana. Invalid quotes rise despite HTTP success. Optional hints are under the Challenge 3 menu.
+4. Keep the fault active. In Fallbacks & timeouts, under Shipping, select **Check response data** and click **Apply Shipping settings**. Incorrect values should become unavailable; valid quotes and stock remain visible. Blocked quotes now rise too. Compare fresh one-minute windows.
 5. Remove the response fault, restore defaults and verify €4.90 / 3 days again. Explain that validation protects customers but does not repair the carrier's data.
 
 ## 4 — Diagnose your partner's incident
 
-**Compete on correct diagnosis and stable protection.** Use comparable difficulty and swap roles. Delay/jitter/disconnect can target Lighting or Shipping; intermittent errors and invalid responses target primary Shipping.
+**Compete on correct diagnosis and stable protection.** Use comparable difficulty and swap roles. All faults can target Lighting inventory or Shipping. The response checker is a third checkbox in each service’s settings.
 
 1. Open Challenge 4 and record a healthy baseline. Agree on useful customer results and an abort condition.
 2. Your partner applies exactly one fault and says go. Click **Start new round**. Keep the Fault injection/current-state tab closed; use Storefront, Grafana and Fallbacks & timeouts to investigate.
-3. Diagnose and contain the fault while leaving it active: **slow calls → short timeout + fallback**, **failed Shipping calls → fallback**, **invalid successful quotes → validation**. Breaker additionally reduces repeated failed calls. Intermittent errors return 503 on alternating calls per product.
+3. Diagnose and contain the fault while leaving it active: **slow calls → short timeout + fallback**, **failed Shipping calls → fallback**, **wrong or missing values → Check response data**. Breaker additionally reduces repeated failed calls. Intermittent errors return 503 on alternating calls per product.
 4. Complete three consecutive refreshes with no incorrect information or catalog failures. Healthy stock must remain usable; affected stock or quotes may be explicitly unavailable where appropriate. Stop the timer and record diagnosis, settings, evidence and seconds.
 5. Reveal the fault, clear all faults and restore defaults. Swap roles, compare both rounds, verify final recovery and submit. Clearing the fault during a round does not count as containment. The manual timer does not grade answers.

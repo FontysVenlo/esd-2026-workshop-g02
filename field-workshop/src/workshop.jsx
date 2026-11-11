@@ -430,16 +430,6 @@ function Workshop() {
     document.title = page.pageTitle;
   }, [page]);
   useEffect(() => {
-    if (!current) return;
-    // Console and workshop use different ports, so share the current challenge
-    // through the server rather than relying on cross-origin localStorage.
-    fetch('/api/workshop/challenge', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ challenge: current.number }),
-    }).catch(() => {});
-  }, [current?.id]);
-  useEffect(() => {
     setFreshStart(null);
     if (!current || !needsFreshStart(progress, index)) return;
     // Record a successful reset even if the participant has already moved on,
@@ -450,7 +440,7 @@ function Workshop() {
     fetch('/api/workshop/reset', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ challenge: current.number }),
+      body: '{}',
       cache: 'no-store',
       signal: AbortSignal.timeout(8000),
     })

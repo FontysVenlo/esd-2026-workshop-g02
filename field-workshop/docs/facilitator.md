@@ -1,6 +1,6 @@
 # Facilitator notes
 
-Use this file to prepare and review the experiments. At <http://localhost:8088>, participants submit notes, see an example solution beside their inputs, and unlock the next challenge. There is no correctness evaluation. Records are stored in each participant's browser, so ask them to download the JSON experiment record for review. Network faults change Toxiproxy paths; response faults change the real primary Shipping service responses.
+Use this file to prepare and review the experiments. At <http://localhost:8088>, participants submit notes, see an example solution beside their inputs, and unlock the next challenge. There is no correctness evaluation. Records are stored in each participant's browser, so ask them to download the JSON experiment record for review. Network faults change Toxiproxy paths; response faults change the real Lighting inventory or primary Shipping service replies.
 
 ## Before participants arrive
 
@@ -19,13 +19,13 @@ Numbers depend on the host and browser. Ask teams to compare same-route, same-fa
 
 ## Challenge 3 — Invalid successful responses
 
-No partner seed is needed. The participant records a baseline, then introduces **Invalid shipping responses**. The primary returns HTTP 200 while cycling per product through negative delivery days, empty fields, a negative price and a valid quote. The backup remains healthy.
+No partner seed is needed. The participant records a baseline, then introduces **Wrong or missing values**. The primary returns HTTP 200 while cycling per product through negative delivery days, empty fields, a negative price and a valid quote. The backup remains healthy.
 
-Response-fault and quote-validation controls unlock when Challenge 3 or 4 is opened. **Shipping data quality** counts invalid quotes regardless of validation; blocked quotes increase only when enforcement is enabled. Validation marks an invalid quote unavailable without activating fallback or breaker. Healthy stock remains visible. Normal transport-failure fallbacks still behave as in Challenge 2.
+All response faults and response checks are available throughout the workshop. Choose Lighting inventory for bad stock values or Shipping for bad delivery information. **Response checks** counts invalid quotes regardless of validation; blocked quotes increase only when enforcement is enabled. Validation marks an invalid quote unavailable without activating fallback or breaker. Healthy stock remains visible. Normal transport-failure fallbacks still behave as in Challenge 2.
 
 ## Challenge 4 — Partner competition
 
-Open Challenge 4 before seeding: its first opening clears faults and restores protections. Seed one fault only after the investigator records a healthy baseline. Use delay, jitter or disconnect on Lighting/Shipping, or invalid quotes/intermittent errors on primary Shipping. Intermittent errors fail alternating calls per product, so keep background traffic fixed.
+Open Challenge 4 before seeding: its first opening clears faults and restores protections. Seed one fault only after the investigator records a healthy baseline. Use delay, jitter or disconnect on Lighting/Shipping, or wrong/missing values and intermittent errors on either service. Intermittent errors fail alternating calls per product, so keep background traffic fixed.
 
 The injector says go after applying the fault. The investigator starts the manual timer and uses Storefront, Grafana and the mitigation tab. Keep fault controls/current state hidden by agreement; this is a local workshop, not a role-based examination system. Require a diagnosis and three consecutive acceptable refreshes while the fault remains active. Clear faults and restore defaults between rounds, swap roles and compare faults of similar difficulty. A shorter time alone does not prove a better design.
 

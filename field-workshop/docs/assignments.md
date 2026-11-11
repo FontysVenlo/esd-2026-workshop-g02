@@ -50,9 +50,9 @@ The primary Shipping provider becomes unreachable, so delivery quotes fail for a
 
 ## 3 — When successful requests return bad data
 
-Customers see strange delivery estimates and prices while monitoring reports successful requests. Record the healthy baseline and a hypothesis, then inject **Invalid shipping responses** in Network Faults. Refresh several times and compare HTTP success with **Shipping data quality** in Grafana.
+Customers see strange delivery estimates and prices while monitoring reports successful requests. Record the healthy baseline and a hypothesis, then inject **Wrong or missing values** in Network Faults. Refresh several times and compare HTTP success with **Response checks** in Grafana.
 
-Use the separate **Validate shipping quotes** control to block missing or invalid quotes. It preserves stock and does not invoke a backup carrier. Keep the fault active for validation; compare invalid and blocked quotes over fresh one-minute windows. Optional hints live under the Challenge 3 menu. Remove the fault, restore defaults and verify normal quotes afterward.
+Under Shipping select **Check response data** and apply its settings to block missing or invalid quotes. It preserves stock and does not invoke a backup carrier. Keep the fault active for validation; compare invalid and blocked quotes over fresh one-minute windows. Optional hints live under the Challenge 3 menu. Remove the fault, restore defaults and verify normal quotes afterward.
 
 ## 4 — Partner incident challenge
 

@@ -262,7 +262,7 @@
     {
       "id": 18,
       "type": "timeseries",
-      "title": "Shipping data quality",
+      "title": "Response checks",
       "datasource": {
         "type": "prometheus",
         "uid": "field-prometheus"
@@ -293,17 +293,29 @@
         {
           "refId": "A",
           "expr": "100 * sum(rate(workshop_shipping_quotes_total{outcome=\"invalid\"}[1m])) / clamp_min(sum(rate(workshop_shipping_quotes_total[1m])), 0.001)",
-          "legendFormat": "Invalid quotes (%)",
+          "legendFormat": "Shipping: wrong or missing (%)",
           "interval": "5s"
         },
         {
           "refId": "B",
           "expr": "100 * sum(rate(workshop_rejected_quotes_total[1m])) / clamp_min(sum(rate(workshop_shipping_quotes_total[1m])), 0.001)",
-          "legendFormat": "Blocked quotes (%)",
+          "legendFormat": "Shipping: blocked (%)",
+          "interval": "5s"
+        },
+        {
+          "refId": "C",
+          "expr": "100 * sum(rate(workshop_inventory_responses_total{dependency=\"lighting-inventory\",outcome=\"invalid\"}[1m])) / clamp_min(sum(rate(workshop_inventory_responses_total{dependency=\"lighting-inventory\"}[1m])), 0.001)",
+          "legendFormat": "Lighting stock: wrong or missing (%)",
+          "interval": "5s"
+        },
+        {
+          "refId": "D",
+          "expr": "100 * sum(rate(workshop_rejected_inventory_responses_total{dependency=\"lighting-inventory\"}[1m])) / clamp_min(sum(rate(workshop_inventory_responses_total{dependency=\"lighting-inventory\"}[1m])), 0.001)",
+          "legendFormat": "Lighting stock: blocked (%)",
           "interval": "5s"
         }
       ],
-      "description": "Invalid quotes can arrive with HTTP 200. Invalid measures response contents even with validation off. Blocked measures invalid quotes withheld from customers when validation is on. Both are percentages of received quotes over one minute."
+      "description": "A reply can arrive successfully but contain wrong or missing values. These lines show bad replies received and bad replies hidden by the response checker, over the last minute."
     },
     {
       "id": 17,

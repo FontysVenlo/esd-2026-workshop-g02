@@ -9,10 +9,34 @@ export function createInventoryServer(category = process.env.INVENTORY_CATEGORY 
   if (!Object.values(inventoryCategory).includes(category))
     throw new Error('Unknown inventory category: ' + category);
   const metrics = new Metrics(category + '-inventory');
-  return http.createServer((req, res) => {
+  let mode = 'none';
+  let sequence = 0;
+  return http.createServer(async (req, res) => {
     const started = performance.now();
     const url = new URL(req.url, 'http://localhost');
     const path = url.pathname;
+    if (path === '/fault') {
+      if (req.method === 'GET') return respond(200, { mode });
+      if (req.method !== 'POST') return respond(405, {});
+      if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`)
+        return respond(403, {});
+      if (!req.headers['content-type']?.startsWith('application/json')) return respond(415, {});
+      try {
+        let raw = '';
+        for await (const chunk of req) {
+          raw += chunk;
+          if (raw.length > 1024) return respond(413, {});
+        }
+        const input = JSON.parse(raw);
+        if (!['none', 'invalid-data', 'intermittent-errors'].includes(input.mode))
+          return respond(400, {});
+        mode = input.mode;
+        sequence = 0;
+        return respond(200, { mode });
+      } catch {
+        return respond(400, {});
+      }
+    }
     if (path === '/health') return respond(200, { status: 'ok' });
     if (path === '/metrics') {
       res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4' });
@@ -22,9 +46,14 @@ export function createInventoryServer(category = process.env.INVENTORY_CATEGORY 
       const product = products().find(
         (product) => product.sku === (url.searchParams.get('sku') ?? 'LAMP-01'),
       );
-      return product && inventoryCategory[product.sku] === category
-        ? respond(200, { sku: product.sku, quantity: product.quantity, warehouse: 'west' })
-        : respond(404, { error: readPageCopy('storefront').api.not_found });
+      if (!product || inventoryCategory[product.sku] !== category)
+        return respond(404, { error: readPageCopy('storefront').api.not_found });
+      const step = sequence++;
+      if (mode === 'intermittent-errors' && step % 2 === 0)
+        return respond(503, { error: readPageCopy('storefront').api.inventory_warning });
+      const quantity =
+        mode === 'invalid-data' ? [-3, null, 1.5, product.quantity][step % 4] : product.quantity;
+      return respond(200, { sku: product.sku, quantity, warehouse: 'west' });
     }
     return respond(404, { error: readPageCopy('storefront').api.not_found });
 

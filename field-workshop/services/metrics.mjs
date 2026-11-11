@@ -37,6 +37,8 @@ export class Metrics {
     this.productDurations = new Map();
     this.quotes = new Map();
     this.rejectedQuotes = new Map();
+    this.inventoryResponses = new Map();
+    this.rejectedInventoryResponses = new Map();
   }
 
   request(route, status, seconds) {
@@ -68,6 +70,16 @@ export class Metrics {
     add(this.rejectedQuotes, { service: this.service, provider }, rejected ? 1 : 0);
   }
 
+  inventoryResponse(dependency, valid, rejected) {
+    for (const outcome of ['valid', 'invalid'])
+      add(
+        this.inventoryResponses,
+        { service: this.service, dependency, outcome },
+        outcome === (valid ? 'valid' : 'invalid') ? 1 : 0,
+      );
+    add(this.rejectedInventoryResponses, { service: this.service, dependency }, rejected ? 1 : 0);
+  }
+
   render() {
     const lines = [];
     const counter = (name, help, entries) => {
@@ -87,6 +99,16 @@ export class Metrics {
       }
     };
     counter('workshop_http_requests_total', 'Completed application HTTP requests.', this.requests);
+    counter(
+      'workshop_inventory_responses_total',
+      'Stock data quality before response checks.',
+      this.inventoryResponses,
+    );
+    counter(
+      'workshop_rejected_inventory_responses_total',
+      'Invalid stock values blocked by response checks.',
+      this.rejectedInventoryResponses,
+    );
     counter(
       'workshop_shipping_quotes_total',
       'Quote data quality, independent of HTTP status and validation enforcement.',

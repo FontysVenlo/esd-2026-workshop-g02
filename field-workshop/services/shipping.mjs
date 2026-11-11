@@ -26,7 +26,7 @@ export function createShippingServer(provider = process.env.SHIPPING_PROVIDER ??
           if (raw.length > 1024) return respond(413, {});
         }
         const input = JSON.parse(raw);
-        if (!['none', 'invalid-quotes', 'intermittent-errors'].includes(input.mode))
+        if (!['none', 'invalid-data', 'intermittent-errors'].includes(input.mode))
           return respond(400, {});
         mode = input.mode;
         calls.clear();
@@ -53,7 +53,7 @@ export function createShippingServer(provider = process.env.SHIPPING_PROVIDER ??
       };
       // A repeatable sequence per product avoids assigning one permanently bad
       // value to the same card when the catalog requests three quotes at once.
-      if (mode === 'invalid-quotes') {
+      if (mode === 'invalid-data') {
         const variants = [
           { etaDays: -2 },
           { priceEur: null, etaDays: null },
