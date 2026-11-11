@@ -80,6 +80,7 @@ function ProductCard({
   product,
   result,
   stale,
+  failed = false,
   preview = false,
   shippingQuote = result?.shipping,
   shippingStale = stale,
@@ -145,7 +146,9 @@ function ProductCard({
     );
   };
   return (
-    <article className={`react-product ${stale ? 'stale' : limited ? 'degraded' : ''}`}>
+    <article
+      className={`react-product ${failed ? 'failed' : stale ? 'stale' : limited ? 'degraded' : ''}`}
+    >
       <div className="product-photo">
         <img src={product.image} alt={product.name} width="1254" height="1254" decoding="async" />
       </div>
@@ -156,18 +159,22 @@ function ProductCard({
         </div>
         <p className="meta">{product.sku}</p>
         <div
-          className={`product-state ${stale ? 'state-stale' : limited ? 'state-limited' : 'state-live'}`}
+          className={`product-state ${failed ? 'state-failed' : stale ? 'state-stale' : limited ? 'state-limited' : 'state-live'}`}
         >
-          {stale
-            ? catalog.stale
-            : !result
-              ? catalog.waiting
-              : limited
-                ? catalog.limited
-                : catalog.live}
+          {failed
+            ? catalog.unavailable
+            : stale
+              ? catalog.stale
+              : !result
+                ? catalog.waiting
+                : limited
+                  ? catalog.limited
+                  : catalog.live}
         </div>
         <div className="product-readings">
-          <p>{result ? stock(result) : catalog.waiting}</p>
+          <p className={failed ? 'stock-unavailable' : undefined}>
+            {failed ? storefront.stock_unavailable : result ? stock(result) : catalog.waiting}
+          </p>
           <p>{shipping({ shipping: shippingQuote }, shippingStale)}</p>
           {!preview && shippingQuote && <p className="meta">{storefront.last_delivery_check}</p>}
         </div>
@@ -185,7 +192,11 @@ function ProductCard({
             {storefrontPage.order_preview}
           </button>
         </div>
-        <div className="individual-result" role="status" aria-live="polite">
+        <div
+          className={`individual-result ${check?.error && !busy ? 'has-error' : ''}`}
+          role="status"
+          aria-live="polite"
+        >
           {busy ? (
             catalog.checking
           ) : check?.error ? (
@@ -211,7 +222,7 @@ function Storefront() {
   useEffect(() => {
     document.title = page.pageTitle;
   }, []);
-  const [preview, setPreview] = useState(false);
+  const [preview, setPreview] = useState(true);
   const [auto, setAuto] = useState(true);
   const [state, refresh] = usePolling(`/api/catalog?preview=${preview}`, 2000, auto);
   const stale = Boolean(state.error || state.pending);
@@ -280,7 +291,7 @@ function Storefront() {
                   })}
           </strong>
           {state.error && <p>{state.error.message || catalog.connection_error}</p>}
-          {stale && state.data && <span>{catalog.stale_notice}</span>}
+          {state.error && state.data && <span>{catalog.stale_notice}</span>}
         </div>
         <div className="react-products">
           {products.map((product) => (
@@ -289,6 +300,7 @@ function Storefront() {
               product={product}
               result={state.data?.products.find((result) => result.product.sku === product.sku)}
               stale={stale}
+              failed={Boolean(state.error)}
               preview={preview}
               shippingQuote={state.quotes[product.sku] ?? null}
               shippingStale={preview && stale}

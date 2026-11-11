@@ -53,12 +53,12 @@
     {
       "key": "validation",
       "label": "Same-fault validation",
-      "prompt": "Compare the identical fault after mitigation was introduced. Measure the impact with Grafana and explain what happens."
+      "prompt": "Compare the identical fault after mitigation was introduced. Measure the impact on the Storefront and in Grafana and explain what happens."
     },
     {
       "key": "conclusion",
       "label": "Conclusion and cleanup",
-      "prompt": "What fault did you introduce? What mitigation did you use? What improved?"
+      "prompt": "What fault did you introduce? What mitigation did you use? What improved? When you reset the fault, what happens?"
     }
   ],
   "solution": [

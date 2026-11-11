@@ -1624,6 +1624,18 @@ a:focus-visible {
 .react-product.stale {
   border-color: #d9be84;
 }
+.react-product.failed {
+  border-color: #c44636;
+}
+.product-state.state-failed {
+  background: #fce8e5;
+  color: #9b3529;
+}
+.stock-unavailable,
+.individual-result.has-error {
+  color: #9b3529;
+  font-weight: 600;
+}
 .product-readings {
   min-height: 6.25rem;
   font-size: 0.88rem;

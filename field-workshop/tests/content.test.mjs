@@ -112,7 +112,7 @@ test('each challenge shows its own complete tasks and page-local edits', async (
   }
 });
 
-test('backup shipping displays price and longer delivery without implementation details', async () => {
+test('storefront shows valid shipping quotes and hides stock counts after failed refreshes', async () => {
   const { readFileSync, unlinkSync } = await import('node:fs');
   const { fileURLToPath, pathToFileURL } = await import('node:url');
   const { build } = await import('esbuild');
@@ -176,6 +176,24 @@ test('backup shipping displays price and longer delivery without implementation 
     );
     assert.ok(missingDelivery.includes(page.storefront.shipping_time_not_checked));
     assert.ok(missingDelivery.includes(page.storefront.shipping_cost_not_checked));
+    for (const sku of ['LAMP-01', 'CHAIR-02', 'DESK-03']) {
+      const failed = renderToStaticMarkup(
+        React.createElement(ProductCard, {
+          product: { ...product, sku },
+          result,
+          stale: true,
+          failed: true,
+        }),
+      );
+      assert.match(failed, /class="react-product failed"/);
+      assert.match(failed, /class="product-state state-failed"/);
+      assert.ok(failed.includes(page.storefront.stock_unavailable));
+      assert.ok(failed.includes(page.catalog.unavailable));
+      assert.ok(!failed.includes(format(page.storefront.in_stock, { quantity: 12 })));
+    }
+    assert.doesNotMatch(stale, /state-failed|stock-unavailable/);
+    assert.ok(html.includes(format(page.storefront.in_stock, { quantity: 12 })));
+    assert.doesNotMatch(html, /state-failed|stock-unavailable/);
   } finally {
     unlinkSync(out);
   }

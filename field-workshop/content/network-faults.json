@@ -94,7 +94,6 @@
     "unknown_value": "?",
     "showing_current_toxiproxy_state": "Showing current Toxiproxy state.",
     "choose_a_whole_number_delay_from_50_to_5000": "Choose a whole-number delay from 50 to 5000 ms.",
-    "restore_both_proxy_paths_and_remove_every_active_toxiproxy": "Restore both proxy paths and remove every active Toxiproxy fault in this local workshop?",
     "sending_change_to_toxiproxy": "Sending change to Toxiproxy…",
     "request_with_body": "{method} {path}\nContent-Type: application/json\n\n{body}",
     "request_line": "{method} {path}",

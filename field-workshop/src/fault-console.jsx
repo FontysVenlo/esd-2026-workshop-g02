@@ -235,11 +235,6 @@ function Console() {
       setMessage({ text: faultConsole.choose_a_whole_number_delay_from_50_to_5000, error: true });
       return;
     }
-    if (
-      action === 'reset' &&
-      !window.confirm(faultConsole.restore_both_proxy_paths_and_remove_every_active_toxiproxy)
-    )
-      return;
     faultLock.current = true;
     setBusy(true);
     setMessage({ text: faultConsole.sending_change_to_toxiproxy });

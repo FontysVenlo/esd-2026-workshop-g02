@@ -53,12 +53,12 @@
     {
       "key": "validation",
       "label": "Same-outage validation",
-      "prompt": "With Primary Shipping still disconnected, compare quotes for all three products: carrier, shipping price, delivery time and catalog response time."
+      "prompt": "Compare the identical fault after mitigation was introduced. Measure the impact on Storefront and in Grafana and explain what happens."
     },
     {
       "key": "conclusion",
       "label": "Blast-radius conclusion and cleanup",
-      "prompt": "What did the customer regain, what trade-off remains, and how did you verify primary-carrier recovery?"
+      "prompt": "What did the customer regain, what trade-off remains? If you reconnect shipping, what happens?"
     }
   ],
   "solution": [
