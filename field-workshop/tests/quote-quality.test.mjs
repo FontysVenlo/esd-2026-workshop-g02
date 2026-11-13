@@ -151,10 +151,11 @@ test('response faults are always available; shipping checks block bad values wit
   for (let i = 0; i < 4; i++) {
     const data = await (await fetch(shop + '/api/order-preview?sku=CHAIR-02')).json();
     assert.equal(data.inventory.source, 'live');
-    assert.equal(data.shipping.source, i < 3 ? 'rejected' : 'live');
+    assert.equal(data.shipping.source, i < 3 ? 'cached' : 'live');
     if (i < 3) {
-      assert.equal(data.shipping.priceEur, null);
-      assert.equal(data.shipping.etaDays, null);
+      assert.equal(data.shipping.priceEur, 4.9);
+      assert.equal(data.shipping.etaDays, 3);
+      assert.ok(data.shipping.checkedAt);
     }
   }
   metrics = await (await fetch(shop + '/metrics')).text();
@@ -225,8 +226,11 @@ test('Lighting response faults affect lamp stock only; its own response checker 
   await checkResponse(consoleBase, 'inventory', true);
   for (let i = 0; i < 4; i++) {
     const data = await (await fetch(shop + '/api/product?sku=LAMP-01')).json();
-    assert.equal(data.inventory.source, i < 3 ? 'rejected' : 'live');
-    if (i < 3) assert.equal(data.inventory.quantity, null);
+    assert.equal(data.inventory.source, i < 3 ? 'cached' : 'live');
+    if (i < 3) {
+      assert.equal(data.inventory.quantity, 12);
+      assert.equal(data.inventory.available, null, 'old stock is not current availability');
+    }
   }
   for (const sku of ['CHAIR-02', 'DESK-03']) {
     const data = await (await fetch(shop + '/api/product?sku=' + sku)).json();
@@ -252,4 +256,142 @@ test('Lighting response faults affect lamp stock only; its own response checker 
   await post(shop, '/api/workshop/reset', {});
   assert.equal((await (await fetch(lighting + '/fault')).json()).mode, 'none');
   assert.deepEqual(mitigations.snapshot(), defaultMitigations);
+});
+
+test('response checks discard invalid replies without history and retain only later valid replies', async () => {
+  const { shop, consoleBase } = await fixture();
+  await post(consoleBase, '/api/response-fault', { proxy: 'inventory', mode: 'invalid-data' });
+  await post(consoleBase, '/api/response-fault', { proxy: 'shipping', mode: 'invalid-data' });
+  await checkResponse(consoleBase, 'inventory', true);
+  await checkResponse(consoleBase, 'shipping', true);
+  const preview = async (sku = 'LAMP-01') =>
+    (await fetch(shop + '/api/order-preview?sku=' + sku)).json();
+  for (let i = 0; i < 3; i++) {
+    const data = await preview();
+    assert.equal(data.inventory.source, 'rejected');
+    assert.equal(data.inventory.quantity, null);
+    assert.equal(data.shipping.source, 'rejected');
+    assert.equal(data.shipping.priceEur, null);
+    assert.equal(data.shipping.etaDays, null);
+  }
+  const firstValid = await preview();
+  for (let i = 0; i < 3; i++) {
+    const data = await preview();
+    assert.equal(data.inventory.quantity, firstValid.inventory.quantity);
+    assert.equal(data.shipping.priceEur, firstValid.shipping.priceEur);
+    assert.equal(data.shipping.etaDays, firstValid.shipping.etaDays);
+    assert.equal(data.inventory.checkedAt, firstValid.inventory.checkedAt);
+    assert.equal(data.shipping.checkedAt, firstValid.shipping.checkedAt);
+    assert.equal(data.inventory.source, 'cached');
+    assert.equal(data.shipping.source, 'cached');
+  }
+  assert.equal(
+    (await preview('CHAIR-02')).shipping.source,
+    'rejected',
+    'never reuse another product’s quote',
+  );
+  const metrics = await (await fetch(shop + '/metrics')).text();
+  assert.match(
+    metrics,
+    /workshop_rejected_inventory_responses_total\{service="storefront",dependency="lighting-inventory"\} 6/,
+  );
+  assert.match(
+    metrics,
+    /workshop_rejected_quotes_total\{service="storefront",provider="primary"\} 7/,
+  );
+  // A fresh start must not carry valid data across challenges.
+  await post(shop, '/api/workshop/reset', {});
+  await post(consoleBase, '/api/response-fault', { proxy: 'inventory', mode: 'invalid-data' });
+  await post(consoleBase, '/api/response-fault', { proxy: 'shipping', mode: 'invalid-data' });
+  await checkResponse(consoleBase, 'inventory', true);
+  await checkResponse(consoleBase, 'shipping', true);
+  const fresh = await preview();
+  assert.equal(fresh.inventory.source, 'rejected');
+  assert.equal(fresh.shipping.source, 'rejected');
+});
+
+test('latest valid values update, malformed JSON is rejected, and carrier histories stay separate', async () => {
+  let stock = { quantity: 7 };
+  let quote = { priceEur: 2.5, etaDays: 2 };
+  let backupQuote = { priceEur: 8, etaDays: 9 };
+  let offline = false;
+  let malformed = false;
+  const primary = await listen(
+    http.createServer((req, res) => {
+      res.writeHead(offline && req.url.startsWith('/quote') ? 503 : 200, {
+        'Content-Type': 'application/json',
+      });
+      res.end(malformed ? '{broken' : JSON.stringify(req.url.startsWith('/stock') ? stock : quote));
+    }),
+  );
+  const backup = await listen(
+    http.createServer((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(backupQuote));
+    }),
+  );
+  const mitigations = createMitigations();
+  for (const dependency of ['inventory', 'shipping'])
+    mitigations.apply({
+      action: 'configure',
+      dependency,
+      timeoutMs: 3000,
+      fallback: false,
+      validate: true,
+    });
+  const shop = await listen(
+    createStorefrontServer({
+      inventoryUrl: primary,
+      shippingUrl: primary,
+      backupShippingUrl: backup,
+      mitigations,
+    }),
+  );
+  const preview = async () => {
+    const response = await fetch(shop + '/api/order-preview');
+    assert.equal(response.status, 200);
+    return response.json();
+  };
+  await preview();
+  stock = { quantity: 9 };
+  quote = { priceEur: 3.5, etaDays: 4 };
+  const latest = await preview();
+  malformed = true;
+  const retained = await preview();
+  assert.equal(retained.inventory.quantity, 9);
+  assert.equal(retained.shipping.priceEur, 3.5);
+  assert.equal(retained.shipping.etaDays, 4);
+  assert.equal(retained.inventory.checkedAt, latest.inventory.checkedAt);
+  assert.equal(retained.shipping.checkedAt, latest.shipping.checkedAt);
+  assert.equal(retained.shipping.source, 'cached');
+  malformed = false;
+  mitigations.apply({
+    action: 'configure',
+    dependency: 'shipping',
+    timeoutMs: 3000,
+    fallback: true,
+    validate: true,
+  });
+  offline = true;
+  assert.equal((await preview()).shipping.priceEur, 8);
+  backupQuote = { priceEur: -100, etaDays: -100 };
+  const backupCached = await preview();
+  assert.equal(backupCached.shipping.priceEur, 8);
+  assert.equal(backupCached.shipping.source, 'cached');
+  offline = false;
+  quote = { priceEur: -1, etaDays: -1 };
+  assert.equal(
+    (await preview()).shipping.priceEur,
+    3.5,
+    'primary never reuses the backup carrier quote',
+  );
+  const metrics = await (await fetch(shop + '/metrics')).text();
+  assert.match(
+    metrics,
+    /workshop_rejected_quotes_total\{service="storefront",provider="primary"\} 2/,
+  );
+  assert.match(
+    metrics,
+    /workshop_rejected_quotes_total\{service="storefront",provider="backup"\} 1/,
+  );
 });

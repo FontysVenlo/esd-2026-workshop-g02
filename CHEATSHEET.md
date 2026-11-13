@@ -62,7 +62,7 @@ For a **slow primary carrier**, a shorter timeout such as 400 ms reaches the bac
 1. Open Challenge 3. All fault and protection controls are available at any time. Record healthy stock, shipping and a prediction before injecting anything.
 2. In Network Faults, choose **Primary Shipping** and **Wrong or missing values**, then click **Apply response fault**. Click **Refresh shipping info** several times. Record incorrect or missing values while stock stays live.
 3. Compare **Dependency outcomes** with **Response checks** in Grafana. Invalid quotes rise despite HTTP success. Optional hints are under the Challenge 3 menu.
-4. Keep the fault active. In Fallbacks & timeouts, under Shipping, select **Check response data** and click **Apply Shipping settings**. Incorrect values should become unavailable; valid quotes and stock remain visible. Blocked quotes now rise too. Compare fresh one-minute windows.
+4. Keep the fault active. In Fallbacks & timeouts, under Shipping, select **Check response data** and click **Apply Shipping settings**. Incorrect replies are discarded. The last valid quote stays visible with its check time; only a new valid reply updates it. With no valid history, delivery information is unavailable. Stock stays visible. **Responses rejected** now rises too. Compare fresh one-minute windows.
 5. Remove the response fault, restore defaults and verify €4.90 / 3 days again. Explain that validation protects customers but does not repair the carrier's data.
 
 ## 4 — Diagnose your partner's incident

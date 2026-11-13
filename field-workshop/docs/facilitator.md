@@ -21,7 +21,7 @@ Numbers depend on the host and browser. Ask teams to compare same-route, same-fa
 
 No partner seed is needed. The participant records a baseline, then introduces **Wrong or missing values**. The primary returns HTTP 200 while cycling per product through negative delivery days, empty fields, a negative price and a valid quote. The backup remains healthy.
 
-All response faults and response checks are available throughout the workshop. Choose Lighting inventory for bad stock values or Shipping for bad delivery information. **Response checks** counts invalid quotes regardless of validation; blocked quotes increase only when enforcement is enabled. Validation marks an invalid quote unavailable without activating fallback or breaker. Healthy stock remains visible. Normal transport-failure fallbacks still behave as in Challenge 2.
+All response faults and response checks are available throughout the workshop. Choose Lighting inventory for bad stock values or Shipping for bad delivery information. **Response checks** counts invalid quotes regardless of validation; blocked quotes increase only when enforcement is enabled. Validation discards an invalid reply and retains the latest valid values for the same product (and carrier for quotes), labelled with their original check time. With no valid history it shows unavailable information. Responses rejected shows the discard counters. Invalid replies never enter the cache, even when validation is off; fresh-start and Storefront restart clear the cache. This does not activate fallback or breaker. Healthy stock remains visible. Normal transport-failure fallbacks still behave as in Challenge 2.
 
 ## Challenge 4 — Partner competition
 

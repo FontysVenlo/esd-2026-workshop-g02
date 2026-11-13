@@ -65,7 +65,7 @@
     "Healthy: all products return live data quickly through one shared worker. Record your measured timings.",
     "With +1500 ms Lighting latency and the default 3000 ms timeout, lamp checks succeed slowly. Chair and desk can exceed their 1000 ms queue deadline while the worker waits for the lamp. Their errors come from real capacity contention.",
     "With only a 400 ms timeout, the lamp check errors sooner and frees the worker. Chair and desk can load again. Timeout alone cannot supply missing lamp stock.",
-    "The breaker pauses failed lamp stock requests for five seconds, avoiding repeated 400 ms waits. A slow successful reply does not trigger it. Inventory fallback is optional for this challenge: it changes the lamp error to Stock unconfirmed, but does not free the worker sooner or improve chair and desk results. Shipping fallback in Challenge 2 can provide a real backup quote.",
+    "The breaker pauses failed lamp stock requests for five seconds, avoiding repeated 400 ms waits. A slow successful reply does not trigger it. Inventory fallback is optional for this challenge: it changes the lamp error to Stock unconfirmed, but does not free the worker sooner or improve chair and desk results.",
     "Clear the fault, restore defaults, allow in-flight calls to finish, and verify live results for all three products."
   ],
   "text": {

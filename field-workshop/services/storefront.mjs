@@ -70,6 +70,10 @@ export function createStorefrontServer(config = {}) {
   const metrics = new Metrics('storefront');
   const capacity = createCapacity(config.capacity);
   const breaker = createBreaker(config.breaker);
+  // Remember only validated values, including before the response checker is
+  // enabled. Invalid replies must never replace a product's last good data.
+  const latestStock = new Map();
+  const latestQuotes = new Map();
   let previousPolicy = JSON.stringify(mitigations.snapshot());
 
   async function dependency(name, baseUrl, path, timeoutMs) {
@@ -79,7 +83,10 @@ export function createStorefrontServer(config = {}) {
         signal: AbortSignal.timeout(timeoutMs),
       });
       if (!response.ok) throw new Error(`Dependency returned ${response.status}`);
-      const body = await response.json();
+      const body = await response.json().catch((error) => {
+        if (error instanceof SyntaxError) return null;
+        throw error;
+      });
       metrics.dependency(name, 'success', (performance.now() - started) / 1000);
       return body;
     } catch (error) {
@@ -124,14 +131,24 @@ export function createStorefrontServer(config = {}) {
         valid,
         !valid && policy.validate,
       );
-      if (!valid && policy.validate)
+      if (!valid && policy.validate) {
+        const previous = latestStock.get(sku);
         return {
+          ...previous,
           available: null,
-          quantity: null,
-          source: 'rejected',
+          quantity: previous?.quantity ?? null,
+          source: previous ? 'cached' : 'rejected',
           warning: readPageCopy('storefront').api.invalid_stock_warning,
         };
-      return { available: data?.quantity > 0, quantity: data?.quantity ?? null, source: 'live' };
+      }
+      const result = {
+        available: data?.quantity > 0,
+        quantity: data?.quantity ?? null,
+        source: 'live',
+        ...(valid ? { checkedAt: new Date().toISOString() } : {}),
+      };
+      if (valid) latestStock.set(sku, result);
+      return result;
     } catch (error) {
       if (!policy.fallback) throw error;
       metrics.fallback(inventoryCategory[sku] + '-inventory');
@@ -145,7 +162,7 @@ export function createStorefrontServer(config = {}) {
     }
   }
 
-  function quoteResult(data, source, validate) {
+  function quoteResult(data, source, validate, sku) {
     const valid =
       data !== null &&
       typeof data === 'object' &&
@@ -154,20 +171,26 @@ export function createStorefrontServer(config = {}) {
       Number.isInteger(data.etaDays) &&
       data.etaDays > 0;
     metrics.quote(source === 'backup' ? 'backup' : 'primary', valid, !valid && validate);
-    if (!valid && validate)
+    const key = `${sku}:${source}`;
+    if (!valid && validate) {
+      const previous = latestQuotes.get(key);
       return {
-        priceEur: null,
-        etaDays: null,
-        source: 'rejected',
+        ...previous,
+        priceEur: previous?.priceEur ?? null,
+        etaDays: previous?.etaDays ?? null,
+        source: previous ? 'cached' : 'rejected',
         warning: readPageCopy('storefront').api.invalid_quote_warning,
       };
-    return { ...data, source };
+    }
+    const result = { ...data, source, ...(valid ? { checkedAt: new Date().toISOString() } : {}) };
+    if (valid) latestQuotes.set(key, result);
+    return result;
   }
 
   async function shipping(policy, sku) {
     try {
       const data = await call('shipping', sku, policy);
-      return quoteResult(data, 'live', policy.validate);
+      return quoteResult(data, 'live', policy.validate, sku);
     } catch (error) {
       if (!policy.fallback) throw error;
       metrics.fallback('shipping');
@@ -178,7 +201,7 @@ export function createStorefrontServer(config = {}) {
           '/quote?sku=' + sku,
           policy.timeoutMs,
         );
-        return quoteResult(quote, 'backup', policy.validate);
+        return quoteResult(quote, 'backup', policy.validate, sku);
       } catch {
         // Both providers are unavailable. Preserve stock and mark the quote missing.
       }
@@ -386,6 +409,8 @@ export function createStorefrontServer(config = {}) {
       }
       const restored = mitigations.apply({ action: 'reset' });
       breaker.reset();
+      latestStock.clear();
+      latestQuotes.clear();
       previousPolicy = JSON.stringify(restored);
       console.log(
         'Workshop fresh start: network faults cleared, default timeouts and fallbacks restored',

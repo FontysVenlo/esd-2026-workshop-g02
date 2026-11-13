@@ -64,8 +64,8 @@
   "solution": [
     "The main delivery company replies, but sometimes sends negative delivery days, a negative price or empty fields. Other replies are normal. Stock still works.",
     "The requests count as successful because a reply arrived. Response checks in Grafana separately shows wrong or missing values.",
-    "Under Shipping, select Check response data and click Apply Shipping settings. Wrong shipping information becomes unavailable. Normal shipping values and stock still appear.",
-    "The checker hides bad values. It does not fix the delivery company or call the backup. Remove the response fault and restore defaults to finish."
+    "Under Shipping, select Check response data and click Apply Shipping settings. Wrong replies are discarded. The last valid quote stays visible with its check time, until a new valid quote updates it. If there is no earlier valid quote, delivery information is unavailable. Stock still works.",
+    "Responses rejected in Grafana counts the discarded replies even while the last valid quote remains visible. The checker does not fix the delivery company or call the backup. Remove the response fault and restore defaults to finish."
   ],
   "text": {
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",

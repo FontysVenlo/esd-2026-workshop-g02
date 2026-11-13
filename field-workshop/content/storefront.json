@@ -52,7 +52,10 @@
     "last_delivery_check": "",
     "shipping_time_missing": "Shipping time: Not provided",
     "shipping_cost_missing": "Shipping cost: Not provided",
-    "stock_missing": "Stock: Not provided"
+    "stock_missing": "Stock: Not provided",
+    "last_valid_stock": "Last valid stock: {quantity}",
+    "last_valid_stock_time": "Stock last checked at",
+    "last_valid_delivery": "Last valid delivery information from"
   },
   "api": {
     "product_name": "Desk Lamp",
@@ -64,8 +67,8 @@
     "json_is_required": "JSON is required",
     "proxy_reset_status": "Toxiproxy returned {status}",
     "reset_failed": "Network faults could not be cleared: {error}",
-    "invalid_quote_warning": "The carrier returned an invalid quote. Delivery information cannot be confirmed.",
+    "invalid_quote_warning": "The latest quote was discarded because its values are invalid.",
     "shipping_reset_failed": "Response faults could not be cleared.",
-    "invalid_stock_warning": "The stock number is missing or does not make sense."
+    "invalid_stock_warning": "The latest stock reply was discarded because its values are invalid."
   }
 }

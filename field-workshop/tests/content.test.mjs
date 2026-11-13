@@ -232,6 +232,23 @@ test('storefront shows valid shipping quotes and hides stock counts after failed
     assert.ok(rejected.includes(page.storefront.shipping_cost_unavailable));
     assert.ok(rejected.includes(format(page.storefront.in_stock, { quantity: 12 })));
     assert.ok(rejected.includes(page.catalog.limited));
+    const checkedAt = '2026-11-13T12:00:00.000Z';
+    const cached = renderToStaticMarkup(
+      React.createElement(ProductCard, {
+        product,
+        result: {
+          inventory: { source: 'cached', quantity: 7, available: null, checkedAt },
+          shipping: { source: 'cached', priceEur: 4.9, etaDays: 3, checkedAt },
+        },
+        stale: false,
+        preview: true,
+      }),
+    );
+    assert.ok(cached.includes(format(page.storefront.in_stock, { quantity: 7 })));
+    assert.ok(cached.includes(format(page.storefront.shipping_time, { days: 3 })));
+    assert.ok(cached.includes(format(page.storefront.shipping_cost, { price: '4.90' })));
+    assert.ok(cached.includes(page.catalog.stale));
+    assert.doesNotMatch(cached, /state-live|<time|Last valid delivery information|Stock last checked/);
   } finally {
     unlinkSync(out);
   }

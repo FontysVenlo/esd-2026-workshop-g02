@@ -98,8 +98,10 @@ function ProductCard({
   }, [result]);
   const unconfirmed = result?.inventory.source !== 'live';
   const limited = Boolean(
-    result && (unconfirmed || ['unavailable', 'rejected'].includes(shippingQuote?.source)),
+    result &&
+    (unconfirmed || ['unavailable', 'rejected', 'cached'].includes(shippingQuote?.source)),
   );
+  const cached = result?.inventory.source === 'cached' || shippingQuote?.source === 'cached';
   async function inspect(preview) {
     if (busy) return;
     controller.current = new AbortController();
@@ -123,14 +125,14 @@ function ProductCard({
     }
   }
   const stock = (value) =>
-    value?.inventory.source === 'live'
+    ['live', 'cached'].includes(value?.inventory.source)
       ? value.inventory.quantity == null
         ? storefront.stock_missing
         : format(storefront.in_stock, { quantity: value.inventory.quantity })
       : storefront.stock_unconfirmed;
   const shipping = (value, staleQuote = false) => {
     const quote = value?.shipping;
-    const live = !staleQuote && ['live', 'backup'].includes(quote?.source);
+    const live = !staleQuote && ['live', 'backup', 'cached'].includes(quote?.source);
     return (
       <>
         <span className="shipping-line">
@@ -176,9 +178,11 @@ function ProductCard({
               ? catalog.stale
               : !result
                 ? catalog.waiting
-                : limited
-                  ? catalog.limited
-                  : catalog.live}
+                : cached
+                  ? catalog.stale
+                  : limited
+                    ? catalog.limited
+                    : catalog.live}
         </div>
         <div className="product-readings">
           {failed && failureMessage && <p className="meta">{failureMessage}</p>}

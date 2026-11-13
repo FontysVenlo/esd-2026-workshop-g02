@@ -270,7 +270,7 @@
       "gridPos": {
         "x": 0,
         "y": 21,
-        "w": 24,
+        "w": 12,
         "h": 7
       },
       "fieldConfig": {
@@ -315,7 +315,52 @@
           "interval": "5s"
         }
       ],
-      "description": "A reply can arrive successfully but contain wrong or missing values. These lines show bad replies received and bad replies hidden by the response checker, over the last minute."
+      "description": "Wrong or missing values received, and invalid replies discarded by the response checker. Rejected replies never replace the last valid information."
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Responses rejected",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "field-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "workshop_rejected_inventory_responses_total",
+          "legendFormat": "{{dependency}}",
+          "interval": "5s"
+        },
+        {
+          "refId": "B",
+          "expr": "workshop_rejected_quotes_total",
+          "legendFormat": "Shipping · {{provider}}",
+          "interval": "5s"
+        }
+      ],
+      "description": "Invalid service replies discarded since Storefront started. Counts rise even when the customer keeps seeing the last valid stock or quote. Validation must be enabled for that service. Counters reset on Storefront restart."
     },
     {
       "id": 19,

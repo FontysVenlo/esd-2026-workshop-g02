@@ -73,8 +73,8 @@
       "shipping_timeout": "Let a delivery request fail after the defined number of milliseconds. This avoids waiting for the full delay and helps make the worker available sooner. With fallback on, the backup service gets its own time limit.",
       "shipping_fallback": "If the main delivery service cannot answer or the breaker stops the request, ask the backup service instead of showing an error. Its quote has the same shipping price, but delivery takes five days instead of three.",
       "shipping_breaker": "If a request to the main delivery service fails, for example through a timeout, stop sending it further requests for five seconds. Then let the next request try again. If it fails, wait another five seconds. If it succeeds, allow requests normally again. This only starts after a failed request. With fallback on, the backup company can still answer during the pause.",
-      "inventory_validation": "Hide a stock count if it is missing, below zero or not a whole number. Show Stock unconfirmed instead. This works without fallback or breaker.",
-      "shipping_validation": "Hide shipping information if the price or delivery days are missing or impossible. Stock stays visible. This does not ask the backup service."
+      "inventory_validation": "Only let valid stock numbers through. Discard replies with missing, negative or non-whole numbers and keep showing the last valid stock for that product.",
+      "shipping_validation": "Only let valid shipping prices and delivery days through. Discard wrong or missing values and keep showing that product’s last valid quote."
     },
     "protection_help_title": "How the protections work",
     "timeout_summary": "**Timeout:** Let a service request fail after the chosen number of milliseconds. This helps make the worker available sooner for other requests instead of waiting for the full delay.",
@@ -88,7 +88,7 @@
     },
     "apply_response_fault": "Apply response fault",
     "remove_response_fault": "Remove response fault",
-    "validation_summary": "**Response check:** Hide wrong or missing stock, shipping prices or delivery days. Other useful information stays visible.",
+    "validation_summary": "**Response check:** Discard wrong or missing values and keep the last valid information. New valid replies update the page. Without earlier valid information, show unavailable information.",
     "check_response_data": "Check response data"
   },
   "faultConsole": {
