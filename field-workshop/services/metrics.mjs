@@ -35,6 +35,7 @@ export class Metrics {
     this.dependencyDurations = new Map();
     this.fallbacks = new Map();
     this.productDurations = new Map();
+    this.productOutcomes = new Map();
     this.quotes = new Map();
     this.rejectedQuotes = new Map();
     this.inventoryResponses = new Map();
@@ -56,8 +57,9 @@ export class Metrics {
     add(this.fallbacks, { service: this.service, dependency: name });
   }
 
-  product(sku, seconds) {
+  product(sku, seconds, outcome) {
     observe(this.productDurations, { service: this.service, sku }, seconds);
+    add(this.productOutcomes, { service: this.service, sku, outcome });
   }
 
   quote(provider, valid, rejected) {
@@ -143,6 +145,11 @@ export class Metrics {
       'workshop_product_duration_seconds',
       'Product processing including shared worker queue time.',
       this.productDurations,
+    );
+    counter(
+      'workshop_product_results_total',
+      'Product results including capacity errors inside a successful catalog envelope.',
+      this.productOutcomes,
     );
     return `${lines.join('\n')}\n`;
   }

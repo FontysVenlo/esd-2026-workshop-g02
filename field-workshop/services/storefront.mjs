@@ -195,6 +195,7 @@ export function createStorefrontServer(config = {}) {
   async function productResult(product, preview, policy) {
     const queuedAt = performance.now();
     let release;
+    let outcome = 'failure';
     try {
       release = await capacity.acquire();
       const queueMs = Math.round(performance.now() - queuedAt);
@@ -208,17 +209,23 @@ export function createStorefrontServer(config = {}) {
       if (failure) throw failure.reason;
       const inventory = results[0].value;
       const delivery = results[1]?.value;
+      const degraded =
+        inventory.source !== 'live' || Boolean(delivery && delivery.source !== 'live');
+      outcome = degraded ? 'degraded' : 'live';
       const { quantity: _quantity, ...description } = product;
       return {
         product: description,
         inventory,
         ...(delivery ? { shipping: delivery } : {}),
-        degraded: inventory.source !== 'live' || Boolean(delivery && delivery.source !== 'live'),
+        degraded,
         queueMs,
       };
+    } catch (error) {
+      outcome = error.outcome ?? 'failure';
+      throw error;
     } finally {
       release?.();
-      metrics.product(product.sku, (performance.now() - queuedAt) / 1000);
+      metrics.product(product.sku, (performance.now() - queuedAt) / 1000, outcome);
     }
   }
 
@@ -302,17 +309,20 @@ export function createStorefrontServer(config = {}) {
     }
     try {
       if (route === '/api/catalog') {
-        // The catalog is one customer response. Without fallback, one missing
-        // product rejects the complete view, demonstrating error propagation.
+        // Preserve each operation's actual result. A slow lamp can exhaust the
+        // shared worker, but its error must never overwrite healthy products.
+        const catalogProducts = products();
         const results = await Promise.allSettled(
-          products().map((product) =>
+          catalogProducts.map((product) =>
             productResult(product, url.searchParams.get('preview') === 'true', policy),
           ),
         );
-        const failure = results.find((result) => result.status === 'rejected');
-        if (failure) throw failure.reason;
         return sendApi(200, {
-          products: results.map((result) => result.value),
+          products: results.map((result, index) => {
+            if (result.status === 'fulfilled') return result.value;
+            const { quantity: _quantity, ...product } = catalogProducts[index];
+            return { product, ...productFailure(result.reason) };
+          }),
           system: capacity.snapshot(),
           circuits: breaker.snapshot(),
         });
@@ -324,15 +334,20 @@ export function createStorefrontServer(config = {}) {
       const result = await productResult(product, route === '/api/order-preview', policy);
       return sendApi(200, { ...result, note: 'Preview only. No order is placed.' });
     } catch (error) {
-      return sendApi(error.outcome === 'timeout' ? 504 : 503, {
+      const failure = productFailure(error);
+      return sendApi(failure.status, failure);
+    }
+
+    function productFailure(error) {
+      return {
+        status: error.outcome === 'timeout' ? 504 : 503,
+        outcome: error.outcome ?? 'failure',
         error:
           error.outcome === 'capacity'
             ? readPageCopy('storefront').catalog.capacity_error
-            : route === '/api/catalog'
-              ? readPageCopy('storefront').catalog.catalog_error
-              : readPageCopy('storefront').catalog.product_error,
+            : readPageCopy('storefront').catalog.product_error,
         failedDependency: error.message.split(' ')[0],
-      });
+      };
     }
 
     // Called by the workshop page when a newly unlocked challenge is opened, so

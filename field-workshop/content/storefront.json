@@ -14,14 +14,14 @@
     "refresh_preview": "Refresh shipping info",
     "auto_refresh": "Auto-refresh every 2 seconds",
     "updating": "Updating catalog…",
-    "failed": "Whole catalog unavailable · HTTP {status} · {milliseconds} ms",
+    "failed": "Catalog refresh failed · HTTP {status} · {milliseconds} ms",
     "unknown_status": "—",
     "preview_ready": "Delivery catalog ready · {milliseconds} ms",
     "stock_ready": "Availability catalog ready · {milliseconds} ms",
     "connection_error": "Could not refresh the catalog. No current live result is shown.",
     "stale_notice": "Current stock could not be confirmed. Individual product checks remain available.",
     "explanation_title": "About availability and delivery",
-    "explanation": "Stock and delivery information are checked live. If current information cannot be confirmed, it is marked unavailable. Delivery time and shipping cost are shown when a current quote is available.",
+    "explanation": "Stock and delivery information are checked live for each product. A product whose current information cannot be confirmed is marked unavailable, while other products keep their own results. Delivery time and shipping cost are shown when available.",
     "chair": "Task Chair",
     "desk": "Writing Desk",
     "price": "€{price}",
@@ -36,7 +36,8 @@
     "individual_result": "{stock} · {milliseconds} ms",
     "capacity_error": "The shop is busy. Please try again shortly.",
     "catalog_error": "The catalog could not be refreshed. Please try again or check a product individually.",
-    "product_error": "Product information is temporarily unavailable."
+    "product_error": "Product information is temporarily unavailable.",
+    "partial": "{count} of 3 product checks failed · {milliseconds} ms"
   },
   "storefront": {
     "in_stock": "{quantity} in stock",
@@ -48,7 +49,7 @@
     "shipping_cost_unavailable": "Shipping cost: Currently unavailable",
     "shipping_time_not_checked": "Shipping time: Not checked yet",
     "shipping_cost_not_checked": "Shipping cost: Not checked yet",
-    "last_delivery_check": "From the last delivery check",
+    "last_delivery_check": "",
     "shipping_time_missing": "Shipping time: Not provided",
     "shipping_cost_missing": "Shipping cost: Not provided",
     "stock_missing": "Stock: Not provided"

@@ -8,12 +8,12 @@ Generate `northstar-workshop.zip` with `package-workshop.ps1` and distribute it 
 
 ## Expected behavior
 
-- Three products share two Storefront workers. Three stock proxies lead to Lighting, Seating and Desks inventory. All three products use one shared Shipping proxy. Disconnecting it takes delivery estimates offline for the whole shop.
-- Healthy: all product and catalog views succeed quickly. The load profile supplies five requests per second: three lamp requests plus one each for chair and desk.
-- Inventory +1500 ms: repeated lamp calls can occupy both workers. Healthy products then queue or are rejected after a 1000 ms queue wait (queue bound: 12); catalog aggregation also waits for every product. Observe a full window, not a single refresh.
-- Inventory timeout 400 ms plus fallback: workers are released sooner. Failed product/dependency circuits pause calls for five seconds, then permit one probe. Lamp stock is unconfirmed and its availability action is disabled; chair and desk can stay live. A probe can cause a brief spike.
+- Three products share one Storefront worker. Three stock proxies lead to Lighting, Seating and Desks inventory. All three products use one shared Shipping proxy. Disconnecting it takes delivery estimates offline for the whole shop.
+- Healthy: all product and catalog views succeed quickly. The load profile supplies 3.5 requests per second: 1.5 lamp requests plus one each for chair and desk.
+- Inventory +1500 ms: repeated lamp calls can occupy the single worker. Healthy products then queue or are rejected after a 1000 ms queue wait (queue bound: 12); catalog aggregation also waits for every product. Observe a full window, not a single refresh.
+- Inventory timeout 400 ms alone: the lamp check errors sooner, releasing the worker so chair and desk can load. Fallback is optional for Challenge 1: it changes the lamp error to Stock unconfirmed, disabling its availability action, but does not improve worker capacity or healthy-product availability. The separate breaker then skips failed lamp stock calls for five seconds before one probe, avoiding repeated 400 ms waits. With a 3000 ms timeout, the 1500 ms reply succeeds slowly: fallback and breaker do not activate. A probe can cause a brief spike.
 - Shipping disconnected: stock remains live. With fallback off the delivery preview fails. With fallback on it obtains real quotes from backup Shipping: €4.90 and 5 days instead of the primary carrier’s €4.90 and 3 days. Reconnect and verify all three primary quotes after recovery.
-- The deliberately coupled baseline makes the dependency risk visible. Discuss alternatives such as independently rendering product cards, bulkheads, or partial aggregation as well as timeout/breaker/fallback. Do not present a circuit breaker as a fallback alone.
+- The shared worker makes the dependency risk visible. Catalog aggregation preserves per-product results. Discuss separate worker pools (bulkheads) as an additional way to isolate capacity. Do not present a circuit breaker as a fallback alone.
 
 Numbers depend on the host and browser. Ask teams to compare same-route, same-fault windows, not a single sample. Grafana's one-minute rates need a fresh observation window after each change.
 

@@ -42,7 +42,7 @@ async function waitFor(base, predicate) {
   assert.fail('expected worker state did not appear');
 }
 
-test('two slow lamp calls cause a healthy product to queue and reject; mitigation contains it', async () => {
+test('one slow lamp call occupies the only worker and rejects healthy work; mitigation contains it', async () => {
   const pending = [];
   const slow = await serve(dependency(() => new Promise((resolve) => pending.push(resolve))));
   const healthy = await serve(dependency(async () => {}));
@@ -57,11 +57,10 @@ test('two slow lamp calls cause a healthy product to queue and reject; mitigatio
     }),
   );
   const lamp1 = fetch(`${base}/api/product`);
-  const lamp2 = fetch(`${base}/api/product`);
-  await waitFor(base, (state) => state.active === 2);
+  await waitFor(base, (state) => state.active === 1);
   const occupiedMetrics = await (await fetch(`${base}/metrics`)).text();
-  assert.match(occupiedMetrics, /^workshop_workers_active 2$/m);
-  assert.match(occupiedMetrics, /^workshop_workers_limit 2$/m);
+  assert.match(occupiedMetrics, /^workshop_workers_active 1$/m);
+  assert.match(occupiedMetrics, /^workshop_workers_limit 1$/m);
   const healthyFailure = await fetch(`${base}/api/product?sku=CHAIR-02`);
   assert.equal(healthyFailure.status, 503, 'healthy branch should be affected by occupied workers');
   assert.equal((await (await fetch(`${base}/api/system`)).json()).rejected, 1);
@@ -70,7 +69,7 @@ test('two slow lamp calls cause a healthy product to queue and reject; mitigatio
     /^workshop_capacity_rejections_total 1$/m,
   );
   for (const resolve of pending.splice(0)) resolve();
-  await Promise.all([lamp1, lamp2]);
+  await lamp1;
 
   mitigations.apply({
     action: 'configure',
@@ -140,7 +139,8 @@ test('primary Shipping outage fails over to equal-price longer delivery and reco
     baseline.products.every((p) => p.shipping.priceEur === 4.9 && p.shipping.etaDays === 3),
   );
   offline = true;
-  assert.equal((await fetch(`${base}/api/catalog?preview=true`)).status, 503);
+  const failedPreview = await (await fetch(`${base}/api/catalog?preview=true`)).json();
+  assert.ok(failedPreview.products.every((item) => item.status === 503));
   assert.equal((await fetch(`${base}/api/catalog`)).status, 200);
   assert.equal((await fetch(`${base}/api/order-preview?sku=CHAIR-02`)).status, 503);
   mitigations.apply({
@@ -184,6 +184,100 @@ test('primary Shipping outage fails over to equal-price longer delivery and reco
     4,
     'all paths remain visible after recovery',
   );
+});
+
+test('1500 ms lamp delay causes actual queue failures; timeout, fallback and breaker have separate effects', async () => {
+  let lampCalls = 0;
+  let healthyCalls = 0;
+  let delayMs = 0;
+  const slow = await serve(
+    dependency(async () => {
+      lampCalls++;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }),
+  );
+  const healthy = await serve(
+    dependency(async () => {
+      healthyCalls++;
+    }),
+  );
+  const mitigations = createMitigations();
+  const base = await serve(
+    createStorefrontServer({
+      inventoryUrl: slow,
+      healthyInventoryUrl: healthy,
+      shippingUrl: healthy,
+      mitigations,
+    }),
+  );
+  const catalog = async () => {
+    const response = await fetch(`${base}/api/catalog`);
+    assert.equal(response.status, 200, 'catalog envelope preserves individual results');
+    return (await response.json()).products;
+  };
+  assert.ok((await catalog()).every((item) => item.inventory.source === 'live'));
+  delayMs = 1500;
+  // Breaker and fallback alone cannot detect or shorten a slow successful call.
+  mitigations.apply({
+    action: 'configure',
+    dependency: 'inventory',
+    timeoutMs: 3000,
+    fallback: true,
+    breaker: true,
+  });
+  const healthyBefore = healthyCalls;
+  const faulted = await catalog();
+  assert.equal(faulted[0].inventory.source, 'live', 'lamp eventually succeeds');
+  assert.deepEqual(
+    faulted.slice(1).map((item) => item.outcome),
+    ['capacity', 'capacity'],
+  );
+  assert.equal(
+    healthyCalls,
+    healthyBefore,
+    'queued products never reached their healthy inventory',
+  );
+  assert.equal((await (await fetch(`${base}/api/system`)).json()).circuits.length, 0);
+  const faultMetrics = await (await fetch(`${base}/metrics`)).text();
+  for (const sku of ['CHAIR-02', 'DESK-03'])
+    assert.match(
+      faultMetrics,
+      new RegExp(
+        `workshop_product_results_total\\{service="storefront",sku="${sku}",outcome="capacity"\\} 1`,
+      ),
+    );
+
+  for (const breaker of [false, true]) {
+    for (const fallback of [false, true]) {
+      mitigations.apply({
+        action: 'configure',
+        dependency: 'inventory',
+        timeoutMs: 400,
+        fallback,
+        breaker,
+      });
+      const before = lampCalls;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const result = await catalog();
+        if (fallback) assert.equal(result[0].inventory.source, 'unconfirmed');
+        else assert.equal(result[0].outcome, breaker && attempt ? 'circuit_open' : 'timeout');
+        assert.deepEqual(
+          result.slice(1).map((item) => item.inventory.source),
+          ['live', 'live'],
+          'timeout alone protects healthy cards',
+        );
+      }
+      assert.equal(
+        lampCalls - before,
+        breaker ? 1 : 2,
+        'only breaker skips repeated dependency attempts',
+      );
+      assert.equal((await (await fetch(`${base}/api/system`)).json()).active, 0);
+    }
+  }
+  delayMs = 0;
+  mitigations.apply({ action: 'reset' });
+  assert.ok((await catalog()).every((item) => item.inventory.source === 'live'));
 });
 
 test('a circuit allows just one recovery probe and resets on success or disabled policy', async () => {

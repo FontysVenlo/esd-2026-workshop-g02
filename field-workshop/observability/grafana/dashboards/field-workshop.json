@@ -318,13 +318,51 @@
       "description": "A reply can arrive successfully but contain wrong or missing values. These lines show bad replies received and bad replies hidden by the response checker, over the last minute."
     },
     {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Product results",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "field-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (sku, outcome) (rate(workshop_product_results_total[1m]))",
+          "legendFormat": "{{sku}} · {{outcome}}",
+          "interval": "5s"
+        }
+      ],
+      "description": "Actual product outcomes, including queue deadline failures inside catalog responses. A successful catalog HTTP envelope can contain failed products. Capacity means the product never acquired the shared worker; timeout means its dependency attempt exceeded the configured limit."
+    },
+    {
       "id": 17,
       "type": "row",
       "title": "More diagnostics",
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 28,
+        "y": 35,
         "w": 24,
         "h": 1
       },
@@ -340,7 +378,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 29,
+            "y": 36,
             "w": 12,
             "h": 7
           },
@@ -384,7 +422,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 29,
+            "y": 36,
             "w": 12,
             "h": 7
           },
@@ -428,7 +466,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 36,
+            "y": 43,
             "w": 12,
             "h": 7
           },
@@ -471,7 +509,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 36,
+            "y": 43,
             "w": 12,
             "h": 7
           },
@@ -509,7 +547,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 43,
+            "y": 50,
             "w": 12,
             "h": 7
           },
@@ -549,7 +587,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 43,
+            "y": 50,
             "w": 12,
             "h": 7
           },
@@ -609,7 +647,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 50,
+            "y": 57,
             "w": 12,
             "h": 7
           },
@@ -647,7 +685,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 50,
+            "y": 57,
             "w": 12,
             "h": 7
           },
@@ -684,7 +722,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 57,
+            "y": 64,
             "w": 12,
             "h": 7
           },
@@ -714,14 +752,14 @@
         {
           "id": 3,
           "type": "timeseries",
-          "title": "Customer request success rate",
+          "title": "HTTP response success rate",
           "datasource": {
             "type": "prometheus",
             "uid": "field-prometheus"
           },
           "gridPos": {
             "x": 12,
-            "y": 57,
+            "y": 64,
             "w": 12,
             "h": 7
           },
@@ -748,7 +786,8 @@
               "legendFormat": "{{route}}",
               "interval": "5s"
             }
-          ]
+          ],
+          "description": "HTTP transport status only. The catalog returns HTTP 200 while carrying individual product errors. Use Product results to compare actual live, degraded, timeout and capacity outcomes."
         }
       ]
     }

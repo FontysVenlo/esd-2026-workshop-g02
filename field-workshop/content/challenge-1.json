@@ -26,7 +26,7 @@
   "title": "One slow product blocks the shop",
   "level": "Guided entry",
   "scenario": "Customers have reported that the availability refresh is slow or that products are not available. Our expert team has already identified a fault in the Lighting inventory service. They say it has something to to with the availability of service workers. Now you are tasked to find the issue and mitigate it.",
-  "why": "The StoreFront uses two workers to process all inventory service requests. Sometimes there is a delay in the availability refresh and other products are unavailable.",
+  "why": "All three products share one Storefront worker. While it waits for lamp stock, chair and desk requests queue. If a request waits more than 1000 ms for the worker, it fails without reaching its healthy inventory service. Each card shows its own result.",
   "reproduce": "Try to add a 1500 ms delay to Lighting inventory to reproduce the issue. See what happens. Can you identify the impact?",
   "assignment": "Assignment: Can you keep chair and desk available while lamp stock is delayed or unavailable?",
   "fields": [
@@ -48,7 +48,7 @@
     {
       "key": "mitigation",
       "label": "Mitigation and reason",
-      "prompt": "For this challenge, apply the predefined fallback in the fault console. Explain what it does. Why should it help?"
+      "prompt": "Keep the same delay. First set Inventory timeout to 400 ms with fallback and breaker off. Check whether chair and desk recover. Then compare the breaker. Optionally enable fallback and describe how the lamp result changes. Which setting protects the worker, and which only changes what the customer sees?"
     },
     {
       "key": "validation",
@@ -62,10 +62,11 @@
     }
   ],
   "solution": [
-    "Healthy: All products and the catalog return live data quickly. Use your measured timings.",
-    "Slow lamp calls occupy the two shared workers. Healthy products can queue or fail.",
-    "The 400 ms timeout releases workers sooner. The breaker pauses failed lamp calls for 5 seconds. The fallback returns unconfirmed stock while chair and desk stay live.",
-    "Recovery may briefly increase latency. Remove faults, restore defaults and verify recovery."
+    "Healthy: all products return live data quickly through one shared worker. Record your measured timings.",
+    "With +1500 ms Lighting latency and the default 3000 ms timeout, lamp checks succeed slowly. Chair and desk can exceed their 1000 ms queue deadline while the worker waits for the lamp. Their errors come from real capacity contention.",
+    "With only a 400 ms timeout, the lamp check errors sooner and frees the worker. Chair and desk can load again. Timeout alone cannot supply missing lamp stock.",
+    "The breaker pauses failed lamp stock requests for five seconds, avoiding repeated 400 ms waits. A slow successful reply does not trigger it. Inventory fallback is optional for this challenge: it changes the lamp error to Stock unconfirmed, but does not free the worker sooner or improve chair and desk results. Shipping fallback in Challenge 2 can provide a real backup quote.",
+    "Clear the fault, restore defaults, allow in-flight calls to finish, and verify live results for all three products."
   ],
   "text": {
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",

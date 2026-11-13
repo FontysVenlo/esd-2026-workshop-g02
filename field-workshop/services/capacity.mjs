@@ -1,6 +1,6 @@
 // A deliberately small, real worker pool shared by all customer product requests.
 // Monitoring, health checks and operator controls never consume these workers.
-export function createCapacity({ limit = 2, maxQueue = 12, queueTimeoutMs = 1000 } = {}) {
+export function createCapacity({ limit = 1, maxQueue = 12, queueTimeoutMs = 1000 } = {}) {
   let active = 0;
   let rejected = 0;
   const queue = [];

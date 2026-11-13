@@ -81,6 +81,7 @@ function ProductCard({
   result,
   stale,
   failed = false,
+  failureMessage,
   preview = false,
   shippingQuote = result?.shipping,
   shippingStale = stale,
@@ -180,6 +181,7 @@ function ProductCard({
                   : catalog.live}
         </div>
         <div className="product-readings">
+          {failed && failureMessage && <p className="meta">{failureMessage}</p>}
           <p className={failed ? 'stock-unavailable' : undefined}>
             {failed ? storefront.stock_unavailable : result ? stock(result) : catalog.waiting}
           </p>
@@ -236,6 +238,7 @@ function Storefront() {
   const [auto, setAuto] = useState(true);
   const [state, refresh] = usePolling(`/api/catalog?preview=${preview}`, 2000, auto);
   const stale = Boolean(state.error || state.pending);
+  const failedCount = state.data?.products.filter((result) => result.error).length ?? 0;
   function selectView(value) {
     if (value === preview) refresh();
     else setPreview(value);
@@ -284,7 +287,7 @@ function Storefront() {
           </label>
         </section>
         <div
-          className={`catalog-feedback ${state.error ? 'has-error' : ''}`}
+          className={`catalog-feedback ${state.error || failedCount ? 'has-error' : ''}`}
           role="status"
           aria-live="polite"
         >
@@ -296,26 +299,35 @@ function Storefront() {
                     status: state.error.status ?? catalog.unknown_status,
                     milliseconds: state.milliseconds,
                   })
-                : format(preview ? catalog.preview_ready : catalog.stock_ready, {
-                    milliseconds: state.milliseconds,
-                  })}
+                : failedCount
+                  ? format(catalog.partial, {
+                      count: failedCount,
+                      milliseconds: state.milliseconds,
+                    })
+                  : format(preview ? catalog.preview_ready : catalog.stock_ready, {
+                      milliseconds: state.milliseconds,
+                    })}
           </strong>
           {state.error && <p>{state.error.message || catalog.connection_error}</p>}
           {state.error && state.data && <span>{catalog.stale_notice}</span>}
         </div>
         <div className="react-products">
-          {products.map((product) => (
-            <ProductCard
-              key={product.sku}
-              product={product}
-              result={state.data?.products.find((result) => result.product.sku === product.sku)}
-              stale={stale}
-              failed={Boolean(state.error)}
-              preview={preview}
-              shippingQuote={state.quotes[product.sku] ?? null}
-              shippingStale={preview && stale}
-            />
-          ))}
+          {products.map((product) => {
+            const item = state.data?.products.find((result) => result.product.sku === product.sku);
+            return (
+              <ProductCard
+                key={product.sku}
+                product={product}
+                result={item?.error ? undefined : item}
+                stale={stale}
+                failed={Boolean(state.error || item?.error)}
+                failureMessage={item?.error}
+                preview={preview}
+                shippingQuote={state.quotes[product.sku] ?? null}
+                shippingStale={preview && (stale || Boolean(item?.error))}
+              />
+            );
+          })}
         </div>
         <details className="catalog-explainer">
           <summary>{catalog.explanation_title}</summary>

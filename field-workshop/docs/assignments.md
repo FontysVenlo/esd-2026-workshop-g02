@@ -1,6 +1,6 @@
 # Engineering assignments
 
-Open <http://localhost:8088> for the guided workflow and <http://localhost:8088/storefront> for the three-product catalog. The start launcher supplies five requests per second. Fault controls target Lighting inventory or shared Shipping. Chair and desk use their own Seating and Desks inventory services. All products share two workers and one catalog response.
+Open <http://localhost:8088> for the guided workflow and <http://localhost:8088/storefront> for the three-product catalog. The start launcher supplies 3.5 requests per second. Fault controls target Lighting inventory or shared Shipping. Chair and desk use their own Seating and Desks inventory services. All products share one worker and one catalog response.
 
 Compare healthy, faulted and mitigated phases using fresh 60–90-second windows and unchanged traffic. No purchases are made.
 
@@ -8,9 +8,9 @@ Timeouts bound dependency waiting; a circuit breaker pauses a failed product/dep
 
 ## 1 — One slow product blocks the shop (Guided entry)
 
-**The customer problem.** Desk Lamp, Task Chair and Writing Desk share two Storefront workers. Only the lamp’s Inventory network branch becomes slow. Repeated lamp requests hold the workers; healthy chair and desk requests now queue or are rejected. The complete catalog also waits for the lamp result.
+**The customer problem.** Desk Lamp, Task Chair and Writing Desk share one Storefront worker. Only the lamp’s Inventory network branch becomes slow. Repeated lamp requests hold the worker; healthy chair and desk requests now queue or are rejected. The complete catalog also waits for the lamp result.
 
-**Why this matters.** The mitigation now protects other products. A 400 ms timeout releases a worker, the 5-second circuit breaker stops repeated waiting on the lamp, and the fallback lets the catalog show chair and desk while lamp stock is unconfirmed. These are three different mechanisms; fallback alone does not free capacity.
+**Why this matters.** The mitigation now protects other products. A 400 ms timeout releases a worker, the 5-second circuit breaker stops repeated waiting on the lamp, and fallback changes the failed lamp check to unconfirmed stock. These are three different mechanisms; fallback alone does not free capacity.
 
 **The issue to reproduce.** Choose Lighting inventory in Network Faults and apply a 1500 ms response delay. It affects only Desk Lamp’s branch. Use “Refresh all availability” in Storefront and watch the shared workers in Grafana as fixed background traffic runs.
 
@@ -24,14 +24,14 @@ Timeouts bound dependency waiting; a circuit breaker pauses a failed product/dep
 
 3. **Trace the propagation.** Compare “Dependency p95 latency”, “Product p95 latency”, “Shared workers and queue”, and “Capacity rejection rate”. Explain the path: lamp Inventory delay → occupied workers → healthy products waiting/rejected, plus the catalog waiting for every product. A queue can fluctuate; use a full window.
 
-4. **Apply containment.** Remove the fault first. Open Fallbacks & timeouts and use Challenge 1 settings. This applies a 400 ms Inventory timeout and enables fallback plus the product/dependency circuit breaker. Predict the distinct effect of each mechanism.
+4. **Compare the controls separately.** Keep the identical fault active. First use a 400 ms Inventory timeout with fallback and breaker off: the lamp errors sooner, while chair and desk can load. Optionally enable fallback: the lamp now shows Stock unconfirmed, but this does not free capacity sooner. Enable the breaker: subsequent lamp stock calls are skipped for five seconds, avoiding repeated 400 ms waits. Fallback or breaker alone with a 3000 ms timeout cannot shorten a successful 1500 ms reply. Timeout is the core protection for chair and desk; fallback is not required for that goal. The Challenge 1 preset enables all three together. Compare fresh windows for each step.
 
 5. **Repeat the same fault and verify recovery.** Reapply the identical +1500 ms Lighting inventory delay. Refresh several times, including within and after a 5-second cooldown. Compare chair/desk live results, queue pressure, rejection-rate changes, catalog latency, and lamp stock uncertainty. The lamp availability action should be disabled while stock is unconfirmed. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.
 
 **You are finished when:**
 
 - You measured healthy, delayed and mitigated phases under unchanged traffic.
-- You observed and explained impact on chair/desk or the complete catalog, then verified that impact shrank while lamp stock remained unconfirmed.
+- You observed and explained impact on chair/desk or the complete catalog, then verified that impact shrank while the lamp showed an error or, with optional fallback, Stock unconfirmed.
 - You distinguished timeout, circuit breaker and fallback; compared equal windows; and verified cleanup.
 
 ## 2 — Keep the catalog usable during a Shipping outage

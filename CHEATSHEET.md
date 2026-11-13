@@ -11,7 +11,7 @@ Start Docker Desktop and run the start launcher. Open [the workshop](http://loca
 
 **What to write down.** For each run, record the time, what happened to the lamp, chair and desk, and the catalog status and response time shown in Storefront. In Grafana, check **Shared workers and queue** and **Rejected since restart**. Record how much the rejection counter changed during the run. Use the same customer action, traffic and 60–90-second observation window for each comparison.
 
-The lamp uses Lighting inventory, the chair uses Seating inventory, and the desk uses Desks inventory. A Storefront worker holds one product check until its dependency calls finish. Two slow lamp checks can fill both slots and make a chair wait before Seating inventory even receives its request.
+The lamp uses Lighting inventory, the chair uses Seating inventory, and the desk uses Desks inventory. A Storefront worker holds one product check until its dependency calls finish. One slow lamp check can occupy the single slot and make a chair wait before Seating inventory even receives its request.
 
 **Three different jobs:** a **timeout** limits waiting; **fallback** supplies a usable alternative after failure (unconfirmed stock or a backup quote); a **breaker** pauses repeated calls after a failure. They can be used independently. A breaker does not supply replacement data.
 
@@ -21,19 +21,19 @@ The lamp uses Lighting inventory, the chair uses Seating inventory, and the desk
 
 ## 1. Make the lamp stock check slow
 
-**Core combination — Inventory timeout 400 ms + fallback ON. Breaker ON adds protection.** The timeout releases workers sooner; fallback keeps the catalog usable with unconfirmed lamp stock. The breaker additionally skips lamp lookups for five seconds after failure. It is helpful, but not required for partial results.
+**Core mitigation — Inventory timeout 400 ms. Breaker ON reduces repeated waiting. Fallback is optional.** Timeout releases the worker sooner so chair and desk can load. The breaker skips lamp stock requests for five seconds after a failure. Inventory fallback only changes the lamp error to Stock unconfirmed; it does not make the shop faster or restore confirmed stock.
 
 | Inventory timeout | Fallback | Breaker | What to compare |
 | --- | --- | --- | --- |
-| 3000 ms | ON or OFF | ON or OFF | Slow lamp calls still occupy workers: 1500 ms completes before the timeout, so fallback and breaker do not activate for the slow lookup. |
-| 400 ms | OFF | ON or OFF | Waiting is bounded, but failed lamp stock still makes the whole catalog response fail. |
-| 400 ms | ON | OFF | The catalog can show partial results, but each new lamp request still waits up to 400 ms. |
+| 3000 ms | ON or OFF | ON or OFF | Slow lamp calls still occupy the worker: 1500 ms completes before the timeout, so fallback and breaker do not activate for the slow lookup. |
+| 400 ms | OFF | ON or OFF | The lamp returns an error after its stock attempt times out; chair and desk can load as the worker is released sooner. |
+| 400 ms | ON | OFF | The lamp shows Stock unconfirmed; chair and desk retain live results. Each new lamp stock attempt still waits up to 400 ms. |
 | **400 ms** | **ON** | **ON** | After the first failure, most lamp requests skip the slow lookup and immediately return unconfirmed stock. Recovery probes may briefly increase latency. |
 
 1. In Storefront, click **Refresh availability**. Record this healthy baseline.
-2. In Network Faults, choose **Lighting inventory**, enter **1500** ms and click **Apply delay**. Refresh availability again. Watch the two shared workers in Grafana. Lamp calls can occupy both, so the healthy chair and desk may wait or their requests may be rejected.
-3. Click **Remove delay** for Inventory. In **Fallbacks & timeouts**, click **Use Challenge 1 settings**. This sets a 400 ms Inventory timeout and enables fallback and the circuit breaker.
-4. Apply the **same 1500 ms Lighting inventory delay**. Refresh availability again. Look for live chair and desk stock, unconfirmed lamp stock, and a change in queue or rejections. Record what actually happened.
+2. In Network Faults, choose **Lighting inventory**, enter **1500** ms and click **Apply delay**. Refresh availability again. Watch the single shared worker in Grafana. A lamp call can occupy it, so the healthy chair and desk may wait or their requests may be rejected.
+3. Keep the delay active. In **Fallbacks & timeouts**, set Inventory timeout to **400 ms**, leave fallback and breaker off, and apply. Check whether chair and desk recover while the lamp shows an error.
+4. Enable and apply the breaker. Compare repeated waiting and rejections. Optionally enable fallback: the lamp changes to **Stock unconfirmed**, while chair and desk keep working. The **Use Challenge 1 settings** preset enables all three together. Record what each setting actually changes.
 5. **Finish:** clear all faults, restore default settings and allow the five-second cooldown to finish. Verify live stock and deliveries, fill in the challenge notes, and click **Submit notes**.
 
 ## 2 — Restore quotes with a backup carrier
