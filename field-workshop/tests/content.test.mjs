@@ -64,6 +64,7 @@ test('only Challenge 3 shows optional hints; Challenge 4 shows partner round con
     for (const challenge of challenges) {
       globalThis.location = { hash: '#' + challenge.id };
       const html = renderToStaticMarkup(React.createElement(Workshop));
+      assert.equal(html.includes('id="solution"'), Boolean(challenge.solution?.length));
       const menuEnd = html.indexOf('</nav>', html.indexOf('id="challenge-nav"'));
       const mainStart = html.indexOf('id="challenge-detail"');
       const instructions = html.slice(menuEnd, mainStart);

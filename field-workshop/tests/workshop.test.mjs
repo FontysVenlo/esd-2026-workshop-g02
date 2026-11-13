@@ -79,7 +79,8 @@ test('workshop overview, browser modules, and local tool guide are served', asyn
 test('each submission reveals its solution and unlocks the next challenge', () => {
   let progress = emptyProgress();
   assert.equal(challenges.length, 4);
-  assert.ok(challenges.every((challenge) => challenge.solution.length >= 3));
+  assert.ok(challenges.slice(0, 3).every((challenge) => challenge.solution.length >= 3));
+  assert.equal(challenges[3].solution, undefined);
   assert.equal(isUnlocked(progress, 0), true);
   assert.equal(isUnlocked(progress, 1), false);
   const arbitraryNotes = Object.fromEntries(

@@ -25,59 +25,52 @@
   },
   "title": "Partner incident challenge",
   "level": "Partner competition",
-  "scenario": "Your partner causes one problem in the shop. Find it and protect customers as quickly as you can. Then swap roles.",
-  "why": "One good refresh can be luck. Explain the cause and check the shop three times before stopping the timer.",
-  "reproduce": "Start with a working shop. Your partner chooses Lighting inventory or Shipping and adds one fault: delay, changing delay, disconnect, some failed requests, or wrong or missing values. Do not look at the fault settings. Use the shop, Grafana and Fallbacks & timeouts to find a useful fix.",
+  "scenario": "Your partner causes one problem in the shop, you cause one in theirs. Find it and protect customers as quickly as you can.",
+  "why": "Explain the fault and check the shop before stopping the timer.",
+  "reproduce": "",
   "assignment": "Who can explain the problem and protect customers faster?",
   "fields": [
     {
-      "key": "plan",
-      "label": "Round setup",
-      "prompt": "Who introduces the fault and who investigates? Agree on similar difficulty and what a good result looks like."
+      "key": "steadyState",
+      "label": "1. Record the baseline",
+      "prompt": "Before introducing any faults, both partners record normal stock, delivery information and the relevant Grafana readings on their own machines."
     },
     {
-      "key": "steadyState",
-      "label": "Normal shop and prediction",
-      "prompt": "Record normal stock and shipping. Which other products might be affected by one slow service?"
+      "key": "plan",
+      "label": "2. Introduce a fault and start the timer",
+      "prompt": "Each partner introduces one fault on the other partner’s machine without revealing it. Once both faults are active, each of you starts your own timer."
     },
     {
       "key": "faultEvidence",
-      "label": "Both rounds: cause and time",
-      "prompt": "Record each fault after the reveal, your explanation, elapsed seconds and what you saw in the shop and Grafana."
+      "label": "3. Identify the problem",
+      "prompt": "Use Grafana and Storefront to identify the fault on your machine. Record the evidence that led you to your diagnosis without looking at the fault settings."
     },
     {
       "key": "mitigation",
-      "label": "Settings and reasons",
-      "prompt": "Record the settings for both rounds. Explain what each timeout, fallback, breaker or response check helped with."
+      "label": "4. Mitigate and test",
+      "prompt": "Apply a mitigation while keeping the fault active. Test it using Storefront and Grafana. What changed, and did the mitigation work?"
     },
     {
       "key": "validation",
-      "label": "Check the shop three times",
-      "prompt": "Leave each fault on. Record three refreshes. What still worked? What information stayed unavailable?"
+      "label": "5. Record the fault, mitigation and impact",
+      "prompt": "While the timer is still running, record the fault you identified, the mitigation you used and its impact compared with your baseline."
     },
     {
       "key": "conclusion",
-      "label": "Compare and reset",
-      "prompt": "Compare both times fairly. What would you try differently? Clear the faults, restore defaults and check the shop works normally again."
+      "label": "6. Stop the timer and compare",
+      "prompt": "After recording your results, stop the timer. Record both partners’ times. Who identified the problem, tested a mitigation and documented the result faster?"
     }
-  ],
-  "solution": [
-    "Find the cause using the shop and Grafana. Keep the fault on and check the result three times.",
-    "For a long wait, use a shorter timeout and fallback. A breaker can also pause repeated failed requests.",
-    "If Shipping cannot answer, fallback asks the backup company. The breaker saves repeated attempts, but cannot provide delivery information itself.",
-    "For wrong or missing values, enable Check response data for the affected service and apply its settings. This hides bad information without using fallback.",
-    "Compare both rounds fairly. Clear faults, restore defaults and check normal results return."
   ],
   "text": {
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",
     "the_customer_problem": "The customer problem",
-    "why_this_matters": "Why this matters",
-    "the_issue_to_reproduce": "The issue to reproduce",
+    "why_this_matters": "",
+    "the_issue_to_reproduce": "",
     "review_experiment_guide": "Review the general experiment guide on Home →",
     "external_link_symbol": "↗",
     "your_work": "YOUR WORK",
     "experiment_notes": "Experiment notes",
-    "fill_these_fields_as_you_run_the_experiment_above": "Record your observations. Submit to reveal an example and unlock the next challenge.",
+    "fill_these_fields_as_you_run_the_experiment_above": "Record your results. Submit to complete the workshop.",
     "update_submission": "Update submission",
     "submit_notes": "Submit notes",
     "your_solution_is_shown_alongside_your_notes": "Your solution is shown alongside your notes.",
@@ -124,10 +117,10 @@
   },
   "competition": {
     "title": "Timed partner round",
-    "rules": "Your partner applies one fault and says go. Start the timer. Leave the fault on. Explain the cause, choose your settings and refresh three times. Working products must stay usable. Missing information must be clearly marked; wrong values must be hidden. Then stop the timer and swap roles. Removing the fault does not count as a fix.",
+    "rules": "Your partner applies one fault and says go. Start the timer. Leave the fault on. Explain the cause, choose your settings. Working products must stay usable. Missing information must be clearly marked and wrong values must be hidden. Then stop the timer. Removing the fault does not count as a fix. Who was faster?",
     "elapsed": "Elapsed: {seconds} seconds",
     "start": "Start new round",
     "stop": "Stop timer",
-    "record": "Record both times, faults and settings below. Agree on what a good result looks like before each round. Clear all faults and restore defaults between rounds. The timer does not check your answers."
+    "record": "Record both times, faults and settings below. Agree on what a good result looks like before the round."
   }
 }

@@ -64,7 +64,7 @@
   "solution": [
     "The primary outage makes delivery requests fail while stock services remain healthy.",
     "Shipping fallback calls a separate carrier and returns real quotes for all three products: €4.90 and 5 days, compared with €4.90 and 3 days normally.",
-    "The breaker can pause primary calls for five seconds while backup quotes continue.^^.",
+    "The breaker can pause primary calls for five seconds while backup quotes continue. But it is not necessary for this challenge.",
     "Reconnect Primary Shipping, and refresh to verify normal delivery estimates return."
   ],
   "text": {

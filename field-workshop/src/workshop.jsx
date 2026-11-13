@@ -262,6 +262,7 @@ function Challenge({ challenge: c, progress, update, submit }) {
   const [error, setError] = useState('');
   const solutionRef = useRef(null);
   const submission = progress.submissions[c.id];
+  const showSolution = Boolean(submission && c.solution?.length);
   const answers = progress.drafts[c.id] ?? submission?.answers ?? {};
   const index = challenges.indexOf(c);
   return (
@@ -297,7 +298,7 @@ function Challenge({ challenge: c, progress, update, submit }) {
         </div>
       </section>
       {c.competition && <Competition copy={c.competition} />}
-      <div className={`challenge-columns${submission ? ' has-solution' : ''}`}>
+      <div className={`challenge-columns${showSolution ? ' has-solution' : ''}`}>
         <section className="notes-panel">
           <div className="eyebrow">{w('your_work')}</div>
           <h2>{w('experiment_notes')}</h2>
@@ -340,7 +341,9 @@ function Challenge({ challenge: c, progress, update, submit }) {
               </button>
               <span className="meta">
                 {submission
-                  ? w('your_solution_is_shown_alongside_your_notes')
+                  ? showSolution
+                    ? w('your_solution_is_shown_alongside_your_notes')
+                    : w('all_four_challenges_are_submitted_download_your_notes_from')
                   : index < challenges.length - 1
                     ? w('submitting_unlocks_challenge', { number: index + 2 })
                     : w('submitting_completes_the_workshop')}
@@ -351,7 +354,7 @@ function Challenge({ challenge: c, progress, update, submit }) {
             </p>
           </form>
         </section>
-        {submission && (
+        {showSolution && (
           <aside id="solution" ref={solutionRef} className="solution-panel">
             <div className="eyebrow">{w('after_submission')}</div>
             <h2>{w('possible_solution')}</h2>
