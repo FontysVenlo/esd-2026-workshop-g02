@@ -59,7 +59,7 @@
     "the_raw_api_is_at_paragraph": "The raw API is at `http://localhost:8478`. [Windows and Mac commands](http://localhost:8088/tools)",
     "apply_a_fault_or_mitigation_to_see_the_equivalent": "Apply a fault or mitigation to see the equivalent command here.",
     "jitter_ms": "Delay variation ± (ms)",
-    "jitter_help": "Make the delay change each time: 1000 ms delay with 800 ms variation adds between 200 and 1800 ms. Use 0 to keep the same delay every time.",
+    "jitter_help": "",
     "breaker_explanation": "If a service fails, the breaker waits five seconds before trying it again.",
     "fallback_explanation": "Fallback shows unknown stock or asks the backup delivery company. It does not check whether a successful reply contains sensible values.",
     "enable_inventory_breaker": " Enable Inventory circuit breaker",

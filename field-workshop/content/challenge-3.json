@@ -25,40 +25,40 @@
   },
   "title": "When successful requests return bad data",
   "level": "Investigation",
-  "scenario": "Customers sometimes see strange delivery days or shipping prices. Sometimes the values are missing. The graphs still say the requests worked. Find out why.",
-  "why": "Getting a reply does not mean the reply is right. Stop the shop from showing impossible values, while keeping stock information available.",
-  "reproduce": "First record normal stock, delivery days and shipping price. Predict what might go wrong. In Network Faults, choose Primary Shipping and Wrong or missing values, then click Apply response fault. Refresh shipping a few times. Leave the fault on while you try a fix.",
-  "assignment": "Can you hide wrong shipping information while keeping stock visible?",
+  "scenario": "This time we start from the beginning. There is no fault recorded yet. Perfect right? But Chaos Engineering as all about preparing for a disaster. And management would be furious if suddenly data is wrong and customers would stop buying. So we need to prepare for that. So please prevent/mitigate the storefront from showing wrong data.",
+  "why": "",
+  "reproduce": "",
+  "assignment": "All our technicians are busy fixing the problems from the challenges before. So you are on your own. But by now, you know the process, don't you?",
   "fields": [
     {
       "key": "symptom",
-      "label": "Normal results and prediction",
-      "prompt": "Record stock, delivery days and shipping price before the fault. What do you expect to change?"
+      "label": "Healthy baseline and metric",
+      "prompt": "Record your baseline. Include all the data you identify as relevant from Grafana into your notes."
     },
     {
       "key": "signals",
-      "label": "What you saw",
-      "prompt": "Record strange numbers or blanks from a few refreshes. What do the request and response-check graphs show?"
+      "label": "Hypothesis and fault injection",
+      "prompt": "What could be the impact of ...?"
     },
     {
       "key": "diagnosis",
-      "label": "Your explanation",
-      "prompt": "Why can a request work but the information still be wrong? What else could explain it?"
+      "label": "Fault evidence",
+      "prompt": "Introduce the fault. What happens? What is wrong? What is missing?"
     },
     {
       "key": "mitigation",
-      "label": "Your change and why it helps",
-      "prompt": "Which setting did you change? Why would waiting less or pausing requests not fix wrong values?"
+      "label": "Mitigation and reason",
+      "prompt": "Which mitigation did you choose? Why would the other mitigations not solve the problem?"
     },
     {
       "key": "validation",
-      "label": "Check the result",
-      "prompt": "Leave the fault on. Are wrong values hidden? Does stock still appear? Does Grafana show blocked values?"
+      "label": "Same-fault validation",
+      "prompt": "Leave the fault on and see if your mitigation works."
     },
     {
       "key": "conclusion",
-      "label": "Finish and reset",
-      "prompt": "What improved? What is still missing? Remove the fault, restore defaults and check normal shipping returns."
+      "label": "Conclusion and cleanup",
+      "prompt": "What improved? Did you successfully mitigate the problem?"
     }
   ],
   "solution": [
@@ -70,8 +70,8 @@
   "text": {
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",
     "the_customer_problem": "The customer problem",
-    "why_this_matters": "Why this matters",
-    "the_issue_to_reproduce": "The issue to reproduce",
+    "why_this_matters": "",
+    "the_issue_to_reproduce": "",
     "review_experiment_guide": "Review the general experiment guide on Home →",
     "external_link_symbol": "↗",
     "your_work": "YOUR WORK",
@@ -125,16 +125,16 @@
   },
   "hints": [
     {
-      "title": "Hint 1 · Look at the shop",
-      "explanation": "Refresh shipping a few times. Are the stock count, delivery days and price sensible? Write down any strange numbers or blanks."
+      "title": "Hint 1",
+      "explanation": "What fault should you introduce? The data reaches the storefront but is it correct?."
     },
     {
-      "title": "Hint 2 · Compare the graphs",
-      "explanation": "A successful request only means that a reply arrived. It can still contain wrong values. Look at Response checks in Grafana. The graph takes about a minute to show a new pattern clearly."
+      "title": "Hint 2",
+      "explanation": "A successful request only means that a reply arrived. It can still contain wrong values. Look at Response checks in Grafana."
     },
     {
-      "title": "Hint 3 · Try a response check",
-      "explanation": "A timeout stops waiting. A breaker pauses failed requests. Neither checks the values in a reply. Under Shipping, select Check response data and click Apply Shipping settings. Wrong values should disappear; stock should stay visible."
+      "title": "Hint 3",
+      "explanation": "A timeout stops waiting. A breaker pauses failed requests. Neither checks the values in a reply. So maybe we should check if the data is correct."
     }
   ]
 }
