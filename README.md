@@ -64,7 +64,6 @@ Notes are saved in your browser; use **Download notes** to export them.
 
 - [Chaos Engineering presentation](<Chaos Engineering Presentation final.pdf>): presentation slides (PDF).
 - [Challenge briefs](field-workshop/docs/assignments.md): a quick overview of the four experiments.
-- [Cheatsheet](CHEATSHEET.md): walkthroughs and expected results.
-- [Tool reference](field-workshop/docs/tool-reference.md): API and terminal commands.
-- [Facilitator notes](field-workshop/docs/facilitator.md): preparation and session guidance.
+
+
 
