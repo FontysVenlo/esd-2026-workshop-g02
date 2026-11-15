@@ -1,63 +1,23 @@
-# Engineering assignments
+# Challenge briefs
 
-Open <http://localhost:8088> for the guided workflow and <http://localhost:8088/storefront> for the three-product catalog. The start launcher supplies 3.5 requests per second. Fault controls target Lighting inventory or shared Shipping. Chair and desk use their own Seating and Desks inventory services. All products share one worker and one catalog response.
+Follow the tasks and submit notes in [the workshop](http://localhost:8088). These briefs are a quick overview; the browser contains the full instructions.
 
-Compare healthy, faulted and mitigated phases using fresh 60–90-second windows and unchanged traffic. No purchases are made.
+## 1. One slow product blocks the shop
 
-Timeouts bound dependency waiting; a circuit breaker pauses a failed product/dependency for five seconds and permits one recovery probe; fallback supplies an honest incomplete result. They serve different purposes.
+Apply a **1500 ms delay to Lighting inventory**. Measure how the lamp's slow check affects chair and desk through the shared worker. Compare a **400 ms Inventory timeout**, then the circuit breaker. Fallback is optional: it changes the lamp result to **Stock unconfirmed**.
 
-## 1 — One slow product blocks the shop (Guided entry)
+## 2. Keep delivery information available
 
-**The customer problem.** Desk Lamp, Task Chair and Writing Desk share one Storefront worker. Only the lamp’s Inventory network branch becomes slow. Repeated lamp requests hold the worker; healthy chair and desk requests now queue or are rejected. The complete catalog also waits for the lamp result.
+**Disconnect Primary Shipping** and compare stock with delivery results. Enable Shipping fallback and verify backup quotes for all three products: **€4.90 / 5 days**, compared with the primary's **€4.90 / 3 days**. The breaker is optional for this outage.
 
-**Why this matters.** The mitigation now protects other products. A 400 ms timeout releases a worker, the 5-second circuit breaker stops repeated waiting on the lamp, and fallback changes the failed lamp check to unconfirmed stock. These are three different mechanisms; fallback alone does not free capacity.
+## 3. Reject wrong or missing values
 
-**The issue to reproduce.** Choose Lighting inventory in Network Faults and apply a 1500 ms response delay. It affects only Desk Lamp’s branch. Use “Refresh all availability” in Storefront and watch the shared workers in Grafana as fixed background traffic runs.
+Test **Wrong or missing values** on both Lighting inventory and Primary Shipping. Compare HTTP success with **Response checks** in Grafana. Enable **Check response data** for the affected service and verify that invalid replies are discarded while the last valid information remains visible.
 
-**Before you start.** Start with “Clear all faults” and “Restore default settings” in Network Faults. Use the start launcher so fixed background traffic is running. Compare the catalog in Storefront; read workers, queue, rejections and dependency circuits in Grafana. Keep the same traffic throughout, use fresh 60–90-second windows, and record changes in the cumulative rejected count rather than its lifetime total.
+## 4. Diagnose your partner's incident
 
-**Your question.** Can you keep the healthy chair and desk available while temporarily disabling an unconfirmed lamp availability check?
+Record baselines on both machines, then each partner introduces one hidden fault on the other's machine. Start both timers once faults are active. Diagnose, mitigate and document the impact while keeping the fault active and its settings hidden. Stop each timer after recording the results, then compare times.
 
-1. **Measure the healthy catalog.** Use “Refresh all availability”. Record all three stock results, catalog time, workers, queue size and the starting rejected count. In Grafana inspect “Product p95 latency” and “Shared workers and queue”. Predict which products can be affected despite having healthy dependency branches; state an abort condition.
+## For every experiment
 
-2. **Create a lamp-only slowdown.** Apply +1500 ms to Lighting inventory in Network Faults. Keep supplied traffic unchanged and refresh the catalog. Record lamp delay, chair/desk queue time or failures, catalog status, and the change in rejected requests over a fresh window. The slow request consumes actual shared workers; Grafana charts measured state.
-
-3. **Trace the propagation.** Compare “Dependency p95 latency”, “Product p95 latency”, “Shared workers and queue”, and “Capacity rejection rate”. Explain the path: lamp Inventory delay → occupied workers → healthy products waiting/rejected, plus the catalog waiting for every product. A queue can fluctuate; use a full window.
-
-4. **Compare the controls separately.** Keep the identical fault active. First use a 400 ms Inventory timeout with fallback and breaker off: the lamp errors sooner, while chair and desk can load. Optionally enable fallback: the lamp now shows Stock unconfirmed, but this does not free capacity sooner. Enable the breaker: subsequent lamp stock calls are skipped for five seconds, avoiding repeated 400 ms waits. Fallback or breaker alone with a 3000 ms timeout cannot shorten a successful 1500 ms reply. Timeout is the core protection for chair and desk; fallback is not required for that goal. The Challenge 1 preset enables all three together. Compare fresh windows for each step.
-
-5. **Repeat the same fault and verify recovery.** Reapply the identical +1500 ms Lighting inventory delay. Refresh several times, including within and after a 5-second cooldown. Compare chair/desk live results, queue pressure, rejection-rate changes, catalog latency, and lamp stock uncertainty. The lamp availability action should be disabled while stock is unconfirmed. Clear all faults, restore default settings, wait for in-flight work and any 5-second cooldown, then verify all three products have live stock and delivery information. Submit your own measurements.
-
-**You are finished when:**
-
-- You measured healthy, delayed and mitigated phases under unchanged traffic.
-- You observed and explained impact on chair/desk or the complete catalog, then verified that impact shrank while the lamp showed an error or, with optional fallback, Stock unconfirmed.
-- You distinguished timeout, circuit breaker and fallback; compared equal windows; and verified cleanup.
-
-## 2 — Keep the catalog usable during a Shipping outage
-
-The primary Shipping provider becomes unreachable, so delivery quotes fail for all three products. A backup carrier can deliver the same products at the same shipping price, but needs 5 days instead of 3.
-
-1. **Compare both healthy catalog views.** Record stock and delivery quotes for all three products, including the shipping price and estimated days. Record catalog time and queue state.
-
-2. **Disconnect Primary Shipping.** Disconnect Primary Shipping and repeat both views. Record working stock checks, failed delivery quotes, customer-visible errors and worker pressure.
-
-3. **Identify the coupling.** Use Shipping failures in Grafana and the Storefront results to identify which customer action requires a carrier. Describe what customers can no longer do.
-
-4. **Enable fallback during the outage.** Keep Primary Shipping disconnected and choose a mitigation in Fallbacks & timeouts. Retest all three products and record the carrier, quote price, estimated days and catalog response time.
-
-5. **Reconnect and verify recovery.** Reconnect Primary Shipping while keeping your mitigation active. If the breaker is enabled, allow its five-second cooldown and a recovery probe, then refresh again. Verify that normal estimates return, restore defaults and submit.
-
-## 3 — When successful requests return bad data
-
-Customers see strange delivery estimates and prices while monitoring reports successful requests. Record the healthy baseline and a hypothesis, then inject **Wrong or missing values** in Network Faults. Refresh several times and compare HTTP success with **Response checks** in Grafana.
-
-Under Shipping select **Check response data** and apply its settings to block missing or invalid quotes. It discards bad replies and keeps the last valid quote for each product and carrier, labelled with its check time. If no valid quote exists yet, delivery information is unavailable. Stock stays visible and the checker does not invoke a backup carrier. Keep the fault active; compare Response checks and Responses rejected in Grafana. Optional hints live under the Challenge 3 menu. Remove the fault, restore defaults and verify normal quotes afterward.
-
-## 4 — Partner incident challenge
-
-Take turns introducing one hidden fault: delay, jitter, disconnection, intermittent Shipping errors or invalid shipping responses. Record a healthy baseline and agree on comparable difficulty and what useful customer protection means.
-
-After the injector says go, start the page timer. The investigator keeps Fault injection/current state closed, states a supported diagnosis and applies protection through Fallbacks & timeouts. Keep the fault active and verify three consecutive refreshes with healthy stock or honest uncertainty for the affected item, and usable or explicitly unavailable quotes without incorrect values. Then stop the timer.
-
-Record both times, diagnoses, settings and remaining trade-offs. Clear faults and restore defaults between rounds and at the end. Removing the fault does not count as containment. The timer is manual; submissions are not automatically graded.
+Compare healthy, faulted and mitigated results using unchanged traffic and equal **60–90-second windows**. Record customer results, latency, workers, queue and new rejections. Clear faults, restore default settings and verify recovery afterward. Notes are saved in your browser; use **Download notes** to export them.

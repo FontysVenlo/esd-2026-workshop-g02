@@ -1,38 +1,27 @@
-# Facilitator notes
+`# Facilitator checklist
 
-Use this file to prepare and review the experiments. At <http://localhost:8088>, participants submit notes, see an example solution beside their inputs, and unlock the next challenge. There is no correctness evaluation. Records are stored in each participant's browser, so ask them to download the JSON experiment record for review. Network faults change Toxiproxy paths; response faults change the real Lighting inventory or primary Shipping service replies.
+## Prepare
 
-## Before participants arrive
+- Run `./package-workshop.ps1` in PowerShell from the repository root and distribute `dist/northstar-workshop.zip`.
+- Ask participants to install and start Docker Desktop, fully extract the ZIP, then run `start.bat` (Windows) or `bash ./start.command` (Mac). Test both platforms before the session.
+- Build and start once while online so images and dependencies are cached. Keep ports **8088, 8089, 3008, 9098 and 8478** free.
+- Check the [workshop](http://localhost:8088), [Storefront](http://localhost:8088/storefront), [Network Faults](http://localhost:8089), [Grafana](http://localhost:3008/d/field-workshop/field-workshop) and [Prometheus targets](http://localhost:9098/targets). All six scrape targets should be UP.
 
-Generate `northstar-workshop.zip` with `package-workshop.ps1` and distribute it to participants. Have them extract it fully. Pull/build the images while online, start the stack with **start.bat** (Windows) or **start.command** (Mac), and verify Grafana plus Prometheus targets. If Docker images are already present, the workshop can run without Internet. Ensure ports 8088, 8089, 3008, 9098 and 8478 are free. Test both launchers on representative participant laptops before the session; archive metadata checks alone do not prove macOS Gatekeeper behavior.
+## Run the session
 
-## Expected behavior
+The launcher supplies **3.5 requests/second**. Keep traffic unchanged and compare fresh **60–90-second windows**. Exact timings vary by machine.
 
-- Three products share one Storefront worker. Three stock proxies lead to Lighting, Seating and Desks inventory. All three products use one shared Shipping proxy. Disconnecting it takes delivery estimates offline for the whole shop.
-- Healthy: all product and catalog views succeed quickly. The load profile supplies 3.5 requests per second: 1.5 lamp requests plus one each for chair and desk.
-- Inventory +1500 ms: repeated lamp calls can occupy the single worker. Healthy products then queue or are rejected after a 1000 ms queue wait (queue bound: 12); catalog aggregation also waits for every product. Observe a full window, not a single refresh.
-- Inventory timeout 400 ms alone: the lamp check errors sooner, releasing the worker so chair and desk can load. Fallback is optional for Challenge 1: it changes the lamp error to Stock unconfirmed, disabling its availability action, but does not improve worker capacity or healthy-product availability. The separate breaker then skips failed lamp stock calls for five seconds before one probe, avoiding repeated 400 ms waits. With a 3000 ms timeout, the 1500 ms reply succeeds slowly: fallback and breaker do not activate. A probe can cause a brief spike.
-- Shipping disconnected: stock remains live. With fallback off the delivery preview fails. With fallback on it obtains real quotes from backup Shipping: €4.90 and 5 days instead of the primary carrier’s €4.90 and 3 days. Reconnect and verify all three primary quotes after recovery.
-- The shared worker makes the dependency risk visible. Catalog aggregation preserves per-product results. Discuss separate worker pools (bulkheads) as an additional way to isolate capacity. Do not present a circuit breaker as a fallback alone.
+| Challenge | Expected result |
+| --- | --- |
+| 1 | Slow lamp stock occupies the shared worker. A 400 ms timeout frees it sooner; the breaker reduces repeated waits. Fallback only changes the lamp's displayed result. |
+| 2 | Shipping fallback restores €4.90 quotes with 5-day delivery during the primary outage. The breaker is optional. |
+| 3 | Test bad stock and shipping values. Response checks detect invalid HTTP 200 replies; enforcement discards them and retains the last valid information. It does not call the backup. |
+| 4 | Each partner sets one hidden fault on the other's machine. Both diagnose, mitigate, test and document before stopping their own timer. Keep faults active until results are recorded. |
 
-Numbers depend on the host and browser. Ask teams to compare same-route, same-fault windows, not a single sample. Grafana's one-minute rates need a fresh observation window after each change.
+Open each challenge before injecting faults: the first visit to Challenges 2–4 resets the environment. Fault and protection controls remain available throughout. Agree on acceptable customer results and when to abort an experiment.
 
-## Challenge 3 — Invalid successful responses
+Submitting requires completed fields and unlocks the next challenge; it does not grade correctness. Example solutions appear for Challenges 1–3. Ask participants to export their browser notes for review.
 
-No partner seed is needed. The participant records a baseline, then introduces **Wrong or missing values**. The primary returns HTTP 200 while cycling per product through negative delivery days, empty fields, a negative price and a valid quote. The backup remains healthy.
+## Finish
 
-All response faults and response checks are available throughout the workshop. Choose Lighting inventory for bad stock values or Shipping for bad delivery information. **Response checks** counts invalid quotes regardless of validation; blocked quotes increase only when enforcement is enabled. Validation discards an invalid reply and retains the latest valid values for the same product (and carrier for quotes), labelled with their original check time. With no valid history it shows unavailable information. Responses rejected shows the discard counters. Invalid replies never enter the cache, even when validation is off; fresh-start and Storefront restart clear the cache. This does not activate fallback or breaker. Healthy stock remains visible. Normal transport-failure fallbacks still behave as in Challenge 2.
-
-## Challenge 4 — Partner competition
-
-Open Challenge 4 before seeding: its first opening clears faults and restores protections. Seed one fault only after the investigator records a healthy baseline. Use delay, jitter or disconnect on Lighting/Shipping, or wrong/missing values and intermittent errors on either service. Intermittent errors fail alternating calls per product, so keep background traffic fixed.
-
-The injector says go after applying the fault. The investigator starts the manual timer and uses Storefront, Grafana and the mitigation tab. Keep fault controls/current state hidden by agreement; this is a local workshop, not a role-based examination system. Require a diagnosis and three consecutive acceptable refreshes while the fault remains active. Clear faults and restore defaults between rounds, swap roles and compare faults of similar difficulty. A shorter time alone does not prove a better design.
-
-## Cleanup and safety
-
-Use **Clear all faults** in Fault injection, then **Restore default settings** in Fallbacks & timeouts, and confirm both Storefront actions return live information. Before each GameDay, ask teams to state blast radius and an abort condition. If impact exceeds the condition, remove the fault or reconnect the dependency immediately. There is no automatic abort. End with **stop.bat** on Windows or **stop.command** on Mac; challenge answers remain in the participant's browser. Runtime mitigation settings reset to the startup configuration when Storefront restarts.
-
-## Discussion prompts
-
-Did HTTP success mean useful information? Was a fallback honest about uncertainty? Did the experiment isolate one cause? What did the `rate()` window hide or reveal? Would the same mitigation be safe for actual purchase placement? Which other stakeholders would you involve before running this in production?
+Use **Clear all faults**, then **Restore default settings**, and verify live stock and normal delivery information. Stop with `stop.bat` or `bash ./stop.command`. Notes remain in the browser; Storefront runtime settings and cached values are lost on restart.

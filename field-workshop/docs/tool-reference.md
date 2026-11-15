@@ -1,103 +1,63 @@
-# Tool reference (Windows PowerShell and Mac Terminal)
+# Tool and API reference
 
-These are real tool/API operations. The [Network Faults console](http://localhost:8089) offers graphical controls for routine latency and disconnection experiments, and its **Info & commands** tab shows the underlying HTTP requests. Run the commands below from the folder containing `compose.yaml`: `field-workshop` in a source checkout, or the extracted ZIP folder. Inspect the response after each change. The Toxiproxy API is exposed only on localhost. The PowerShell commands are for Windows; Mac equivalents follow.
+Use [Network Faults](http://localhost:8089) for fault injection and live protections. **Info & commands** shows equivalent Windows/Mac requests. The [Commands page](http://localhost:8088/tools) has copyable examples.
 
-## What is a fallback, and how do I enable it?
+## Docker
 
-The Storefront now has three products, one shared worker and per-product results in the catalog. `/api/catalog` checks all stock; `/api/catalog?preview=true` also requests quotes. `/api/product?sku=CHAIR-02` and `?sku=DESK-03` check the healthy comparison products individually. `/api/system` reports real worker occupancy, queued requests, cumulative rejections and product/dependency circuits without consuming a worker.
-
-Fault controls target Lighting inventory and shared Shipping (`inventory` and `shipping`). The inventory proxy points to Lighting inventory. Independent seating-inventory and desks-inventory proxies point to the other two stock services. All three products use shared Primary Shipping. With Shipping fallback enabled, failed primary requests use the separate shipping-backup provider. Do not fault the healthy comparison branches. The standard load profile sends 3.5 requests per second and is needed to demonstrate sustained shared-capacity pressure.
-
-A fallback is the response the shop uses when a dependency cannot answer. The workshop already implements it; you do not need to write code. Inventory fallback returns **Stock unconfirmed**. Shipping fallback requests a real backup quote at the same price with longer delivery. If both carriers fail it reports **Shipping quote unavailable**. Neither invents stock or delivery information.
-
-Fallback and circuit breaker are independently configurable for each dependency. Shipping uses one shared breaker for all quotes. Inventory uses a breaker per product. Each pauses failed calls for five seconds before allowing one probe. A short timeout releases workers sooner; the breaker avoids repeatedly consuming capacity on a known bad path; fallback turns a failed product check into honest limited information. A short timeout without fallback returns an error for the affected product; healthy product results remain visible. The catalog envelope returns HTTP 200 with per-product errors, statuses and outcomes. The shared queue waits at most 1000 ms and holds at most 12 waiting product operations.
-
-Open **Fallbacks & timeouts**, the second tab in [Network Faults](http://localhost:8089/#mitigations). Use the Challenge 1/2 preset or edit a dependency's timeout and fallback checkbox, then click Apply. Settings affect new requests immediately; no terminal or restart is needed. Use **Restore default settings** to turn both fallbacks off and restore 3000 ms timeouts. Reapply the identical fault to test the behavior.
-
-## What is Prometheus for?
-
-Prometheus collects the services' counters and timing measurements every two seconds and stores them as time series. Grafana queries those measurements and presents charts. You can complete the guided experiments using Grafana; opening Prometheus is optional for inspecting raw measurements or writing queries. It does not inject faults or enable fallbacks.
-
-## Start and observe
-
-```powershell
-docker compose up --build -d
-docker compose --profile load up -d loadgen
-docker compose ps
-docker compose logs -f storefront
-```
-
-In another terminal, try `Invoke-RestMethod http://localhost:8088/api/product` and `Invoke-RestMethod http://localhost:8088/api/order-preview`. Open the product page and the Grafana dashboard. Prometheus's `/targets` page should show three `UP` services.
-
-## Inspect and change network faults
-
-```powershell
-$proxyApi = 'http://localhost:8478'
-Invoke-RestMethod "$proxyApi/proxies" -UserAgent 'field-workshop/1.0'
-```
-
-Add 1500 ms to Lighting inventory responses. Toxiproxy changes the **actual Storefront → Inventory network call**.
-
-```powershell
-$fault = @{ name='inventory-lag'; type='latency'; stream='downstream'; attributes=@{latency=1500; jitter=0} } | ConvertTo-Json -Depth 4
-Invoke-RestMethod -Method Post -Uri "$proxyApi/proxies/inventory/toxics" -ContentType 'application/json' -Body $fault -UserAgent 'field-workshop/1.0'
-Invoke-RestMethod -Method Get -Uri "$proxyApi/proxies/inventory" -UserAgent 'field-workshop/1.0'
-```
-
-Remove that fault:
-
-```powershell
-Invoke-RestMethod -Method Delete -Uri "$proxyApi/proxies/inventory/toxics/inventory-lag" -UserAgent 'field-workshop/1.0'
-```
-
-Disconnect and reconnect Shipping:
-
-```powershell
-Invoke-RestMethod -Method Post -Uri "$proxyApi/proxies/shipping" -ContentType 'application/json' -Body '{"enabled":false}' -UserAgent 'field-workshop/1.0'
-Invoke-RestMethod -Method Post -Uri "$proxyApi/proxies/shipping" -ContentType 'application/json' -Body '{"enabled":true}' -UserAgent 'field-workshop/1.0'
-```
-
-Use the same API for either proxy. Do not reconfigure proxy upstream targets. For a clean experiment baseline, click **Clear all faults** in Fault injection and **Restore default settings** in Fallbacks & timeouts. Keep the supplied light traffic.
-
-## Change Storefront behavior in the browser
-
-Use the **Fallbacks & timeouts** tab on Windows or Mac. Inventory's preset applies a 400 ms timeout and enables fallback; Shipping's preset enables fallback with a 3000 ms timeout. You can also choose a timeout from 50 to 5000 ms and independently enable or disable either fallback.
-
-Settings are held by the running Storefront. New requests use the updated settings; an in-flight request keeps the policy it started with. The console does not restart containers, clear metrics, or change network faults. Restarting Storefront discards runtime changes and reloads its startup configuration (normally 3000 ms timeouts with fallbacks off). Environment variables in Compose are startup overrides for maintainers, not the live settings display.
-
-The console exposes GET and POST at /api/mitigations. A POST accepts either a configure action with dependency, timeoutMs, and a boolean fallback, or a reset action. It forwards only to a fixed internal Storefront settings listener on port 8081, which is not published to the host. No Docker socket, shell commands, or extra platform-specific services are needed.
-
-## Optional command examples
-
-Participants do not need to type these. The console's **Info & commands** tab has a Windows/Mac selector and produces an equivalent command after each successful fault or mitigation change. The [Commands page](http://localhost:8088/tools) has self-contained examples. Both platforms call the same HTTP endpoints.
-
-Windows PowerShell, Inventory example:
-
-```powershell
-Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":true,"breaker":true}'
-```
-
-Mac Terminal, the same change:
+Run from `field-workshop/` in a checkout or the extracted ZIP folder:
 
 ```sh
-curl -f -sS -X POST 'http://localhost:8089/api/mitigations' -H 'Content-Type: application/json' --data '{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":true}'
+docker compose --profile load up --build -d --wait
+docker compose ps
+docker compose logs -f storefront
+docker compose --profile load down
 ```
 
-For Shipping use dependency shipping and the desired timeout. To restore defaults, POST only an action of reset. Reapply the fault and use Storefront to validate the customer result.
+## Customer and monitoring endpoints
 
-## Raw monitoring
+GET requests on `http://localhost:8088`:
 
-Try these in the Prometheus expression browser at <http://localhost:9098>:
+| Path | Result |
+| --- | --- |
+| `/api/catalog` | Stock for all three products |
+| `/api/catalog?preview=true` | Stock and delivery quotes |
+| `/api/product?sku=CHAIR-02` | One product's stock; also `LAMP-01` or `DESK-03` |
+| `/api/order-preview?sku=CHAIR-02` | One product's stock and quote |
+| `/api/system` | Worker, queue, rejection and circuit state |
 
-```promql
-sum by (route, status) (rate(workshop_http_requests_total{service="storefront"}[1m]))
-histogram_quantile(0.95, sum by (le, route) (rate(workshop_http_request_duration_seconds_bucket{service="storefront"}[1m])))
-sum by (dependency, outcome) (rate(workshop_dependency_calls_total[1m]))
-sum by (dependency) (rate(workshop_fallbacks_total[1m]))
+Catalog HTTP 200 responses can contain individual product errors. Check each product's result as well as transport status.
+
+## Fault and protection endpoints
+
+Requests below use `http://localhost:8089`. POST bodies must be JSON with `Content-Type: application/json`. `proxy` and `dependency` accept `inventory` (Lighting) or `shipping` (Primary Shipping).
+
+| Method and path | Request or purpose |
+| --- | --- |
+| `GET /api/state` | Current injected faults |
+| `POST /api/action` | `action`: `set-latency`, `remove-latency`, `disconnect`, `reconnect` or `reset`. Include `proxy` except for reset. Delay requires `latencyMs` (50–5000); optional `jitterMs` is 0–latencyMs. |
+| `GET /api/response-fault?proxy=inventory` | Current response fault |
+| `POST /api/response-fault` | `proxy` and `mode`: `none`, `invalid-data` or `intermittent-errors` |
+| `GET /api/mitigations` | Current protections for both services |
+| `POST /api/mitigations` | `action: configure`, `dependency`, `timeoutMs` (50–5000) and boolean `fallback`; optional booleans `breaker` and `validate` preserve their current values when omitted |
+
+Inventory timeout example, with other protections off:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8089/api/mitigations' -ContentType 'application/json' -Body '{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":false,"breaker":false,"validate":false}'
 ```
 
-Use Storefront for customer results and Grafana for internal monitoring. The main view shows **Shared workers and queue**, **Rejected since restart**, **Product p95 latency**, **Dependency p95 latency**, **Dependency outcomes**, and **Fallback activity**. Expand **More diagnostics** for circuit state, retry delays, rejection rates and additional request metrics. Compare fresh, equal one-minute windows rather than lifetime totals.
+The same request in Mac Terminal:
 
-**Open product dependency circuits** counts paused/probing paths. **Dependency circuit state** identifies each product/dependency: 0 closed, 1 paused, 2 probing. **Dependency retry delay** shows remaining cooldown at each scrape. Metrics are sampled every two seconds, so brief queue peaks or recovery probes can be missed; retry delay is not a live countdown. Closed paths explicitly return to zero.
+```sh
+curl -f -sS -X POST 'http://localhost:8089/api/mitigations' -H 'Content-Type: application/json' --data '{"action":"configure","dependency":"inventory","timeoutMs":400,"fallback":false,"breaker":false,"validate":false}'
+```
 
-**Product results** counts each product’s actual live, degraded, timeout, circuit-open, failure or capacity outcome, including errors carried inside HTTP 200 catalog responses. **HTTP response success rate** measures transport status only. **Product p95 latency** includes queue time; dependency latency measures the admitted backend call. A fast Primary Shipping failure can break delivery previews without queue pressure. Shipping fallback obtains a real backup quote with the same price and longer delivery. After cleanup, allow in-flight requests and one breaker cooldown to finish.
+To clear faults, POST `{"action":"reset"}` to `/api/action`. To restore protections, POST the same body to `/api/mitigations`: both timeouts become 3000 ms and fallback, breaker and validation turn off. These are separate operations. Changes affect new requests; Storefront restart reloads its startup settings.
+
+Network faults use Toxiproxy, whose raw API is at `http://localhost:8478`. Response faults change service replies directly.
+
+## Read the measurements
+
+[Grafana](http://localhost:3008/d/field-workshop/field-workshop) shows customer latency, shared capacity, dependency outcomes and response checks. **Response checks** reports invalid values even with enforcement off; **Responses rejected** counts discarded replies when enforcement is on. **Product results** includes errors inside HTTP 200 catalog responses.
+
+[Prometheus](http://localhost:9098) scrapes every two seconds. Grafana's one-minute rates need a fresh observation window after each change. Product latency includes queue time; dependency latency measures the backend call. Expand **More diagnostics** for circuit state and retry delays.

@@ -17,10 +17,6 @@ const toolsPage = pageReader('tools.html');
 const guideFiles = new Map([
   ['/docs/assignments.md', readFileSync(new URL('../docs/assignments.md', import.meta.url))],
   ['/docs/tool-reference.md', readFileSync(new URL('../docs/tool-reference.md', import.meta.url))],
-  [
-    '/docs/experiment-record.md',
-    readFileSync(new URL('../docs/experiment-record.md', import.meta.url)),
-  ],
 ]);
 
 export function createStorefrontServer(config = {}) {
