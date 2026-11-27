@@ -1,10 +1,14 @@
+import { CUSTOMER_REQUEST_TIMEOUT_MS } from '../src/shared/request-limits.js';
+
 const base = process.env.STOREFRONT_URL ?? 'http://localhost:8088';
 let requests = 0;
 let failures = 0;
 
 async function request(path) {
   try {
-    const response = await fetch(`${base}${path}`, { signal: AbortSignal.timeout(5000) });
+    const response = await fetch(`${base}${path}`, {
+      signal: AbortSignal.timeout(CUSTOMER_REQUEST_TIMEOUT_MS),
+    });
     requests += 1;
     if (!response.ok) failures += 1;
   } catch {

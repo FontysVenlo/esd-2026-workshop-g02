@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { format } from '/copy.mjs';
 
 import page from '../content/storefront.json' with { type: 'json' };
+import { CUSTOMER_REQUEST_TIMEOUT_MS } from './shared/request-limits.js';
 
 const { catalog, storefront, storefrontPage } = page;
 
@@ -33,7 +34,10 @@ function usePolling(path, interval, enabled = true) {
       try {
         const response = await fetch(path, {
           cache: 'no-store',
-          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]),
+          signal: AbortSignal.any([
+            controller.signal,
+            AbortSignal.timeout(CUSTOMER_REQUEST_TIMEOUT_MS),
+          ]),
         });
         const data = await response.json();
         if (!response.ok) throw Object.assign(new Error(data.error), { status: response.status });
@@ -86,16 +90,18 @@ function ProductCard({
   shippingQuote = result?.shipping,
   shippingStale = stale,
 }) {
-  const [check, setCheck] = useState(null);
+  const [checkState, setCheck] = useState(null);
   const [busy, setBusy] = useState(false);
   const controller = useRef(null);
   useEffect(() => () => controller.current?.abort(), []);
-  useEffect(() => {
-    if (result?.inventory.source === 'live')
-      setCheck((previous) =>
-        previous?.data?.inventory && previous.data.inventory.source !== 'live' ? null : previous,
-      );
-  }, [result]);
+  // A catalog refresh supersedes an individual reading, including a response
+  // still in flight under older protections. Never render that older reading.
+  const check =
+    checkState?.catalogResult === result &&
+    checkState?.catalogShipping === shippingQuote &&
+    checkState?.catalogFailed === failed
+      ? checkState
+      : null;
   const unconfirmed = result?.inventory.source !== 'live';
   const limited = Boolean(
     result &&
@@ -112,14 +118,29 @@ function ProductCard({
         `${preview ? '/api/order-preview' : '/api/product'}?sku=${product.sku}`,
         {
           cache: 'no-store',
-          signal: AbortSignal.any([controller.current.signal, AbortSignal.timeout(6000)]),
+          signal: AbortSignal.any([
+            controller.current.signal,
+            AbortSignal.timeout(CUSTOMER_REQUEST_TIMEOUT_MS),
+          ]),
         },
       );
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
-      setCheck({ data, milliseconds: Math.round(performance.now() - started) });
+      setCheck({
+        data,
+        milliseconds: Math.round(performance.now() - started),
+        catalogResult: result,
+        catalogShipping: shippingQuote,
+        catalogFailed: failed,
+      });
     } catch (error) {
-      if (!controller.current.signal.aborted) setCheck({ error: error.message });
+      if (!controller.current.signal.aborted)
+        setCheck({
+          error: error.message,
+          catalogResult: result,
+          catalogShipping: shippingQuote,
+          catalogFailed: failed,
+        });
     } finally {
       setBusy(false);
     }

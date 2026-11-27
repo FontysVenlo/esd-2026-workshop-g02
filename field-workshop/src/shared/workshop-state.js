@@ -5,7 +5,7 @@ export { challenges } from './challenges.js';
 import { challenges } from './challenges.js';
 
 export function emptyProgress() {
-  return { drafts: {}, submissions: {}, started: {} };
+  return { drafts: {}, submissions: {}, started: {}, rounds: {} };
 }
 
 export function normalizeProgress(value) {
@@ -15,6 +15,37 @@ export function normalizeProgress(value) {
     submissions:
       value.submissions && typeof value.submissions === 'object' ? value.submissions : {},
     started: value.started && typeof value.started === 'object' ? value.started : {},
+    rounds: Object.fromEntries(
+      Object.entries(value.rounds ?? {}).filter(
+        ([id, round]) =>
+          challenges.some((challenge) => challenge.id === id && challenge.competition) &&
+          round &&
+          Number.isFinite(round.startedAt) &&
+          (round.stoppedAt === null ||
+            (Number.isFinite(round.stoppedAt) && round.stoppedAt >= round.startedAt)),
+      ),
+    ),
+  };
+}
+
+export function roundSeconds(round, now = Date.now()) {
+  return round ? Math.max(0, Math.floor(((round.stoppedAt ?? now) - round.startedAt) / 1000)) : 0;
+}
+
+export function startRound(progress, id, now = Date.now()) {
+  const index = challenges.findIndex((challenge) => challenge.id === id && challenge.competition);
+  if (index < 0 || !isUnlocked(progress, index) || needsFreshStart(progress, index))
+    throw new Error('Prepare the challenge before starting a round.');
+  if (progress.rounds?.[id]?.stoppedAt === null) return progress;
+  return { ...progress, rounds: { ...progress.rounds, [id]: { startedAt: now, stoppedAt: null } } };
+}
+
+export function stopRound(progress, id, now = Date.now()) {
+  const round = progress.rounds?.[id];
+  if (!round || round.stoppedAt !== null) return progress;
+  return {
+    ...progress,
+    rounds: { ...progress.rounds, [id]: { ...round, stoppedAt: Math.max(now, round.startedAt) } },
   };
 }
 
@@ -80,6 +111,18 @@ export function buildRecord(progress, exportedAt = new Date().toISOString()) {
       submittedAt: progress.submissions[challenge.id]?.submittedAt ?? null,
       answers: progress.submissions[challenge.id]?.answers ?? {},
       draftAnswers: progress.drafts[challenge.id] ?? {},
+      ...(progress.rounds?.[challenge.id]
+        ? {
+            round: {
+              startedAt: new Date(progress.rounds[challenge.id].startedAt).toISOString(),
+              stoppedAt:
+                progress.rounds[challenge.id].stoppedAt === null
+                  ? null
+                  : new Date(progress.rounds[challenge.id].stoppedAt).toISOString(),
+              elapsedSeconds: roundSeconds(progress.rounds[challenge.id], Date.parse(exportedAt)),
+            },
+          }
+        : {}),
     })),
   };
 }

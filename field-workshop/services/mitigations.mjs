@@ -1,5 +1,6 @@
 import { readPageCopy } from './page-copy.mjs';
 import http from 'node:http';
+import { MAX_DEPENDENCY_TIMEOUT_MS } from '../src/shared/request-limits.js';
 
 export const defaultMitigations = Object.freeze({
   inventory: Object.freeze({ timeoutMs: 3000, fallback: false, breaker: false, validate: false }),
@@ -7,6 +8,7 @@ export const defaultMitigations = Object.freeze({
 });
 
 export function createMitigations(initial = defaultMitigations) {
+  let resetting = false;
   let settings = Object.fromEntries(
     Object.entries(initial).map(([name, policy]) => [
       name,
@@ -18,6 +20,10 @@ export function createMitigations(initial = defaultMitigations) {
     ]),
   );
   return {
+    isResetting: () => resetting,
+    setResetting: (value) => {
+      resetting = value;
+    },
     snapshot: () => structuredClone(settings),
     apply(input) {
       if (!input || typeof input !== 'object' || Array.isArray(input))
@@ -36,7 +42,11 @@ export function createMitigations(initial = defaultMitigations) {
           )
         )
           throw new Error(readPageCopy('network-faults').api.unknown_mitigation_setting);
-        if (!Number.isInteger(input.timeoutMs) || input.timeoutMs < 50 || input.timeoutMs > 5000)
+        if (
+          !Number.isInteger(input.timeoutMs) ||
+          input.timeoutMs < 50 ||
+          input.timeoutMs > MAX_DEPENDENCY_TIMEOUT_MS
+        )
           throw new Error(
             readPageCopy('network-faults').api.timeout_must_be_a_whole_number_from_50_to_5000_ms,
           );
@@ -70,6 +80,8 @@ export function createMitigationServer(mitigations) {
       res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify(body));
     };
+    if (req.url === '/status' && req.method === 'GET')
+      return send(200, { resetting: mitigations.isResetting() });
     if (req.url !== '/settings')
       return send(404, { error: readPageCopy('network-faults').api.not_found });
     if (req.method === 'GET') return send(200, mitigations.snapshot());
@@ -77,6 +89,8 @@ export function createMitigationServer(mitigations) {
       return send(405, { error: readPageCopy('network-faults').api.method_not_allowed });
     if (!req.headers['content-type']?.startsWith('application/json'))
       return send(415, { error: readPageCopy('network-faults').api.json_is_required });
+    if (mitigations.isResetting())
+      return send(409, { error: readPageCopy('network-faults').api.reset_in_progress });
     let raw = '';
     for await (const chunk of req) {
       raw += chunk;
@@ -84,6 +98,9 @@ export function createMitigationServer(mitigations) {
         return send(413, { error: readPageCopy('network-faults').api.request_is_too_large });
     }
     try {
+      // Reset may have started while this request body was being received.
+      if (mitigations.isResetting())
+        return send(409, { error: readPageCopy('network-faults').api.reset_in_progress });
       send(200, mitigations.apply(JSON.parse(raw)));
     } catch (error) {
       send(400, { error: error.message });

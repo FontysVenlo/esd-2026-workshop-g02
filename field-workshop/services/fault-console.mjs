@@ -17,6 +17,17 @@ export function createFaultConsoleServer(config = {}) {
     inventory: config.inventoryControlUrl ?? process.env.INVENTORY_CONTROL_URL,
   };
 
+  async function ensureReady() {
+    const response = await fetch(new URL('/status', mitigationApi), {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) throw new Error(`Settings listener returned ${response.status}`);
+    if ((await response.json()).resetting)
+      throw Object.assign(new Error(readPageCopy('network-faults').api.reset_in_progress), {
+        status: 409,
+      });
+  }
+
   async function responseFault(proxy, method = 'GET', body) {
     if (!controlUrls[proxy]) return { mode: 'none' };
     const response = await fetch(new URL('/fault', controlUrls[proxy]), {
@@ -176,6 +187,7 @@ export function createFaultConsoleServer(config = {}) {
             return send(400, { error: readPageCopy('network-faults').api.invalid_response_fault });
           if (input && !controlUrls[proxy])
             return send(503, { error: readPageCopy('network-faults').api.response_fault_failed });
+          if (req.method === 'POST') await ensureReady();
           return send(200, await responseFault(proxy, req.method, input));
         }
         const response = await fetch(new URL('/settings', mitigationApi), {
@@ -186,7 +198,7 @@ export function createFaultConsoleServer(config = {}) {
         });
         return send(response.status, await response.json());
       } catch (error) {
-        return send(502, {
+        return send(error.status ?? 502, {
           error: format(readPageCopy('network-faults').api.cannot_reach_settings, {
             error: error.message,
           }),
@@ -250,10 +262,11 @@ export function createFaultConsoleServer(config = {}) {
         ) {
           return send(400, { error: readPageCopy('network-faults').api.invalid_jitter });
         }
+        await ensureReady();
         const command = await act(input);
         return send(200, { command, state: await state() });
       } catch (error) {
-        return send(502, {
+        return send(error.status ?? 502, {
           error: format(readPageCopy('network-faults').api.change_failed, { error: error.message }),
         });
       }

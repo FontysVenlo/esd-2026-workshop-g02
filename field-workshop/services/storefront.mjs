@@ -10,6 +10,7 @@ import { pageReader, serveContentAsset } from './web-content.mjs';
 import { products, inventoryCategory } from './catalog.mjs';
 import { createCapacity } from './capacity.mjs';
 import { createBreaker } from './breaker.mjs';
+import { MAX_DEPENDENCY_TIMEOUT_MS } from '../src/shared/request-limits.js';
 
 const page = pageReader('index.html');
 const workshopPage = pageReader('workshop.html');
@@ -54,8 +55,10 @@ export function createStorefrontServer(config = {}) {
     inventoryControlUrl: config.inventoryControlUrl ?? process.env.INVENTORY_CONTROL_URL,
   };
   for (const timeout of [settings.inventoryTimeoutMs, settings.shippingTimeoutMs]) {
-    if (!Number.isFinite(timeout) || timeout < 1)
-      throw new Error('Dependency timeouts must be positive milliseconds');
+    if (!Number.isInteger(timeout) || timeout < 1 || timeout > MAX_DEPENDENCY_TIMEOUT_MS)
+      throw new Error(
+        `Dependency timeouts must be whole milliseconds from 1 to ${MAX_DEPENDENCY_TIMEOUT_MS}`,
+      );
   }
   const mitigations =
     config.mitigations ??
@@ -71,6 +74,50 @@ export function createStorefrontServer(config = {}) {
   const latestStock = new Map();
   const latestQuotes = new Map();
   let previousPolicy = JSON.stringify(mitigations.snapshot());
+  const pendingProducts = new Set();
+  let resetTask = null;
+
+  function trackProduct(product, preview, policy) {
+    const pending = productResult(product, preview, policy);
+    pendingProducts.add(pending);
+    const finished = () => pendingProducts.delete(pending);
+    pending.then(finished, finished);
+    return pending;
+  }
+
+  async function performReset() {
+    // Admission is closed while resetTask exists. Drain every old policy before
+    // clearing caches and circuits so no old request can write into the new run.
+    await Promise.allSettled([...pendingProducts]);
+    const response = await fetch(new URL('/reset', settings.toxiproxyApi), {
+      method: 'POST',
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok)
+      throw new Error(
+        format(readPageCopy('storefront').api.proxy_reset_status, { status: response.status }),
+      );
+    for (const controlUrl of [settings.shippingControlUrl, settings.inventoryControlUrl].filter(
+      Boolean,
+    )) {
+      const cleared = await fetch(new URL('/fault', controlUrl), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'none' }),
+        signal: AbortSignal.timeout(3000),
+      });
+      if (!cleared.ok) throw new Error(readPageCopy('storefront').api.shipping_reset_failed);
+    }
+    const restored = mitigations.apply({ action: 'reset' });
+    breaker.reset();
+    latestStock.clear();
+    latestQuotes.clear();
+    previousPolicy = JSON.stringify(restored);
+    console.log(
+      'Workshop fresh start: network faults cleared, default timeouts and fallbacks restored',
+    );
+    return { faults: 'cleared', mitigations: restored };
+  }
 
   async function dependency(name, baseUrl, path, timeoutMs) {
     const started = performance.now();
@@ -316,6 +363,11 @@ export function createStorefrontServer(config = {}) {
     }
     if (!['/api/product', '/api/order-preview', '/api/catalog'].includes(route))
       return send(404, { error: readPageCopy('storefront').api.not_found });
+    if (resetTask)
+      return send(503, {
+        outcome: 'resetting',
+        error: readPageCopy('storefront').api.reset_in_progress,
+      });
 
     const started = performance.now();
     // Keep one consistent policy for the entire customer request, even if the
@@ -333,7 +385,7 @@ export function createStorefrontServer(config = {}) {
         const catalogProducts = products();
         const results = await Promise.allSettled(
           catalogProducts.map((product) =>
-            productResult(product, url.searchParams.get('preview') === 'true', policy),
+            trackProduct(product, url.searchParams.get('preview') === 'true', policy),
           ),
         );
         return sendApi(200, {
@@ -350,7 +402,7 @@ export function createStorefrontServer(config = {}) {
         (product) => product.sku === (url.searchParams.get('sku') ?? 'LAMP-01'),
       );
       if (!product) return sendApi(404, { error: readPageCopy('storefront').api.not_found });
-      const result = await productResult(product, route === '/api/order-preview', policy);
+      const result = await trackProduct(product, route === '/api/order-preview', policy);
       return sendApi(200, { ...result, note: 'Preview only. No order is placed.' });
     } catch (error) {
       const failure = productFailure(error);
@@ -379,39 +431,21 @@ export function createStorefrontServer(config = {}) {
       if (!req.headers['content-type']?.startsWith('application/json'))
         return send(415, { error: readPageCopy('storefront').api.json_is_required });
       try {
-        const response = await fetch(new URL('/reset', settings.toxiproxyApi), {
-          method: 'POST',
-          signal: AbortSignal.timeout(3000),
-        });
-        if (!response.ok)
-          throw new Error(
-            format(readPageCopy('storefront').api.proxy_reset_status, { status: response.status }),
-          );
-        for (const controlUrl of [settings.shippingControlUrl, settings.inventoryControlUrl].filter(
-          Boolean,
-        )) {
-          const cleared = await fetch(new URL('/fault', controlUrl), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mode: 'none' }),
-            signal: AbortSignal.timeout(3000),
+        // Concurrent reset callers share one operation rather than starting a
+        // second cleanup that could erase a newly injected fault afterward.
+        if (!resetTask) {
+          mitigations.setResetting(true);
+          resetTask = performReset().finally(() => {
+            mitigations.setResetting(false);
+            resetTask = null;
           });
-          if (!cleared.ok) throw new Error(readPageCopy('storefront').api.shipping_reset_failed);
         }
+        return send(200, await resetTask);
       } catch (error) {
         return send(502, {
           error: format(readPageCopy('storefront').api.reset_failed, { error: error.message }),
         });
       }
-      const restored = mitigations.apply({ action: 'reset' });
-      breaker.reset();
-      latestStock.clear();
-      latestQuotes.clear();
-      previousPolicy = JSON.stringify(restored);
-      console.log(
-        'Workshop fresh start: network faults cleared, default timeouts and fallbacks restored',
-      );
-      return send(200, { faults: 'cleared', mitigations: restored });
     }
 
     function sendApi(status, body) {

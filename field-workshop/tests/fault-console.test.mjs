@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { afterEach, test } from 'node:test';
 import { createFaultConsoleServer } from '../services/fault-console.mjs';
+import { createMitigations, createMitigationServer } from '../services/mitigations.mjs';
 
 const servers = [];
 afterEach(async () => {
@@ -70,7 +71,10 @@ async function fixture() {
       reply(res, 404, { error: 'not found' });
     }),
   );
-  const consoleBase = await listen(createFaultConsoleServer({ toxiproxyApi: toxiproxy }));
+  const mitigationApi = await listen(createMitigationServer(createMitigations()));
+  const consoleBase = await listen(
+    createFaultConsoleServer({ toxiproxyApi: toxiproxy, mitigationApi }),
+  );
   async function action(body, headers = {}) {
     return fetch(`${consoleBase}/api/action`, {
       method: 'POST',

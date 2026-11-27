@@ -14,7 +14,11 @@ import {
   saveDraft,
   submitChallenge,
   buildRecord,
+  startRound,
+  stopRound,
+  roundSeconds,
 } from '/workshop-state.mjs';
+import { WORKSHOP_RESET_TIMEOUT_MS } from './shared/request-limits.js';
 
 const WorkshopCopy = createContext(home);
 function workshopCopy(page) {
@@ -213,43 +217,24 @@ function ChallengeInstructions({ challenge: c }) {
     </section>
   );
 }
-function Competition({ copy }) {
-  const [started, setStarted] = useState(null);
-  const [seconds, setSeconds] = useState(0);
+function Competition({ copy, round, start, stop }) {
+  const [, tick] = useState(0);
+  const running = round?.stoppedAt === null;
   useEffect(() => {
-    if (started === null) return;
-    const timer = setInterval(
-      () => setSeconds(Math.floor((performance.now() - started) / 1000)),
-      250,
-    );
+    if (!running) return;
+    const timer = setInterval(() => tick((value) => value + 1), 250);
     return () => clearInterval(timer);
-  }, [started]);
+  }, [running]);
   return (
     <section className="competition-round">
       <h2>{copy.title}</h2>
       <p>{copy.rules}</p>
-      <output>{format(copy.elapsed, { seconds })}</output>
+      <output>{format(copy.elapsed, { seconds: roundSeconds(round) })}</output>
       <div className="actions">
-        <button
-          type="button"
-          className="primary"
-          disabled={started !== null}
-          onClick={() => {
-            setSeconds(0);
-            setStarted(performance.now());
-          }}
-        >
+        <button type="button" className="primary" disabled={running} onClick={start}>
           {copy.start}
         </button>
-        <button
-          type="button"
-          className="secondary"
-          disabled={started === null}
-          onClick={() => {
-            setSeconds(Math.floor((performance.now() - started) / 1000));
-            setStarted(null);
-          }}
-        >
+        <button type="button" className="secondary" disabled={!running} onClick={stop}>
           {copy.stop}
         </button>
       </div>
@@ -257,7 +242,7 @@ function Competition({ copy }) {
     </section>
   );
 }
-function Challenge({ challenge: c, progress, update, submit }) {
+function Challenge({ challenge: c, progress, update, submit, start, stop }) {
   const { w, page } = useWorkshopCopy();
   const [error, setError] = useState('');
   const solutionRef = useRef(null);
@@ -297,7 +282,14 @@ function Challenge({ challenge: c, progress, update, submit }) {
           ))}
         </div>
       </section>
-      {c.competition && <Competition copy={c.competition} />}
+      {c.competition && (
+        <Competition
+          copy={c.competition}
+          round={progress.rounds?.[c.id]}
+          start={start}
+          stop={stop}
+        />
+      )}
       <div className={`challenge-columns${showSolution ? ' has-solution' : ''}`}>
         <section className="notes-panel">
           <div className="eyebrow">{w('your_work')}</div>
@@ -393,6 +385,7 @@ function Workshop() {
   const [download, setDownload] = useState('');
   const [freshStart, setFreshStart] = useState(null);
   const [freshStartAttempt, setFreshStartAttempt] = useState(0);
+  const resetRequest = useRef(null);
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
@@ -429,41 +422,42 @@ function Workshop() {
   const current = index >= 0 && isUnlocked(progress, index) ? challenges[index] : null;
   const page = current ?? home;
   const { w, p } = workshopCopy(page);
+  const requiresReset = Boolean(current && needsFreshStart(progress, index));
+  const resetPending =
+    freshStart?.state === 'pending' || (requiresReset && freshStart?.state !== 'error');
   useEffect(() => {
     document.title = page.pageTitle;
   }, [page]);
   useEffect(() => {
-    setFreshStart(null);
     if (!current || !needsFreshStart(progress, index)) return;
-    // Record a successful reset even if the participant has already moved on,
-    // so returning to this challenge never wipes an experiment in progress.
-    let visible = true;
     const id = current.id;
     setFreshStart({ state: 'pending' });
-    fetch('/api/workshop/reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-      cache: 'no-store',
-      signal: AbortSignal.timeout(8000),
-    })
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error ?? response.status);
+    // Reuse an in-flight preparation if navigation or an effect re-run occurs.
+    // The server also coalesces retries across reloads and browser tabs.
+    if (!resetRequest.current)
+      resetRequest.current = fetch('/api/workshop/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+        cache: 'no-store',
+        signal: AbortSignal.timeout(WORKSHOP_RESET_TIMEOUT_MS),
       })
+        .then(async (response) => {
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error ?? response.status);
+        })
+        .finally(() => {
+          resetRequest.current = null;
+        });
+    resetRequest.current
       .then(() => {
         setProgress((previous) => markStarted(previous, id));
-        if (visible) {
-          setFreshStart({ state: 'done' });
-          setAnnouncement(w('fresh_start_announcement'));
-        }
+        setFreshStart({ state: 'done' });
+        setAnnouncement(w('fresh_start_announcement'));
       })
       .catch((error) => {
-        if (visible) setFreshStart({ state: 'error', error: error.message });
+        setFreshStart({ state: 'error', error: error.message });
       });
-    return () => {
-      visible = false;
-    };
   }, [current?.id, freshStartAttempt]);
   useEffect(() => {
     if (hash && hash !== 'home' && !current) {
@@ -472,6 +466,7 @@ function Workshop() {
     }
   }, [hash, current]);
   function reset() {
+    if (resetPending) return;
     if (!window.confirm(w('reset_all_answers_this_clears_every_draft_and_submitted'))) return;
     setProgress(emptyProgress());
     setUnlocked(-1);
@@ -492,7 +487,14 @@ function Workshop() {
     <WorkshopCopy.Provider value={page}>
       <header>
         <div className="header-inner workshop-header">
-          <a className="brand" href="#home">
+          <a
+            className="brand"
+            href="#home"
+            aria-disabled={resetPending}
+            onClick={(event) => {
+              if (resetPending) event.preventDefault();
+            }}
+          >
             {p('northstar_supply')} <span>{p('workshop')}</span>
           </a>
           <span className="header-note">{p('reliability_workshop')}</span>
@@ -504,6 +506,10 @@ function Workshop() {
             id="home-link"
             className="home-link"
             href="#home"
+            aria-disabled={resetPending}
+            onClick={(event) => {
+              if (resetPending) event.preventDefault();
+            }}
             aria-current={!current ? 'page' : undefined}
           >
             {p('home')} <span>{p('welcome_setup')}</span>
@@ -522,13 +528,14 @@ function Workshop() {
                       : 'available'
                     : 'locked',
               );
-              const Tag = available ? 'a' : 'button';
+              const navigable = available && !resetPending;
+              const Tag = navigable ? 'a' : 'button';
               return (
                 <Tag
                   key={c.id}
-                  href={available ? `#${c.id}` : undefined}
-                  disabled={!available}
-                  type={available ? undefined : 'button'}
+                  href={navigable ? `#${c.id}` : undefined}
+                  disabled={!navigable}
+                  type={navigable ? undefined : 'button'}
                   aria-current={current?.id === c.id ? 'page' : undefined}
                   className={`challenge-link ${submitted ? 'is-complete' : available ? 'is-available' : 'is-locked'} ${i === unlocked ? 'just-unlocked' : ''}`}
                 >
@@ -583,7 +590,7 @@ function Workshop() {
               >
                 {p('download_notes')}
               </button>
-              <button type="button" className="text-button" onClick={reset}>
+              <button type="button" className="text-button" onClick={reset} disabled={resetPending}>
                 {p('clear_notes')}
               </button>
             </div>
@@ -596,20 +603,31 @@ function Workshop() {
           <div className="visually-hidden" role="status" aria-live="polite">
             {announcement}
           </div>
-          {current ? (
+          {current && (requiresReset || resetPending) ? (
+            <section className="challenge-page" aria-busy={resetPending}>
+              <h1>{current.title}</h1>
+              <p>
+                {w(
+                  freshStart?.state === 'error' ? 'fresh_start_failed' : 'preparing_a_fresh_start',
+                )}
+              </p>
+            </section>
+          ) : current ? (
             <Challenge
               key={current.id}
               challenge={current}
               progress={progress}
               update={(id, answers) => setProgress((previous) => saveDraft(previous, id, answers))}
               submit={submit}
+              start={() => setProgress((previous) => startRound(previous, current.id))}
+              stop={() => setProgress((previous) => stopRound(previous, current.id))}
             />
           ) : (
             <Home progress={progress} reset={reset} />
           )}
         </div>
       </main>
-      {unlocked >= 0 && (
+      {unlocked >= 0 && !requiresReset && !resetPending && (
         <div id="unlock-toast" className="unlock-toast is-visible">
           <span className="unlock-toast-symbol" aria-hidden="true">
             {p('text')}
@@ -621,7 +639,7 @@ function Workshop() {
           <a href={`#${challenges[unlocked].id}`}>{p('open')}</a>
         </div>
       )}
-      {unlocked < 0 && (
+      {current && (unlocked < 0 || requiresReset || resetPending) && (
         <FreshStartToast status={freshStart} retry={() => setFreshStartAttempt((n) => n + 1)} />
       )}
       <a

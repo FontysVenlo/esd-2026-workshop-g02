@@ -58,6 +58,7 @@
     "last_valid_delivery": "Last valid delivery information from"
   },
   "api": {
+    "reset_in_progress": "The workshop is preparing a fresh start. Try again when it is ready.",
     "product_name": "Desk Lamp",
     "inventory_warning": "Availability cannot be confirmed.",
     "shipping_warning": "Shipping quote is temporarily unavailable.",

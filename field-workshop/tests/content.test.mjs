@@ -56,6 +56,7 @@ test('only Challenge 3 shows optional hints; Challenge 4 shows partner round con
       getItem: () =>
         JSON.stringify({
           drafts: {},
+          started: Object.fromEntries(challenges.map((c) => [c.id, '2026-11-06'])),
           submissions: Object.fromEntries(
             challenges.map((c) => [c.id, { submittedAt: '2026-11-06', answers: {} }]),
           ),
@@ -105,6 +106,34 @@ test('only Challenge 3 shows optional hints; Challenge 4 shows partner round con
     assert.ok(html.includes(page.guide.title));
     assert.match(html, /<details class="experiment-help experiment-guide"><summary>/);
     assert.doesNotMatch(html, /Unique edit for challenge/);
+    globalThis.location = { hash: '#challenge-4' };
+    globalThis.localStorage = {
+      getItem: () =>
+        JSON.stringify({
+          submissions: Object.fromEntries(
+            challenges.map((c) => [c.id, { submittedAt: '2026-11-06', answers: {} }]),
+          ),
+        }),
+    };
+    const preparing = renderToStaticMarkup(React.createElement(Workshop));
+    assert.match(preparing, /aria-busy="true"/);
+    assert.doesNotMatch(
+      preparing,
+      /class="competition-round"|id="challenge-form"|class="tool-links"/,
+      'a challenge must not start while its first reset is pending',
+    );
+    globalThis.localStorage = {
+      getItem: () =>
+        JSON.stringify({
+          started: { 'challenge-4': '2026-11-06' },
+          rounds: { 'challenge-4': { startedAt: 10000, stoppedAt: 23500 } },
+          submissions: Object.fromEntries(
+            challenges.map((c) => [c.id, { submittedAt: '2026-11-06', answers: {} }]),
+          ),
+        }),
+    };
+    const resumed = renderToStaticMarkup(React.createElement(Workshop));
+    assert.ok(resumed.includes(format(challenges[3].competition.elapsed, { seconds: 13 })));
   } finally {
     globalThis.location = originalLocation;
     globalThis.localStorage = originalStorage;
@@ -127,6 +156,10 @@ test('storefront shows valid shipping quotes and hides stock counts after failed
   );
   const source = readFileSync(new URL('../src/storefront.jsx', import.meta.url), 'utf8')
     .replace("'/copy.mjs'", "'./shared/copy.js'")
+    .replace(
+      'const [checkState, setCheck] = useState(null);',
+      'const [checkState, setCheck] = useState(globalThis.retainedIndividualCheck ?? null);',
+    )
     .replace(
       "createRoot(document.getElementById('storefront-root')).render(<Storefront />);",
       'export {ProductCard};',
@@ -249,8 +282,50 @@ test('storefront shows valid shipping quotes and hides stock counts after failed
     assert.ok(cached.includes(format(page.storefront.shipping_time, { days: 3 })));
     assert.ok(cached.includes(format(page.storefront.shipping_cost, { price: '4.90' })));
     assert.ok(cached.includes(page.catalog.stale));
-    assert.doesNotMatch(cached, /state-live|<time|Last valid delivery information|Stock last checked/);
+    assert.doesNotMatch(
+      cached,
+      /state-live|<time|Last valid delivery information|Stock last checked/,
+    );
+    // Model the retained hook state when an older individual request completes
+    // after the catalog has already refreshed under the response checker.
+    globalThis.retainedIndividualCheck = {
+      catalogResult: result,
+      catalogShipping: result.shipping,
+      catalogFailed: false,
+      data: {
+        inventory: { source: 'live', quantity: -3 },
+        shipping: { source: 'live', priceEur: -4.9, etaDays: -2 },
+      },
+      milliseconds: 10,
+    };
+    const unchecked = renderToStaticMarkup(
+      React.createElement(ProductCard, { product, result, stale: false, preview: true }),
+    );
+    assert.match(unchecked, /-3 in stock/);
+    assert.match(unchecked, /About -2 days/);
+    assert.match(unchecked, /€-4.90/);
+    for (const inventorySource of ['cached', 'live']) {
+      const protectedResult = {
+        inventory: { source: inventorySource, quantity: 12 },
+        shipping: { source: 'cached', priceEur: 4.9, etaDays: 3 },
+      };
+      const refreshed = renderToStaticMarkup(
+        React.createElement(ProductCard, {
+          product,
+          result: protectedResult,
+          stale: false,
+          preview: true,
+        }),
+      );
+      assert.match(refreshed, /12 in stock/);
+      assert.doesNotMatch(
+        refreshed,
+        /-3 in stock|About -2 days|€-4.90/,
+        'an old individual result must not bypass refreshed response validation',
+      );
+    }
   } finally {
+    delete globalThis.retainedIndividualCheck;
     unlinkSync(out);
   }
 });

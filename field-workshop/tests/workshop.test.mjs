@@ -13,6 +13,9 @@ import {
   saveDraft,
   submitChallenge,
   submittedCount,
+  startRound,
+  stopRound,
+  roundSeconds,
 } from '../src/shared/workshop-state.js';
 
 test('workshop overview, browser modules, and local tool guide are served', async () => {
@@ -74,6 +77,43 @@ test('workshop overview, browser modules, and local tool guide are served', asyn
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
+});
+
+test('partner timing survives navigation and reload and is included in exported notes', () => {
+  let progress = emptyProgress();
+  const id = challenges[3].id;
+  assert.throws(() => startRound(progress, id, 10000), /Prepare/);
+  for (const challenge of challenges.slice(0, 3)) {
+    progress = submitChallenge(
+      progress,
+      challenge.id,
+      Object.fromEntries(challenge.fields.map((field) => [field.key, 'observed'])),
+    );
+  }
+  assert.throws(() => startRound(progress, id, 10000), /Prepare/, 'wait for the fresh start');
+  progress = markStarted(progress, id);
+  progress = startRound(progress, id, 10000);
+  progress = normalizeProgress(JSON.parse(JSON.stringify(progress)));
+  assert.equal(roundSeconds(progress.rounds[id], 15000), 5);
+  assert.equal(
+    startRound(progress, id, 18000),
+    progress,
+    'starting again must not restart an active round',
+  );
+  const runningRecord = buildRecord(progress, new Date(19000).toISOString()).challenges[3].round;
+  assert.equal(runningRecord.elapsedSeconds, 9);
+  assert.equal(runningRecord.stoppedAt, null);
+  progress = stopRound(progress, id, 23500);
+  progress = normalizeProgress(JSON.parse(JSON.stringify(progress)));
+  assert.equal(roundSeconds(progress.rounds[id], 90000), 13, 'a stopped timer stays stopped');
+  assert.deepEqual(buildRecord(progress, new Date(90000).toISOString()).challenges[3].round, {
+    startedAt: new Date(10000).toISOString(),
+    stoppedAt: new Date(23500).toISOString(),
+    elapsedSeconds: 13,
+  });
+  progress = startRound(progress, id, 100000);
+  assert.equal(roundSeconds(progress.rounds[id], 100000), 0);
+  assert.deepEqual(emptyProgress().rounds, {}, 'clearing notes also clears the timer');
 });
 
 test('each submission reveals its solution and unlocks the next challenge', () => {

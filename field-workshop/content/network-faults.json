@@ -133,6 +133,7 @@
     "response_fault_applied": "Change applied. {service}: {fault}."
   },
   "api": {
+    "reset_in_progress": "The workshop is preparing a fresh start. Wait until it is ready before changing faults or protections.",
     "method_not_allowed": "Method not allowed",
     "not_found": "Not found",
     "choose_inventory_or_shipping": "Choose Inventory or Shipping",
