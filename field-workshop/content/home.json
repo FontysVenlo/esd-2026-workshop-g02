@@ -72,24 +72,24 @@
     "description": "Use this process for each challenge. Record your evidence in the challenge notes; optional hints are available in Challenge 3.",
     "steps": [
       {
-        "title": "Steady State",
-        "instruction": "Measure the healthy baseline. Start with default settings. Measure how the system behaves under healthy conditions. Check Storefront and Grafana."
+        "title": "Define steady state",
+        "instruction": "Identify what customers must be able to do, measure normal behavior."
       },
       {
-        "title": "Hypothesis & Fault Injection",
-        "instruction": "State the expected impact a fault would have. Then apply the fault."
+        "title": "State a hypothesis we can disprove",
+        "instruction": "Predict what should happen under a specified fault and identify an observation that would disprove the prediction."
       },
       {
-        "title": "Observe & Measure the impact (blast radius).",
-        "instruction": "Compare customer results, dependencies, shared workers, queue and rejections over 60 to 90 second."
+        "title": "Inject one fault",
+        "instruction": "Specify the affected service and fault settings."
       },
       {
-        "title": "Choose a mitigation",
-        "instruction": "Use evidence to choose a mitigation. For example a timeout and fallback. Explain what you expect your mitigation to improve."
+        "title": "Compare outcomes against the baseline",
+        "instruction": "Record customer impact and the measurements that explain it."
       },
       {
-        "title": "Repeat, compare and clean up",
-        "instruction": "Retest the identical fault and traffic. Record improvements. Clear faults, restore defaults and verify recovery."
+        "title": "Improve, retest, and verify recovery",
+        "instruction": "Apply a protection, repeat the same fault, document remaining degradation, then clean up."
       }
     ]
   },
