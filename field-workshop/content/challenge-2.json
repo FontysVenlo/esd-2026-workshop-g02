@@ -25,47 +25,47 @@
   },
   "title": "Keep the catalog usable during a Shipping outage",
   "level": "Intermediate",
-  "scenario": "A team of technicians found that the shipping service is sometimes unavailable. They are currently investigation the cause of the outage. For now, management wants a quick fix until the main cause is solved.",
-  "why": "Customers have already reported missing shipping information in tge last weeks. Customers need a usable delivery option to plan their purchase. Otherwise they cant buy the products, which would lead to a monetary loss. .",
-  "reproduce": "Disconnect Primary Shipping in Network Faults. Compare availability and delivery previews before and after applying a mitigation. You should not solve the cause but try to handle it better in case of future service unavailability.",
+  "scenario": "Primary Shipping can become unavailable. Test how the shop can still provide delivery information.",
+  "why": "Customers need usable delivery information. Stock checks must still work when Shipping fails.",
+  "reproduce": "Record a healthy baseline and your hypothesis, then disconnect Primary Shipping.",
   "assignment": "Can you restore delivery information during a primary Shipping outage?",
   "fields": [
     {
       "key": "steadyState",
       "label": "Healthy baseline and metric",
-      "prompt": "Record your baseline. Include all the data you identify as relevant from Grafana into your notes. Watch healthy availability and delivery carefully."
+      "prompt": "Record healthy stock, delivery information and relevant Grafana readings."
     },
     {
       "key": "hypothesis",
       "label": "Hypothesis and fault injection",
-      "prompt": "What could be the impact of an unavailable shipping service? Which functions will fail? Record your hypothesis and disconnect the shipping service."
+      "prompt": "How should the system behave in case of a shipping outage? What would disprove your hypothesis?"
     },
     {
       "key": "faultEvidence",
       "label": "Fault evidence",
-      "prompt": "Investigate delivery information for all products. Record status, queue size and new rejections."
+      "prompt": "Compare stock and delivery results for all products. Record Shipping failures and fallback activity in Grafana."
     },
     {
       "key": "mitigation",
       "label": "Mitigation and reason",
-      "prompt": "What did you configure, and how does it restore a usable delivery option? Distinguish fallback, timeout and breaker."
+      "prompt": "Keep the outage active. Test Shipping fallback. Optionally compare the breaker. Explain what customers regain and what remains different."
     },
     {
       "key": "validation",
-      "label": "Same-outage validation",
-      "prompt": "Compare the identical fault after mitigation was introduced. Measure the impact on Storefront and in Grafana and explain what happens."
+      "label": "Same-fault validation",
+      "prompt": "Keep the fault and traffic unchanged. Test whether your protection keeps customer results within the limits in your hypothesis. Compare with your baseline and record the evidence."
     },
     {
       "key": "conclusion",
-      "label": "Blast-radius conclusion and cleanup",
-      "prompt": "What did the customer regain, what trade-off remains? If you reconnect shipping, what happens?"
+      "label": "Conclusion and cleanup",
+      "prompt": "Did you find a weakness? What improved, and what remains limited? Clear faults, restore defaults and verify recovery."
     }
   ],
   "solution": [
-    "The primary outage makes delivery requests fail while stock services remain healthy.",
-    "Shipping fallback calls a separate carrier and returns real quotes for all three products: €4.90 and 5 days, compared with €4.90 and 3 days normally.",
+    "During the outage, Refresh availability still returns stock. Refresh shipping info fails until Shipping fallback is enabled.",
+    "Shipping fallback calls a separate carrier and returns data for all three products: €4.90 and 5 days, compared with €4.90 and 3 days normally.",
     "The breaker can pause primary calls for five seconds while backup quotes continue. But it is not necessary for this challenge.",
-    "Reconnect Primary Shipping, and refresh to verify normal delivery estimates return."
+    "Reconnect Primary Shipping, restore defaults and refresh to verify normal stock and delivery information."
   ],
   "text": {
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",
