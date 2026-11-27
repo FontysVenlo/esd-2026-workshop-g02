@@ -33,12 +33,12 @@
     {
       "key": "steadyState",
       "label": "1. Record the baseline",
-      "prompt": "Before introducing any faults, both partners record normal stock, delivery information and the relevant Grafana readings on their own machines."
+      "prompt": "Before introducing any faults, both partners record normal stock, delivery information and the relevant Grafana readings on their own machines. Agree on comparable fault difficulty and acceptable customer results."
     },
     {
       "key": "plan",
       "label": "2. Introduce a fault and start the timer",
-      "prompt": "Each partner introduces one fault on the other partner’s machine without revealing it. Once both faults are active, each of you starts your own timer."
+      "prompt": "Wait for preparation to finish on both machines. Each partner introduces one fault on the other partner’s machine without revealing it. Once both faults are active, each of you starts your own timer."
     },
     {
       "key": "faultEvidence",
@@ -58,7 +58,7 @@
     {
       "key": "conclusion",
       "label": "6. Stop the timer and compare",
-      "prompt": "After recording your results, stop the timer. Record both partners’ times. Who identified the problem, tested a mitigation and documented the result faster?"
+      "prompt": "After recording your results, stop the timer. Record both partners’ times. Who identified the problem, tested a mitigation and documented the result faster? Reveal the faults, clear them, restore defaults and verify recovery."
     }
   ],
   "text": {
@@ -117,7 +117,7 @@
   },
   "competition": {
     "title": "Timed partner round",
-    "rules": "Your partner applies one fault and says go. Start the timer. Leave the fault on. Explain the cause, choose your settings. Working products must stay usable. Missing information must be clearly marked and wrong values must be hidden. Then stop the timer. Removing the fault does not count as a fix. Who was faster?",
+    "rules": "Your partner applies one fault and says go. Start the timer. Leave the fault on. Explain the cause, choose your settings. Working products must stay usable. Missing information must be clearly marked and wrong values must be hidden. Record your diagnosis, protection and measured results before stopping the timer. Removing the fault does not count as a fix. Who was faster?",
     "elapsed": "Elapsed: {seconds} seconds",
     "start": "Start new round",
     "stop": "Stop timer",
