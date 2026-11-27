@@ -42,7 +42,7 @@
     },
     {
       "key": "faultEvidence",
-      "label": "Fault evidence",
+      "label": "Observe the fault’s blast radius",
       "prompt": "Compare stock and delivery results for all products. Record Shipping failures and fallback activity in Grafana."
     },
     {

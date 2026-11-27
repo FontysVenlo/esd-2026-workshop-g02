@@ -25,25 +25,25 @@
   },
   "title": "When successful requests return bad data",
   "level": "Investigation",
-  "scenario": "This time we start from the beginning. There is no fault recorded yet. Perfect right? But Chaos Engineering as all about preparing for a disaster. And management would be furious if suddenly data is wrong and customers would stop buying. So we need to prepare for that. So please prevent/mitigate the storefront from showing wrong data.",
+  "scenario": "A service can return data with incorrect stock or delivery values. Test how the shop handles these replies.",
   "why": "",
   "reproduce": "",
-  "assignment": "All our technicians are busy fixing the problems from the challenges before. So you are on your own. But by now, you know the process, don't you?",
+  "assignment": "Test Wrong or missing values on Lighting inventory and Primary Shipping separately. Keep incorrect values off the page and make missing information clear.",
   "fields": [
     {
       "key": "symptom",
       "label": "Healthy baseline and metric",
-      "prompt": "Record your baseline. Include all the data you identify as relevant from Grafana into your notes."
+      "prompt": "Record healthy stock, delivery information and relevant Grafana readings."
     },
     {
       "key": "signals",
       "label": "Hypothesis and fault injection",
-      "prompt": "What could be the impact of ...?"
+      "prompt": "Which customer results should remain correct and usable when Inventory or Shipping returns invalid values? What would disprove your hypothesis?"
     },
     {
       "key": "diagnosis",
-      "label": "Fault evidence",
-      "prompt": "Introduce the fault. What happens? What is wrong? What is missing?"
+      "label": "Observe the fault’s blast radius",
+      "prompt": "Compare stock and delivery results with your baseline. Which products and functions are affected? Compare Dependency outcomes with Response checks in Grafana."
     },
     {
       "key": "mitigation",
@@ -53,20 +53,19 @@
     {
       "key": "validation",
       "label": "Same-fault validation",
-      "prompt": "Leave the fault on and see if your mitigation works."
+      "prompt": "Keep the fault and traffic unchanged. Test whether your protection keeps customer results within the limits in your hypothesis. Compare with your baseline and record the evidence."
     },
     {
       "key": "conclusion",
       "label": "Conclusion and cleanup",
-      "prompt": "What improved? Did you successfully mitigate the problem?"
+      "prompt": "Did you find a weakness? What improved, and what remains limited? Clear faults, restore defaults and verify recovery."
     }
   ],
   "solution": [
-    "The main services reply, but sometimes sends negative days, a negative price or empty fields. Other replies are normal.",
-    "The requests count as successful because a reply arrived. Response checks in Grafana separately shows wrong or missing values.",
-    "Under Shipping and Inventory, select Check response data and Apply Shipping settings. Wrong replies are discarded. The last valid quote stays visible, until a new valid quote updates it. If there is no earlier valid quote, delivery information is unavailable.",
-    "Responses rejected in Grafana counts the discarded replies even while the last valid quote remains visible. The checker does not fix the services or call the backup. Remove the response fault and restore defaults to finish.",
-    "As you had more freedom this time, did you actually check both services? In a worst case scenario, both of them could fail."
+    "HTTP 200 replies can contain invalid stock, prices or delivery days.",
+    "Response checks shows invalid values. Responses rejected counts those blocked when validation is enabled.",
+    "Enable Check response data for each service and click its matching Apply settings button. Invalid replies are discarded. The last valid values remain.",
+    "Validation does not repair the service or call backup Shipping. Remove faults, restore defaults and verify normal results."
   ],
   "text": {
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",
@@ -127,11 +126,11 @@
   "hints": [
     {
       "title": "Hint 1",
-      "explanation": "What fault should you introduce? The data reaches the storefront but is it correct?."
+      "explanation": "The reply reaches Storefront. Are its values usable?"
     },
     {
       "title": "Hint 2",
-      "explanation": "A successful request only means that a reply arrived. It can still contain wrong values. Look at Response checks in Grafana."
+      "explanation": "Packets reaching the storefront does not guarantee correct values. Compare Dependency outcomes with Response checks."
     },
     {
       "title": "Hint 3",

@@ -42,7 +42,7 @@
     },
     {
       "key": "faultEvidence",
-      "label": "Fault evidence",
+      "label": "Observe the fault’s blast radius",
       "prompt": "Record Lighting inventory latency and customer impact. Include all the data from Grafana that changed compared to the baseline."
     },
     {
