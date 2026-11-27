@@ -62,7 +62,7 @@ Notes are saved in your browser; use **Download notes** to export them.
 
 ## Repository guide
 
-- [Chaos Engineering presentation](<Chaos_Engineering_New.pdf.pdf>): presentation slides (PDF).
+- [Chaos Engineering presentation](<Chaos_Engineering_New.pdf>): presentation slides (PDF).
 - [Challenge briefs](field-workshop/docs/assignments.md): a quick overview of the four experiments.
 
 

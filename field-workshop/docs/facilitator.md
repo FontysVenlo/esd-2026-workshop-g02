@@ -1,4 +1,4 @@
-`# Facilitator checklist
+# Facilitator checklist
 
 ## Prepare
 
