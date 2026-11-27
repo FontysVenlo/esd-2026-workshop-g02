@@ -25,20 +25,20 @@
   },
   "title": "One slow product blocks the shop",
   "level": "Guided entry",
-  "scenario": "Customers have reported that the availability refresh is slow or that products are not available. Our expert team has already identified a fault in the Lighting inventory service. They say it has something to to with the availability of service workers. Now you are tasked to find the issue and mitigate it.",
-  "why": "All three products share one Storefront worker. While it waits for lamp stock, chair and desk requests queue. If a request waits more than 1000 ms for the worker, it fails without reaching its healthy inventory service. Each card shows its own result.",
-  "reproduce": "Try to add a 1500 ms delay to Lighting inventory to reproduce the issue. See what happens. Can you identify the impact?",
+  "scenario": "Customers report slow or failed availability checks. Test whether slow Lighting inventory affects other products.",
+  "why": "All products share one Storefront worker. Slow lamp checks make other requests wait. Requests that wait longer than 1000 ms fail before reaching Inventory.",
+  "reproduce": "Record a healthy baseline and your hypothesis. Then add a 1500 ms Lighting inventory delay with no variation.",
   "assignment": "Assignment: Can you keep chair and desk available while lamp stock is delayed or unavailable?",
   "fields": [
     {
       "key": "steadyState",
       "label": "Healthy baseline and metric",
-      "prompt": "Record your baseline. Include all the data you identify as relevant from Grafana into your notes."
+      "prompt": "Record healthy stock, delivery information and relevant Grafana readings."
     },
     {
       "key": "hypothesis",
       "label": "Hypothesis and fault injection",
-      "prompt": "What will +1500 ms Lighting inventory delay affect? What could be the blast radius? Write your hypothesis and introduce the fault."
+      "prompt": "Which availability checks should keep working during the 1500 ms Lighting delay? What would disprove your hypothesis?"
     },
     {
       "key": "faultEvidence",
@@ -48,25 +48,25 @@
     {
       "key": "mitigation",
       "label": "Mitigation and reason",
-      "prompt": "Keep the same delay. First set Inventory timeout to 400 ms with fallback and breaker off. Check whether chair and desk recover. Then compare the breaker. Optionally enable fallback and describe how the lamp result changes. Which setting protects the worker, and which only changes what the customer sees?"
+      "prompt": "Keep the delay active. Test a 400 ms Inventory timeout. Also test the timeout in combination with fallback and breaker. Explain each effect."
     },
     {
       "key": "validation",
       "label": "Same-fault validation",
-      "prompt": "Compare the identical fault after mitigation was introduced. Measure the impact on the Storefront and in Grafana and explain what happens."
+      "prompt": "Keep the fault and traffic unchanged. Test whether your protection keeps customer results within the limits in your hypothesis. Compare with your baseline and record the evidence."
     },
     {
       "key": "conclusion",
       "label": "Conclusion and cleanup",
-      "prompt": "What fault did you introduce? What mitigation did you use? What improved? When you reset the fault, what happens?"
+      "prompt": "Did you found a weakness? What improved, and what remains limited? Clear faults, restore defaults and verify recovery."
     }
   ],
   "solution": [
-    "Healthy: all products return live data quickly through one shared worker. Record your measured timings.",
-    "With +1500 ms Lighting latency and the default 3000 ms timeout, lamp checks succeed slowly. Chair and desk can exceed their 1000 ms queue deadline while the worker waits for the lamp. Their errors come from real capacity contention.",
+    "Healthy: All products return live data quickly through one shared worker.",
+    "With +1500 ms Lighting latency and the default 3000 ms timeout, lamp checks succeed slowly. Chair and desk can exceed their 1000 ms queue deadline while the worker waits for the lamp.",
     "With only a 400 ms timeout, the lamp check errors sooner and frees the worker. Chair and desk can load again. Timeout alone cannot supply missing lamp stock.",
-    "The breaker pauses failed lamp stock requests for five seconds, avoiding repeated 400 ms waits. A slow successful reply does not trigger it. Inventory fallback is optional for this challenge: it changes the lamp error to Stock unconfirmed, but does not free the worker sooner or improve chair and desk results.",
-    "Clear the fault, restore defaults, allow in-flight calls to finish, and verify live results for all three products."
+    "The breaker pauses failed lamp stock requests for five seconds, avoiding repeated 400 ms waits. Inventory fallback is optional for this challenge: it changes the lamp error to Stock unconfirmed, but does not free the worker sooner or improve chair and desk results.",
+    "Clear the fault, allow calls to finish, and verify live results for all three products."
   ],
   "text": {
     "challenge_of": "CHALLENGE {number} OF {total} · {level}",
